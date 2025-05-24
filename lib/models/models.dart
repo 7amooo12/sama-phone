@@ -1,0 +1,15 @@
+// Export all models for easy importing
+export 'user_model.dart';
+export 'user_role.dart';
+export 'product_model.dart';
+export 'order_model.dart';
+export 'fault_model.dart';
+export 'waste_model.dart';
+export 'chat_model.dart';
+export 'notification_model.dart';
+export 'message_model.dart';
+export 'flask_auth_model.dart';
+export 'flask_user_model.dart';
+export 'flask_product_model.dart';
+export 'flask_invoice_model.dart';
+export 'admin_product_model.dart';

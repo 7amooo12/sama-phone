@@ -1,0 +1,17 @@
+// This file provides namespace for plugins that don't specify them
+project.ext {
+    set("NamespaceOverrides", [
+        "file_picker": "com.mr.flutter.plugin.filepicker",
+        "flutter_document_picker": "com.sidlatau.flutterdocumentpicker",
+        "flutter_inappwebview": "com.pichillilorenzo.flutter_inappwebview",
+        "flutter_local_notifications": "com.dexterous.flutterlocalnotifications",
+        "flutter_plugin_android_lifecycle": "io.flutter.plugins.flutter_plugin_android_lifecycle",
+        "flutter_secure_storage": "com.it_nomads.fluttersecurestorage",
+        "image_picker_android": "io.flutter.plugins.imagepicker",
+        "path_provider_android": "io.flutter.plugins.pathprovider",
+        "share_plus": "dev.fluttercommunity.plus.share",
+        "shared_preferences_android": "io.flutter.plugins.sharedpreferences",
+        "url_launcher_android": "io.flutter.plugins.urllauncher",
+        "webview_flutter_android": "io.flutter.plugins.webviewflutter"
+    ])
+} 

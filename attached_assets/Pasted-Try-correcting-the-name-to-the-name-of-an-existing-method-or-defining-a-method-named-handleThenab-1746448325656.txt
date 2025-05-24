@@ -1,0 +1,486 @@
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.fetchSignInMethodsForEmail(jsObject,
+      email))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:511:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.getRedirectResult(jsObject)).then(
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:526:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.sendSignInLinkToEmail(
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:562:12: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+    return handleThenable(auth_interop.setPersistence(jsObject, instance));
+           ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:586:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.sendPasswordResetEmail(
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:593:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.signInWithCredential(jsObject,
+      credential))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:602:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.signInAnonymously(jsObject))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:613:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.signInWithCustomToken(jsObject, token))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:640:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.signInWithEmailAndPassword(
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:646:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:662:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.signInWithPhoneNumber(
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:670:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.signInWithPopup(jsObject,
+      provider.jsObject))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:674:55: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+  Future signInWithRedirect(AuthProvider provider) => handleThenable(
+                                                      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:678:23: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+  Future signOut() => handleThenable(jsObject.signOut());
+                      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:696:7: Error: The method 'handleThenable' isn't
+defined for the class 'Auth'.
+ - 'Auth' is from 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(auth_interop.verifyPasswordResetCode(jsObject, code));
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:989:7: Error: The method 'handleThenable' isn't
+defined for the class 'PhoneAuthProvider'.
+ - 'PhoneAuthProvider' is from
+ 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(jsObject.verifyPhoneNumber(
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:1016:30: Error: The method 'handleThenable' isn't
+defined for the class 'ApplicationVerifier<T>'.
+ - 'ApplicationVerifier' is from
+ 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+  Future<String> verify() => handleThenable(jsObject.verify());
+                             ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:1072:27: Error: The method 'handleThenable' isn't
+defined for the class 'RecaptchaVerifier'.
+ - 'RecaptchaVerifier' is from
+ 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+  Future<num> render() => handleThenable(jsObject.render());
+                          ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/auth.dart:1093:7: Error: The method 'handleThenable' isn't
+defined for the class 'ConfirmationResult'.
+ - 'ConfirmationResult' is from
+ 'package:firebase_auth_web/src/interop/auth.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/auth.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(jsObject.confirm(verificationCode))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/multi_factor.dart:52:7: Error: The method 'handleThenable'
+isn't defined for the class 'MultiFactorUser'.
+ - 'MultiFactorUser' is from
+ 'package:firebase_auth_web/src/interop/multi_factor.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/multi_factor.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(jsObject.getSession())
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/multi_factor.dart:63:12: Error: The method 'handleThenable'
+isn't defined for the class 'MultiFactorUser'.
+ - 'MultiFactorUser' is from
+ 'package:firebase_auth_web/src/interop/multi_factor.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/multi_factor.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+    return handleThenable(jsObject.enroll(assertion.jsObject, displayName));
+           ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/multi_factor.dart:75:12: Error: The method 'handleThenable'
+isn't defined for the class 'MultiFactorUser'.
+ - 'MultiFactorUser' is from
+ 'package:firebase_auth_web/src/interop/multi_factor.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/multi_factor.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+    return handleThenable(jsObject.unenroll(multiFactorInfoId));
+           ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/multi_factor.dart:150:12: Error: The method 'handleThenable'
+isn't defined for the class 'MultiFactorResolver'.
+ - 'MultiFactorResolver' is from
+ 'package:firebase_auth_web/src/interop/multi_factor.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/
+ lib/src/interop/multi_factor.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+    return handleThenable(jsObject.resolveSignIn(assertion.jsObject))
+           ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-5.8.13/lib
+/src/interop/multi_factor.dart:230:12: Error: Method not found:
+'handleThenable'.
+    return handleThenable(
+           ^^^^^^^^^^^^^^
+lib/providers/product_provider.dart:30:24: Error: The method
+'getAllProducts' isn't defined for the class 'DatabaseService'.
+ - 'DatabaseService' is from
+ 'package:flutter_multi_role_app/services/database_service.dart'
+ ('lib/services/database_service.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'getAllProducts'.
+      _databaseService.getAllProducts().listen((productsList) {
+                       ^^^^^^^^^^^^^^
+lib/providers/product_provider.dart:47:24: Error: The method
+'getProductsByOwner' isn't defined for the class 'DatabaseService'.
+ - 'DatabaseService' is from
+ 'package:flutter_multi_role_app/services/database_service.dart'
+ ('lib/services/database_service.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'getProductsByOwner'.
+      _databaseService.getProductsByOwner(ownerId).listen((productsList) {
+                       ^^^^^^^^^^^^^^^^^^
+lib/providers/product_provider.dart:104:60: Error: The method
+'uploadMultipleFiles' isn't defined for the class 'StorageService'.
+ - 'StorageService' is from
+ 'package:flutter_multi_role_app/services/storage_service.dart'
+ ('lib/services/storage_service.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'uploadMultipleFiles'.
+      final List<String> imageUrls = await
+      _storageService.uploadMultipleFiles(
+                                                           ^^^^^^^^^^^^^^^^^
+                                                           ^^
+lib/providers/product_provider.dart:124:55: Error: The method 'addProduct'
+isn't defined for the class 'DatabaseService'.
+ - 'DatabaseService' is from
+ 'package:flutter_multi_role_app/services/database_service.dart'
+ ('lib/services/database_service.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'addProduct'.
+      final String productId = await _databaseService.addProduct(product);
+                                                      ^^^^^^^^^^
+lib/providers/product_provider.dart:172:65: Error: The method
+'uploadMultipleFiles' isn't defined for the class 'StorageService'.
+ - 'StorageService' is from
+ 'package:flutter_multi_role_app/services/storage_service.dart'
+ ('lib/services/storage_service.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'uploadMultipleFiles'.
+        final List<String> newImageUrls = await
+        _storageService.uploadMultipleFiles(
+                                                                ^^^^^^^^^^^^
+                                                                ^^^^^^^
+lib/providers/product_provider.dart:197:30: Error: The method
+'updateProduct' isn't defined for the class 'DatabaseService'.
+ - 'DatabaseService' is from
+ 'package:flutter_multi_role_app/services/database_service.dart'
+ ('lib/services/database_service.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'updateProduct'.
+      await _databaseService.updateProduct(updatedProduct);
+                             ^^^^^^^^^^^^^
+lib/providers/product_provider.dart:246:32: Error: The method
+'deleteProduct' isn't defined for the class 'DatabaseService'.
+ - 'DatabaseService' is from
+ 'package:flutter_multi_role_app/services/database_service.dart'
+ ('lib/services/database_service.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'deleteProduct'.
+        await _databaseService.deleteProduct(productId);
+                               ^^^^^^^^^^^^^
+lib/widgets/worker/performance_chart.dart:79:25: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+            sideTitles: SideTitles(showTitles: false),
+                        ^^^^^^^^^^
+lib/widgets/worker/performance_chart.dart:78:30: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+          rightTitles: const AxisTitles(
+                             ^^^^^^^^^^
+lib/widgets/worker/performance_chart.dart:82:25: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+            sideTitles: SideTitles(showTitles: false),
+                        ^^^^^^^^^^
+lib/widgets/worker/performance_chart.dart:81:28: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+          topTitles: const AxisTitles(
+                           ^^^^^^^^^^
+lib/widgets/worker/performance_chart.dart:106:25: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+            sideTitles: SideTitles(
+                        ^^^^^^^^^^
+lib/widgets/worker/performance_chart.dart:105:29: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+          leftTitles: const AxisTitles(
+                            ^^^^^^^^^^
+lib/widgets/worker/performance_chart.dart:122:20: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+            return FlLine(
+                   ^^^^^^
+lib/widgets/worker/performance_chart.dart:121:37: Error: Not a constant
+expression.
+          getDrawingHorizontalLine: (value) {
+                                    ^^^^^^^
+lib/widgets/worker/performance_chart.dart:117:25: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+        gridData: const FlGridData(
+                        ^^^^^^^^^^
+lib/widgets/owner/business_stats_card.dart:76:35: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+                  gridData: const FlGridData(show: false),
+                                  ^^^^^^^^^^
+lib/widgets/owner/business_stats_card.dart:77:37: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+                  titlesData: const FlTitlesData(show: false),
+                                    ^^^^^^^^^^^^
+lib/widgets/owner/business_stats_card.dart:79:40: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+                  lineTouchData: const LineTouchData(enabled: false),
+                                       ^^^^^^^^^^^^^
+lib/widgets/owner/business_stats_card.dart:90:38: Error: Cannot invoke a
+non-'const' constructor where a const expression is expected.
+Try using a constructor or factory that is 'const'.
+                      dotData: const FlDotData(show: false),
+                                     ^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:129:22: Error: The method 'handleThenable'
+isn't defined for the class 'StorageReference'.
+ - 'StorageReference' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+  Future delete() => handleThenable(storage_interop.deleteObject(jsObject));
+                     ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:134:15: Error: The method 'handleThenable'
+isn't defined for the class 'StorageReference'.
+ - 'StorageReference' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+        await handleThenable(storage_interop.getDownloadURL(jsObject));
+              ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:140:7: Error: The method 'handleThenable' isn't
+defined for the class 'StorageReference'.
+ - 'StorageReference' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(storage_interop.getMetadata(jsObject))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:154:7: Error: The method 'handleThenable' isn't
+defined for the class 'StorageReference'.
+ - 'StorageReference' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(storage_interop.list(jsObject, options?.jsObject))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:169:7: Error: The method 'handleThenable' isn't
+defined for the class 'StorageReference'.
+ - 'StorageReference' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+      handleThenable(storage_interop.listAll(jsObject))
+      ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:193:11: Error: The method 'handleThenable'
+isn't defined for the class 'StorageReference'.
+ - 'StorageReference' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+    await handleThenable(
+          ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:263:42: Error: Method not found: 'jsify'.
+              (customMetadata != null) ? jsify(customMetadata) : null));
+                                         ^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:300:9: Error: The method 'handleThenable' isn't
+defined for the class 'UploadTask'.
+ - 'UploadTask' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'handleThenable'.
+        handleThenable(jsObject).then(UploadTaskSnapshot.getInstance);
+        ^^^^^^^^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:437:42: Error: Method not found: 'jsify'.
+              (customMetadata != null) ? jsify(customMetadata) : null));
+                                         ^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:486:38: Error: The method 'dartify' isn't
+defined for the class '_SettableMetadataBase<T>'.
+ - '_SettableMetadataBase' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'dartify'.
+    Map<String, dynamic>? metadata = dartify(jsObject.customMetadata);
+                                     ^^^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.22/
+lib/src/interop/storage.dart:495:31: Error: The method 'jsify' isn't defined
+for the class '_SettableMetadataBase<T>'.
+ - '_SettableMetadataBase' is from
+ 'package:firebase_storage_web/src/interop/storage.dart'
+ ('../../../AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.6.
+ 22/lib/src/interop/storage.dart').
+Try correcting the name to the name of an existing method, or defining a
+method named 'jsify'.
+    jsObject.customMetadata = jsify(m);
+                              ^^^^^
+../../../AppData/Local/Pub/Cache/hosted/pub.dev/fl_chart-0.62.0/lib/src/util
+s/utils.dart:269:20: Error: Member not found: 'MediaQuery.boldTextOverride'.
+    if (MediaQuery.boldTextOverride(context)) {
+                   ^^^^^^^^^^^^^^^^
+Waiting for connection from debug service on Chrome...             50.1s
+Failed to compile application.
+
+C:\Users\mn402\Downloads\SmartBizTracker\SmartBizTracker>flutter pub get    

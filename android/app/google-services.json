@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "990198617767",
+    "project_id": "sama-d3f03",
+    "storage_bucket": "sama-d3f03.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:990198617767:android:142a2cd6fbd6cc4e79ed82",
+        "android_client_info": {
+          "package_name": "com.example.smartbiztracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBY5_gjpBRuSey1Lz6jCMI84QBNT-KG4Lo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
