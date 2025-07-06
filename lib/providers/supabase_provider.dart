@@ -507,22 +507,27 @@ class SupabaseProvider extends ChangeNotifier {
         return false;
       }
 
-      // Since biometric has already been verified, we can fetch the user data directly
-      // This is a simplified approach - in production, we would use stored refresh token
-      // or other secure methods to re-authenticate
+      // SECURITY FIX: Secure biometric authentication
+      // Only allow biometric login if user has a valid existing session
+      try {
+        final result = await _supabaseService.signInWithSession(email);
 
-      // Call a special method in supabase service
-      final result = await _supabaseService.signInWithSession(email);
-
-      if (result != null) {
-        _user = result;
+        if (result != null) {
+          _user = result;
+          _isLoading = false;
+          notifyListeners();
+          return true;
+        } else {
+          _isLoading = false;
+          _error = 'فشل تسجيل الدخول باستخدام البصمة. يرجى تسجيل الدخول باستخدام كلمة المرور';
+          notifyListeners();
+          return false;
+        }
+      } catch (securityError) {
         _isLoading = false;
+        _error = securityError.toString();
         notifyListeners();
-        return true;
-      } else {
-        _isLoading = false;
-        _error = 'فشل تسجيل الدخول باستخدام البصمة. يرجى تسجيل الدخول باستخدام كلمة المرور';
-        notifyListeners();
+        AppLogger.error('Secure biometric authentication failed: $securityError');
         return false;
       }
     } catch (e) {

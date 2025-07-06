@@ -12,6 +12,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:smartbiztracker_new/screens/admin/email_confirmation_management_screen.dart';
 import 'package:smartbiztracker_new/screens/admin/quick_fix_screen.dart';
+import 'package:smartbiztracker_new/utils/app_logger.dart';
 
 class NewUsersScreen extends StatefulWidget {
   const NewUsersScreen({super.key});
@@ -30,11 +31,31 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
     super.initState();
     timeago.setLocaleMessages('ar', timeago.ArMessages());
 
-    // Load pending users on init
+    // Load pending users on init - use both providers for comprehensive data loading
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      authProvider.fetchPendingApprovalUsers();
+      _loadPendingUsers();
     });
+  }
+
+  // Load pending users from both providers
+  Future<void> _loadPendingUsers() async {
+    try {
+      AppLogger.info('🔄 NewUsersScreen: Loading pending users...');
+
+      // Load from AuthProvider (legacy)
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.fetchPendingApprovalUsers();
+
+      // Also load from SupabaseProvider (current)
+      final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+      await supabaseProvider.fetchAllUsers();
+
+      final pendingCount = supabaseProvider.users.length;
+      AppLogger.info('✅ NewUsersScreen: Loaded $pendingCount pending users');
+
+    } catch (e) {
+      AppLogger.error('❌ NewUsersScreen: Error loading pending users: $e');
+    }
   }
 
   // Approve user

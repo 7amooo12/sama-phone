@@ -4593,28 +4593,32 @@ class _ComprehensiveReportsScreenState extends State<ComprehensiveReportsScreen>
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth <= 600;
 
+        // Calculate values
+        final availableProductsCount = _allProducts.where((product) => product.isInStock).length;
+        final categoriesCount = _categories.length;
+
         return GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: isMobile ? 1 : 2,
           crossAxisSpacing: AccountantThemeConfig.defaultPadding,
           mainAxisSpacing: AccountantThemeConfig.defaultPadding,
-          childAspectRatio: isMobile ? 3.0 : 2.5,
+          childAspectRatio: isMobile ? 2.8 : 2.2, // Optimized aspect ratio to prevent overflow
           children: [
             ModernAccountantWidgets.buildFinancialCard(
-              title: 'إجمالي المنتجات',
-              value: '${_allProducts.length}',
+              title: 'إجمالي المنتجات المتاحة',
+              value: '$availableProductsCount',
               icon: Icons.inventory_2_rounded,
               gradient: [AccountantThemeConfig.primaryGreen, AccountantThemeConfig.secondaryGreen],
-              change: '+${_allProducts.length}',
+              change: '+$availableProductsCount',
               isPositive: true,
             ),
             ModernAccountantWidgets.buildFinancialCard(
               title: 'إجمالي الفئات',
-              value: '${_categories.length}',
+              value: '$categoriesCount',
               icon: Icons.category_rounded,
               gradient: [AccountantThemeConfig.accentBlue, AccountantThemeConfig.deepBlue],
-              change: '+${_categories.length}',
+              change: '+$categoriesCount',
               isPositive: true,
             ),
           ],
@@ -7325,7 +7329,7 @@ class _ComprehensiveReportsScreenState extends State<ComprehensiveReportsScreen>
           // Performance metrics
           Column(
             children: [
-              _buildInsightRow('إجمالي المنتجات', '$totalProducts منتج', Icons.inventory_2),
+              _buildInsightRow('إجمالي المنتجات المحللة', '$totalProducts منتج', Icons.inventory_2),
               _buildInsightRow('إجمالي الإيرادات', _currencyFormat.format(totalRevenue), Icons.monetization_on),
               _buildInsightRow('متوسط هامش الربح', '${averageProfitMargin.toStringAsFixed(1)}%', Icons.trending_up),
               _buildInsightRow('معدل دوران المخزون', '${stockTurnoverRate.toStringAsFixed(2)}x', Icons.refresh),
@@ -9057,8 +9061,8 @@ class _ComprehensiveReportsScreenState extends State<ComprehensiveReportsScreen>
       children: [
         Expanded(
           child: _buildMetricCard(
-            'إجمالي المنتجات',
-            '${_allProducts.length}',
+            'إجمالي المنتجات المتاحة',
+            '${_allProducts.where((product) => product.isInStock).length}',
             Icons.inventory_2,
             Colors.blue,
           ),

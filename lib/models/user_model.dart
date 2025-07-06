@@ -18,9 +18,26 @@ class UserModel {
   }); // Alias for compatibility
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // SECURITY FIX: Proper name handling with fallback logic
+    String userName = json['name'] as String? ?? '';
+
+    // If name is empty or just whitespace, don't use default placeholder
+    // Let the UI handle empty names appropriately
+    if (userName.trim().isEmpty) {
+      // Check if there's a name in email (before @)
+      final email = json['email'] as String? ?? '';
+      if (email.isNotEmpty && email.contains('@')) {
+        final emailPrefix = email.split('@')[0];
+        // Only use email prefix if it looks like a name (not just numbers/random chars)
+        if (emailPrefix.length > 2 && !RegExp(r'^[0-9]+$').hasMatch(emailPrefix)) {
+          userName = emailPrefix;
+        }
+      }
+    }
+
     return UserModel(
       id: json['id'] as String,
-      name: json['name'] as String,
+      name: userName, // Use processed name
       email: json['email'] as String,
       role: UserRole.fromString(json['role'] as String),
       phone: json['phone_number'] as String? ?? json['phone'] as String? ?? '',
@@ -48,6 +65,31 @@ class UserModel {
 
   String get userRole => role.value;
   String get uid => id;
+
+  /// Get display name with fallback logic
+  String get displayName {
+    if (name.trim().isNotEmpty && name.trim() != 'مستخدم جديد') {
+      return name.trim();
+    }
+
+    // Fallback to email prefix if name is empty or default
+    if (email.isNotEmpty && email.contains('@')) {
+      final emailPrefix = email.split('@')[0];
+      if (emailPrefix.length > 2 && !RegExp(r'^[0-9]+$').hasMatch(emailPrefix)) {
+        return emailPrefix;
+      }
+    }
+
+    // Last resort fallback
+    return 'مستخدم';
+  }
+
+  /// Check if the user has a valid custom name (not default or empty)
+  bool get hasValidName {
+    return name.trim().isNotEmpty &&
+           name.trim() != 'مستخدم جديد' &&
+           name.trim() != 'مستخدم';
+  }
 
   /// Sanitize profile image URL to prevent URI parsing errors
   static String? _sanitizeProfileImageUrl(String? url) {

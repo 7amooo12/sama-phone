@@ -93,19 +93,29 @@ class SupabaseService {
         // Continue with signup - let Supabase handle any conflicts
       }
 
-      // Try to create auth user directly
-      AppLogger.info('Creating auth user for: $email');
+      // SECURITY FIX: Validate name is not empty
+      if (name.trim().isEmpty) {
+        throw Exception('الاسم مطلوب ولا يمكن أن يكون فارغاً');
+      }
 
-      // Create auth user first
+      // Try to create auth user directly
+      AppLogger.info('Creating auth user for: $email with name: $name');
+
+      // Create auth user first with metadata
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'name': name.trim(),
+          'phone': phone?.trim(),
+          'full_name': name.trim(), // Additional field for better compatibility
+        },
         emailRedirectTo: null, // Disable email confirmation for test accounts
       );
 
       if (response.user != null) {
         final userId = response.user!.id;
-        AppLogger.info('Auth user created successfully: $userId');
+        AppLogger.info('Auth user created successfully: $userId with metadata');
 
         // Wait a moment for auth user to be fully created
         await Future.delayed(const Duration(milliseconds: 500));
@@ -115,13 +125,13 @@ class SupabaseService {
           await _supabase.rpc('create_user_profile_safe', params: {
             'user_id': userId,
             'user_email': email,
-            'user_name': name,
-            'user_phone': phone,
+            'user_name': name.trim(), // Ensure name is trimmed and not null
+            'user_phone': phone?.trim(),
             'user_role': role ?? 'client',
             'user_status': 'pending',
           });
 
-          AppLogger.info('✅ User profile created successfully for: $email');
+          AppLogger.info('✅ User profile created successfully for: $email with name: $name');
           return response.user;
         } catch (profileError) {
           AppLogger.error('Error creating user profile: $profileError');
@@ -150,27 +160,12 @@ class SupabaseService {
         AppLogger.info('No existing session found, proceeding with sign-in');
       }
 
-      // For @sama.com test accounts, check if user exists in user_profiles first
-      if (email.contains('@sama.com')) {
-        AppLogger.info('🧪 Test account detected, checking user profile first: $email');
-        final userProfile = await getUserDataByEmail(email);
-        if (userProfile != null) {
-          AppLogger.info('✅ User profile found: ${userProfile.name} (${userProfile.role}, ${userProfile.status})');
-
-          // If user is approved/active, try alternative login first
-          if (userProfile.status == 'approved' || userProfile.status == 'active') {
-            AppLogger.info('🔄 User is approved, attempting alternative login first');
-            final altUser = await _signInTestAccount(email);
-            if (altUser != null) {
-              AppLogger.info('✅ Alternative login successful for: $email');
-              return altUser;
-            }
-          }
-        } else {
-          AppLogger.warning('⚠️ No user profile found for test account: $email');
-          throw Exception('المستخدم غير موجود في النظام. يرجى التواصل مع الإدارة.');
-        }
+      // SECURITY FIX: Validate input parameters
+      if (email.isEmpty || password.isEmpty) {
+        throw Exception('البريد الإلكتروني وكلمة المرور مطلوبان');
       }
+
+      // SECURITY FIX: Remove test account bypass - all accounts must use proper authentication
 
       // Skip pre-authentication profile checks to avoid RLS recursion
       // We'll validate the user after successful authentication
@@ -184,18 +179,31 @@ class SupabaseService {
       // After successful authentication, minimal profile handling
       if (response.user != null) {
         try {
-          // Skip complex profile checks that cause infinite recursion
-          // Just ensure a basic profile exists using the safe RPC function
-          await _supabase.rpc('create_user_profile_safe', params: {
-            'user_id': response.user!.id,
-            'user_email': response.user!.email ?? email,
-            'user_name': response.user!.userMetadata?['name'] as String?,
-            'user_phone': null,
-            'user_role': 'client',
-            'user_status': 'pending',
-          });
+          // SECURITY FIX: Check if user profile already exists before creating/updating
+          final existingProfile = await getUserData(response.user!.id);
 
-          AppLogger.info('✅ Profile ensured for authenticated user');
+          if (existingProfile == null) {
+            // Only create profile if it doesn't exist
+            AppLogger.info('Creating new profile for authenticated user: ${response.user!.email}');
+
+            // Get name from metadata, but don't use null values
+            final nameFromMetadata = response.user!.userMetadata?['name'] as String?;
+            final nameToUse = nameFromMetadata?.isNotEmpty == true ? nameFromMetadata : null;
+
+            await _supabase.rpc('create_user_profile_safe', params: {
+              'user_id': response.user!.id,
+              'user_email': response.user!.email ?? email,
+              'user_name': nameToUse, // Only pass name if it's not null/empty
+              'user_phone': null,
+              'user_role': 'client',
+              'user_status': 'pending',
+            });
+
+            AppLogger.info('✅ New profile created for authenticated user');
+          } else {
+            AppLogger.info('✅ Existing profile found for user: ${existingProfile.name}');
+            // Don't overwrite existing profile data
+          }
         } catch (profileError) {
           AppLogger.warning('Profile creation skipped: $profileError');
           // Continue with successful authentication - profile issues won't block login
@@ -211,60 +219,12 @@ class SupabaseService {
       if (e is AuthException) {
         if (e.message.contains('Invalid login credentials')) {
           AppLogger.error('🔐 Invalid credentials error for: $email');
-
-          // For @sama.com test accounts, provide alternative login
-          if (email.contains('@sama.com')) {
-            AppLogger.info('🧪 Attempting alternative login for test account: $email');
-
-            final userProfile = await getUserDataByEmail(email);
-            if (userProfile != null && (userProfile.status == 'approved' || userProfile.status == 'active')) {
-              AppLogger.info('✅ Found approved user profile, using alternative login');
-              final altUser = await _signInTestAccount(email);
-              if (altUser != null) {
-                return altUser;
-              }
-            }
-
-            // If alternative login fails, provide specific error for test accounts
-            throw Exception('خطأ في بيانات الدخول للحساب التجريبي. يرجى التأكد من كلمة المرور أو التواصل مع الإدارة.');
-          }
-
+          // SECURITY FIX: Remove test account bypass - proper error message for all invalid credentials
           throw Exception('بريد إلكتروني أو كلمة مرور غير صحيحة');
         } else if (e.message.contains('Email not confirmed')) {
-          AppLogger.info('Email not confirmed error for: $email, checking admin approval status');
-
-          // Check if user is admin-approved and should bypass email confirmation
-          final approvedUser = await _checkAdminApprovedUser(email);
-          if (approvedUser != null) {
-            AppLogger.info('User is admin-approved, attempting to confirm email and retry login: $email');
-
-            // Try to confirm email programmatically for admin-approved users
-            final emailConfirmed = await _confirmEmailForApprovedUser(email);
-            if (emailConfirmed) {
-              AppLogger.info('Email confirmed for admin-approved user, retrying login: $email');
-              // Retry login after email confirmation
-              try {
-                final retryResponse = await _supabase.auth.signInWithPassword(
-                  email: email,
-                  password: password,
-                );
-                return retryResponse.user;
-              } catch (retryError) {
-                AppLogger.warning('Retry login failed, falling back to alternative method: $retryError');
-              }
-            }
-
-            // Fallback to alternative login for admin-approved users
-            return await _signInApprovedUser(email, approvedUser);
-          }
-
-          // For test accounts or other special cases
-          if (email.contains('@sama.com')) {
-            AppLogger.info('Test account email not confirmed, attempting alternative login: $email');
-            return await _signInTestAccount(email);
-          } else {
-            throw Exception('يرجى تأكيد البريد الإلكتروني أولاً');
-          }
+          AppLogger.info('Email not confirmed error for: $email');
+          // SECURITY FIX: All users must confirm their email - no bypasses allowed
+          throw Exception('يرجى تأكيد البريد الإلكتروني أولاً');
         } else if (e.message.contains('Project not specified')) {
           throw Exception('خطأ في إعداد الخادم. يرجى المحاولة لاحقاً');
         } else {
@@ -279,25 +239,8 @@ class SupabaseService {
     }
   }
 
-  /// Check if user is admin-approved and should bypass email confirmation
-  Future<UserModel?> _checkAdminApprovedUser(String email) async {
-    try {
-      AppLogger.info('Checking admin approval status for: $email');
-
-      final userProfile = await getUserDataByEmail(email);
-      if (userProfile != null &&
-          (userProfile.status == 'approved' || userProfile.status == 'active') &&
-          userProfile.role != 'client') {
-        AppLogger.info('User is admin-approved with role: ${userProfile.role}');
-        return userProfile;
-      }
-
-      return null;
-    } catch (e) {
-      AppLogger.error('Error checking admin approval status: $e');
-      return null;
-    }
-  }
+  /// SECURITY FIX: Removed _checkAdminApprovedUser method
+  /// This method was part of the authentication bypass logic
 
   /// Confirm email for admin-approved users programmatically
   Future<bool> _confirmEmailForApprovedUser(String email) async {
@@ -340,108 +283,13 @@ class SupabaseService {
     }
   }
 
-  /// Alternative sign in for admin-approved users
-  Future<User?> _signInApprovedUser(String email, UserModel userProfile) async {
-    try {
-      AppLogger.info('Attempting approved user login for: $email');
+  /// SECURITY FIX: Removed _signInApprovedUser method
+  /// This method was creating mock User objects without proper password validation
+  /// All users must now authenticate through proper Supabase authentication
 
-      // Create a user session for admin-approved users
-      // This bypasses the email confirmation requirement
-      return User(
-        id: userProfile.id,
-        appMetadata: {
-          'provider': 'email',
-          'providers': ['email'],
-        },
-        userMetadata: {
-          'email': email,
-          'name': userProfile.name,
-          'role': userProfile.role,
-          'admin_approved': true,
-        },
-        aud: 'authenticated',
-        createdAt: userProfile.createdAt.toIso8601String(),
-        emailConfirmedAt: DateTime.now().toIso8601String(), // Mark as confirmed
-      );
-    } catch (e) {
-      AppLogger.error('Error during approved user sign in: $e');
-      return null;
-    }
-  }
-
-  /// Alternative sign in for test accounts with unconfirmed emails
-  Future<User?> _signInTestAccount(String email) async {
-    try {
-      AppLogger.info('🧪 Attempting test account login for: $email');
-
-      // Get user profile directly from database
-      final userProfile = await getUserDataByEmail(email);
-      if (userProfile != null) {
-        AppLogger.info('📋 Found user profile: ${userProfile.name} (${userProfile.role}, ${userProfile.status})');
-
-        if (userProfile.status == 'approved' || userProfile.status == 'active') {
-          AppLogger.info('✅ Test account login successful for: $email');
-
-          // CRITICAL FIX: Use the new TestSessionService to establish proper session
-          try {
-            AppLogger.info('🔧 Establishing test session using TestSessionService...');
-
-            final sessionEstablished = await TestSessionService.establishTestSession(userProfile);
-
-            if (sessionEstablished) {
-              // Check if we now have a valid session
-              final currentUser = _supabase.auth.currentUser;
-              final currentSession = _supabase.auth.currentSession;
-
-              if (currentUser != null) {
-                AppLogger.info('✅ Test session established successfully: $email');
-                return currentUser;
-              }
-            }
-
-            // If session establishment failed, create a mock user as fallback
-            AppLogger.warning('⚠️ Session establishment failed, creating mock user for test account');
-
-            final mockUser = User(
-              id: userProfile.id,
-              appMetadata: {
-                'provider': 'test_account',
-                'providers': ['test_account'],
-              },
-              userMetadata: {
-                'email': email,
-                'name': userProfile.name,
-                'role': userProfile.role,
-                'status': userProfile.status,
-                'test_account': true,
-              },
-              aud: 'authenticated',
-              createdAt: userProfile.createdAt.toIso8601String(),
-              emailConfirmedAt: DateTime.now().toIso8601String(),
-            );
-
-            AppLogger.info('✅ Mock user created for test account: $email');
-            return mockUser;
-
-          } catch (sessionError) {
-            AppLogger.error('❌ Failed to establish test session: $sessionError');
-            throw Exception('فشل في إنشاء جلسة للحساب التجريبي. يرجى التواصل مع الإدارة.');
-          }
-        } else {
-          AppLogger.warning('⚠️ Test account not approved: $email (status: ${userProfile.status})');
-          throw Exception('الحساب التجريبي غير مفعل. يرجى التواصل مع الإدارة لتفعيل الحساب.');
-        }
-      } else {
-        AppLogger.error('❌ No user profile found for test account: $email');
-        throw Exception('الحساب التجريبي غير موجود في النظام.');
-      }
-
-      return null;
-    } catch (e) {
-      AppLogger.error('❌ Error during test account sign in: $e');
-      rethrow;
-    }
-  }
+  /// SECURITY FIX: Removed _signInTestAccount method
+  /// This method was allowing login with only email verification for @sama.com accounts
+  /// bypassing password validation entirely. All users must now authenticate properly.
 
   /// Sign out current user
   Future<void> signOut() async {
@@ -698,36 +546,33 @@ class SupabaseService {
     }
   }
 
-  /// Sign in with previous session (for biometric auth)
+  /// SECURITY FIX: Secure biometric authentication
+  /// This method now requires a valid existing session and proper authentication
   Future<UserModel?> signInWithSession(String email) async {
     try {
-      AppLogger.info('Signing in with session for email: $email');
+      AppLogger.info('Attempting secure biometric sign-in for: $email');
 
-      // Check if we have an active session
-      if (_supabase.auth.currentSession != null) {
+      // SECURITY FIX: Only allow biometric login if there's already a valid authenticated session
+      if (_supabase.auth.currentSession != null && _supabase.auth.currentUser != null) {
         final userId = _supabase.auth.currentUser?.id;
+        final sessionEmail = _supabase.auth.currentUser?.email;
 
-        if (userId != null) {
-          // We already have a valid session, just get the user data
+        // Verify the email matches the current session
+        if (userId != null && sessionEmail == email) {
+          AppLogger.info('Valid session found for biometric authentication: $email');
           return await getUserData(userId);
+        } else {
+          AppLogger.warning('Email mismatch in biometric authentication: session=$sessionEmail, requested=$email');
+          throw Exception('جلسة المصادقة البيومترية غير صالحة');
         }
       }
 
-      // If no active session, we need to fetch the user by email using SECURITY DEFINER function
-      final userProfile = await getUserDataByEmail(email);
-
-      if (userProfile == null) {
-        AppLogger.warning('No user profile found for email: $email');
-        return null;
-      }
-
-      // For testing purposes, simulate a successful login
-      // In a real app with proper biometric auth, you would use a refresh token or passwordless auth
-      AppLogger.info('User signed in via biometric: ${userProfile.name}');
-      return userProfile;
+      // SECURITY FIX: No valid session - biometric authentication not allowed
+      AppLogger.warning('No valid session for biometric authentication: $email');
+      throw Exception('يجب تسجيل الدخول بكلمة المرور أولاً لتفعيل المصادقة البيومترية');
     } catch (e) {
-      AppLogger.error('Error during session sign in: $e');
-      return null;
+      AppLogger.error('Error during secure biometric sign in: $e');
+      rethrow;
     }
   }
 

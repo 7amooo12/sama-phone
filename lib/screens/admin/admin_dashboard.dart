@@ -112,31 +112,77 @@ class _AdminDashboardState extends State<AdminDashboard>
     _initializeData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when the screen becomes visible again
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshDataIfNeeded();
+    });
+  }
+
+  // Refresh data if it's been a while since last update
+  Future<void> _refreshDataIfNeeded() async {
+    if (!mounted) return;
+
+    final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+
+    // If no users loaded or it's been more than 5 minutes, refresh
+    if (supabaseProvider.allUsers.isEmpty ||
+        DateTime.now().difference(DateTime.now()).inMinutes > 5) {
+      AppLogger.info('🔄 Admin Dashboard: Refreshing data due to staleness or empty state');
+      await supabaseProvider.fetchAllUsers();
+    }
+  }
+
   // Initialize data loading only once to prevent infinite loops
   Future<void> _initializeData() async {
     if (!mounted) return;
 
     final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
 
-    // Load all users if not already loaded
-    if (supabaseProvider.allUsers.isEmpty && !supabaseProvider.isLoading) {
-      await supabaseProvider.fetchAllUsers();
-    }
-
-    // Load workers if not already cached
-    final workers = supabaseProvider.workers;
-    if (workers.isEmpty && !supabaseProvider.isLoading) {
-      await supabaseProvider.getUsersByRole(UserRole.worker.value);
-    }
-
-    // Load client orders for the recent orders section
     try {
-      final clientOrdersProvider = Provider.of<ClientOrdersProvider>(context, listen: false);
-      if (clientOrdersProvider.orders.isEmpty && !clientOrdersProvider.isLoading) {
-        await clientOrdersProvider.loadAllOrders();
+      AppLogger.info('🔄 Admin Dashboard: Initializing data loading...');
+
+      // CRITICAL FIX: Always load all users for admin dashboard to show pending registrations
+      AppLogger.info('📥 Admin Dashboard: Loading all users including pending registrations...');
+      await supabaseProvider.fetchAllUsers();
+
+      // Log the results for debugging
+      final allUsersCount = supabaseProvider.allUsers.length;
+      final pendingUsersCount = supabaseProvider.users.length; // This filters for pending users
+      AppLogger.info('✅ Admin Dashboard: Loaded $allUsersCount total users, $pendingUsersCount pending approval');
+
+      // Debug: Log pending users details
+      final pendingUsers = supabaseProvider.users;
+      if (pendingUsers.isNotEmpty) {
+        AppLogger.info('📋 Pending users for approval:');
+        for (final user in pendingUsers) {
+          AppLogger.info('   👤 ${user.name} (${user.email}) - Status: ${user.status}');
+        }
+      } else {
+        AppLogger.info('📋 No pending users found');
       }
+
+      // Load workers if not already cached
+      final workers = supabaseProvider.workers;
+      if (workers.isEmpty && !supabaseProvider.isLoading) {
+        await supabaseProvider.getUsersByRole(UserRole.worker.value);
+      }
+
+      // Load client orders for the recent orders section
+      try {
+        final clientOrdersProvider = Provider.of<ClientOrdersProvider>(context, listen: false);
+        if (clientOrdersProvider.orders.isEmpty && !clientOrdersProvider.isLoading) {
+          await clientOrdersProvider.loadAllOrders();
+        }
+      } catch (e) {
+        AppLogger.error('❌ خطأ في تحميل طلبات العملاء: $e');
+      }
+
+      AppLogger.info('✅ Admin Dashboard: Data initialization completed');
     } catch (e) {
-      AppLogger.error('❌ خطأ في تحميل طلبات العملاء: $e');
+      AppLogger.error('❌ Admin Dashboard: Error during data initialization: $e');
     }
   }
 
@@ -346,13 +392,35 @@ class _AdminDashboardState extends State<AdminDashboard>
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.of(context)
-                                .pushNamed(AppRoutes.approvalRequests);
-                          },
-                          icon: const Icon(Icons.arrow_forward),
-                          label: const Text('عرض الكل'),
+                        Row(
+                          children: [
+                            IconButton(
+                              onPressed: () async {
+                                // Refresh pending users data
+                                final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+                                AppLogger.info('🔄 Refreshing pending users data...');
+                                await supabaseProvider.fetchAllUsers();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('تم تحديث البيانات'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.refresh),
+                              tooltip: 'تحديث البيانات',
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                Navigator.of(context)
+                                    .pushNamed(AppRoutes.approvalRequests);
+                              },
+                              icon: const Icon(Icons.arrow_forward),
+                              label: const Text('عرض الكل'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -823,13 +891,29 @@ class _AdminDashboardState extends State<AdminDashboard>
 
   Widget _buildPendingApprovals(SupabaseProvider supabaseProvider) {
     final pendingUsers = supabaseProvider.users;
+    final allUsersCount = supabaseProvider.allUsers.length;
     final theme = Theme.of(context);
+
+    // Debug logging
+    AppLogger.info('🔍 Admin Dashboard: Building pending approvals widget');
+    AppLogger.info('📊 Total users: $allUsersCount, Pending users: ${pendingUsers.length}');
+    AppLogger.info('🔄 Loading state: ${supabaseProvider.isLoading}');
 
     if (supabaseProvider.isLoading && pendingUsers.isEmpty) {
       return Container(
         height: 180,
         alignment: Alignment.center,
-        child: const CircularProgressIndicator(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'جاري تحميل طلبات التسجيل...',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
       );
     }
 
