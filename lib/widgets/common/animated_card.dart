@@ -5,26 +5,6 @@ import 'package:smartbiztracker_new/utils/style_system.dart';
 /// بطاقة متحركة احترافية
 /// توفر هذه البطاقة تأثيرات حركية متعددة وخيارات تخصيص متقدمة
 class AnimatedCard extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
-  final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry margin;
-  final BorderRadius? borderRadius;
-  final Color? backgroundColor;
-  final List<BoxShadow>? boxShadow;
-  final double? width;
-  final double? height;
-  final bool enablePressAnimation;
-  final bool enableHoverAnimation;
-  final bool enableShadowAnimation;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final Gradient? gradient;
-  final Border? border;
-  final DecorationImage? image;
-  final Color? splashColor;
-  final Color? highlightColor;
 
   const AnimatedCard({
     super.key,
@@ -49,6 +29,26 @@ class AnimatedCard extends StatefulWidget {
     this.splashColor,
     this.highlightColor,
   });
+  final Widget child;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+  final BorderRadius? borderRadius;
+  final Color? backgroundColor;
+  final List<BoxShadow>? boxShadow;
+  final double? width;
+  final double? height;
+  final bool enablePressAnimation;
+  final bool enableHoverAnimation;
+  final bool enableShadowAnimation;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final Gradient? gradient;
+  final Border? border;
+  final DecorationImage? image;
+  final Color? splashColor;
+  final Color? highlightColor;
 
   @override
   State<AnimatedCard> createState() => _AnimatedCardState();
@@ -165,17 +165,6 @@ class _AnimatedCardState extends State<AnimatedCard> with SingleTickerProviderSt
 
 /// بطاقة متحركة مع تأثير تدرج لوني
 class GradientAnimatedCard extends StatelessWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-  final List<Color> gradientColors;
-  final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry margin;
-  final BorderRadius? borderRadius;
-  final List<BoxShadow>? boxShadow;
-  final double? width;
-  final double? height;
-  final AlignmentGeometry begin;
-  final AlignmentGeometry end;
 
   const GradientAnimatedCard({
     super.key,
@@ -191,6 +180,17 @@ class GradientAnimatedCard extends StatelessWidget {
     this.begin = Alignment.topLeft,
     this.end = Alignment.bottomRight,
   });
+  final Widget child;
+  final VoidCallback? onTap;
+  final List<Color> gradientColors;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+  final BorderRadius? borderRadius;
+  final List<BoxShadow>? boxShadow;
+  final double? width;
+  final double? height;
+  final AlignmentGeometry begin;
+  final AlignmentGeometry end;
 
   @override
   Widget build(BuildContext context) {
@@ -214,18 +214,6 @@ class GradientAnimatedCard extends StatelessWidget {
 
 /// بطاقة متحركة مع تأثير نبض
 class PulsingAnimatedCard extends StatelessWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-  final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry margin;
-  final BorderRadius? borderRadius;
-  final Color? backgroundColor;
-  final List<BoxShadow>? boxShadow;
-  final double? width;
-  final double? height;
-  final Duration pulseDuration;
-  final double minScale;
-  final double maxScale;
 
   const PulsingAnimatedCard({
     super.key,
@@ -242,6 +230,18 @@ class PulsingAnimatedCard extends StatelessWidget {
     this.minScale = 1.0,
     this.maxScale = 1.03,
   });
+  final Widget child;
+  final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+  final BorderRadius? borderRadius;
+  final Color? backgroundColor;
+  final List<BoxShadow>? boxShadow;
+  final double? width;
+  final double? height;
+  final Duration pulseDuration;
+  final double minScale;
+  final double maxScale;
 
   @override
   Widget build(BuildContext context) {
@@ -267,19 +267,6 @@ class PulsingAnimatedCard extends StatelessWidget {
 
 /// بطاقة متحركة مع تأثير ظهور
 class FadeInAnimatedCard extends StatelessWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-  final EdgeInsetsGeometry padding;
-  final EdgeInsetsGeometry margin;
-  final BorderRadius? borderRadius;
-  final Color? backgroundColor;
-  final List<BoxShadow>? boxShadow;
-  final double? width;
-  final double? height;
-  final Duration duration;
-  final Duration delay;
-  final Curve curve;
-  final Offset offset;
 
   const FadeInAnimatedCard({
     super.key,
@@ -297,6 +284,19 @@ class FadeInAnimatedCard extends StatelessWidget {
     this.curve = Curves.easeOut,
     this.offset = const Offset(0, 50),
   });
+  final Widget child;
+  final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+  final BorderRadius? borderRadius;
+  final Color? backgroundColor;
+  final List<BoxShadow>? boxShadow;
+  final double? width;
+  final double? height;
+  final Duration duration;
+  final Duration delay;
+  final Curve curve;
+  final Offset offset;
 
   @override
   Widget build(BuildContext context) {

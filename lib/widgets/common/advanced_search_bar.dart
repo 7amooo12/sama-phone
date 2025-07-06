@@ -1,24 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:async';
-import 'package:flutter/services.dart';
 
 class AdvancedSearchBar extends StatefulWidget {
-  final TextEditingController controller;
-  final Function(String) onChanged;
-  final Function(String) onSubmitted;
-  final String hintText;
-  final bool autofocus;
-  final Color accentColor;
-  final BorderRadius? borderRadius;
-  final EdgeInsetsGeometry? margin;
-  final bool showClearButton;
-  final Widget? trailing;
-  final bool showSearchAnimation;
-  final Duration debounceTime;
 
   const AdvancedSearchBar({
-    Key? key,
+    super.key,
     required this.controller,
     required this.onChanged,
     required this.onSubmitted,
@@ -31,7 +18,19 @@ class AdvancedSearchBar extends StatefulWidget {
     this.trailing,
     this.showSearchAnimation = true,
     this.debounceTime = const Duration(milliseconds: 300),
-  }) : super(key: key);
+  });
+  final TextEditingController controller;
+  final Function(String) onChanged;
+  final Function(String) onSubmitted;
+  final String hintText;
+  final bool autofocus;
+  final Color accentColor;
+  final BorderRadius? borderRadius;
+  final EdgeInsetsGeometry? margin;
+  final bool showClearButton;
+  final Widget? trailing;
+  final bool showSearchAnimation;
+  final Duration debounceTime;
 
   @override
   State<AdvancedSearchBar> createState() => _AdvancedSearchBarState();

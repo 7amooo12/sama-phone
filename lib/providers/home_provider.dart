@@ -8,7 +8,6 @@ class HomeProvider extends ChangeNotifier {
   final List<String> _visitedTabs = ['/'];
   bool _isLoading = false;
   String _error = '';
-  final AppLogger _logger = AppLogger();
   bool _shouldRebuildScreen = false;
 
   // Getters
@@ -32,7 +31,7 @@ class HomeProvider extends ChangeNotifier {
           _visitedTabs.removeAt(0);
         }
       }
-      
+
       // Only rebuild the necessary parts
       _shouldRebuildScreen = false;
       notifyListeners();
@@ -90,10 +89,10 @@ class HomeProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('last_tab_index', _currentIndex);
       await prefs.setString('last_tab_route', _visitedTabs.last);
-      _logger.i('Last tab saved: $_currentIndex, ${_visitedTabs.last}');
+      AppLogger.info('Last tab saved: $_currentIndex, ${_visitedTabs.last}');
     } catch (e) {
       _setError('فشل في حفظ آخر تبويب: $e');
-      _logger.e('Error saving last tab: $e');
+      AppLogger.error('Error saving last tab: $e');
     }
   }
 
@@ -110,12 +109,12 @@ class HomeProvider extends ChangeNotifier {
         if (!_visitedTabs.contains(lastRoute)) {
           _visitedTabs.add(lastRoute);
         }
-        _logger.i('Last tab restored: $lastIndex, $lastRoute');
+        AppLogger.info('Last tab restored: $lastIndex, $lastRoute');
       }
       _setLoading(false);
     } catch (e) {
       _setError('فشل في استعادة آخر تبويب: $e');
-      _logger.e('Error restoring last tab: $e');
+      AppLogger.error('Error restoring last tab: $e');
     }
   }
 

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/utils/app_localizations.dart';
 
 class AppErrorWidget extends StatelessWidget {
-  final String? message;
-  final Function? onRetry;
 
   const AppErrorWidget({
-    Key? key,
+    super.key,
     this.message,
     this.onRetry,
-  }) : super(key: key);
+  });
+  final String? message;
+  final Function? onRetry;
 
   @override
   Widget build(BuildContext context) {

@@ -8,7 +8,8 @@ enum UserRole {
   worker,
   manager,
   user,
-  pending;
+  pending,
+  warehouseManager;
 
   String get name {
     switch (this) {
@@ -32,6 +33,8 @@ enum UserRole {
         return 'User';
       case UserRole.pending:
         return 'Pending';
+      case UserRole.warehouseManager:
+        return 'Warehouse Manager';
     }
   }
 
@@ -47,6 +50,7 @@ enum UserRole {
       case UserRole.owner:
       case UserRole.user:
       case UserRole.employee:
+      case UserRole.warehouseManager:
         return true;
       case UserRole.guest:
       case UserRole.pending:
@@ -76,14 +80,26 @@ enum UserRole {
         return 'زائر';
       case UserRole.pending:
         return 'قيد الانتظار';
+      case UserRole.warehouseManager:
+        return 'مدير المخزن';
     }
   }
 
   static UserRole fromString(String value) {
-    return UserRole.values.firstWhere(
+    final result = UserRole.values.firstWhere(
       (role) => role.toString().split('.').last.toLowerCase() == value.toLowerCase(),
-      orElse: () => UserRole.guest,
+      orElse: () {
+        print('🔒 SECURITY ALERT: Unknown role "$value" -> defaulting to guest');
+        return UserRole.guest;
+      },
     );
+
+    // Log only critical conversions
+    if (value == 'warehouseManager' || value == 'admin') {
+      print('🔒 CRITICAL ROLE: "$value" -> $result');
+    }
+
+    return result;
   }
 
   String toJson() => value;
@@ -108,15 +124,31 @@ extension UserRoleExtension on UserRole {
         return 'مالك';
       case UserRole.user:
         return 'مستخدم';
+      case UserRole.employee:
+        return 'موظف';
+      case UserRole.guest:
+        return 'زائر';
       case UserRole.pending:
         return 'قيد الانتظار';
+      case UserRole.warehouseManager:
+        return 'مدير المخزن';
     }
   }
 
   static UserRole fromString(String value) {
-    return UserRole.values.firstWhere(
-      (role) => role.name.toLowerCase() == value.toLowerCase(),
-      orElse: () => UserRole.pending,
+    final result = UserRole.values.firstWhere(
+      (role) => role.toString().split('.').last.toLowerCase() == value.toLowerCase(),
+      orElse: () {
+        print('🔒 Extension: Unknown role "$value" -> defaulting to guest');
+        return UserRole.guest;
+      },
     );
+
+    // Log only critical conversions
+    if (value == 'warehouseManager' || value == 'admin') {
+      print('🔒 Extension CRITICAL: "$value" -> $result');
+    }
+
+    return result;
   }
 } 

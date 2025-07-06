@@ -4,22 +4,22 @@ import 'package:shimmer/shimmer.dart';
 /// ويدجت لعرض تأثير التحميل اللامع (Shimmer)
 /// يستخدم هذا الويدجت لإظهار تأثير جمالي متحرك أثناء تحميل البيانات
 class ShimmerLoading extends StatelessWidget {
-  final double? height;
-  final double? width;
-  final Color baseColor;
-  final Color highlightColor;
-  final double borderRadius;
-  final BoxShape shape;
 
   const ShimmerLoading({
-    Key? key,
+    super.key,
     this.height,
     this.width,
     this.baseColor = const Color(0xFFE0E0E0),
     this.highlightColor = const Color(0xFFF5F5F5),
     this.borderRadius = 8.0,
     this.shape = BoxShape.rectangle,
-  }) : super(key: key);
+  });
+  final double? height;
+  final double? width;
+  final Color baseColor;
+  final Color highlightColor;
+  final double borderRadius;
+  final BoxShape shape;
 
   @override
   Widget build(BuildContext context) {

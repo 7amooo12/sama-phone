@@ -4,13 +4,13 @@ import '../models/task_model.dart';
 import '../utils/app_logger.dart';
 
 class TaskProvider with ChangeNotifier {
+
+  TaskProvider({required DatabaseService databaseService}) 
+    : _databaseService = databaseService;
   final DatabaseService _databaseService;
   List<TaskModel> _tasks = [];
   bool _isLoading = false;
   String? _error;
-
-  TaskProvider({required DatabaseService databaseService}) 
-    : _databaseService = databaseService;
 
   List<TaskModel> get tasks => _tasks;
   bool get isLoading => _isLoading;

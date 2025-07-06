@@ -83,6 +83,25 @@ class ProductivityModel {
     };
   }
 
+  // Add toJson method for compatibility
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'workerId': workerId,
+      'workerName': workerName,
+      'productId': productId,
+      'productName': productName,
+      'producedQuantity': producedQuantity,
+      'defectiveQuantity': defectiveQuantity,
+      'efficiency': efficiency,
+      'date': date.toIso8601String(),
+      'shift': shift,
+      'workingHours': workingHours,
+      'metrics': metrics,
+      'notes': notes,
+    };
+  }
+
   ProductivityModel copyWith({
     String? id,
     String? workerId,

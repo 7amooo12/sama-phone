@@ -1,25 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/utils/animation_system.dart';
-import 'package:smartbiztracker_new/utils/style_system.dart';
 
 /// قائمة متحركة احترافية
 /// توفر هذه القائمة تأثيرات حركية متعددة وخيارات تخصيص متقدمة
 class AnimatedListView extends StatelessWidget {
-  final List<Widget> children;
-  final ScrollController? controller;
-  final EdgeInsetsGeometry padding;
-  final bool shrinkWrap;
-  final ScrollPhysics? physics;
-  final bool? primary;
-  final Axis scrollDirection;
-  final bool reverse;
-  final AnimationType animationType;
-  final Duration duration;
-  final Duration delay;
-  final Curve curve;
-  final double offset;
-  final bool staggered;
-  final int staggeredDelayFactor;
 
   const AnimatedListView({
     super.key,
@@ -39,6 +23,21 @@ class AnimatedListView extends StatelessWidget {
     this.staggered = true,
     this.staggeredDelayFactor = 50,
   });
+  final List<Widget> children;
+  final ScrollController? controller;
+  final EdgeInsetsGeometry padding;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  final bool? primary;
+  final Axis scrollDirection;
+  final bool reverse;
+  final AnimationType animationType;
+  final Duration duration;
+  final Duration delay;
+  final Curve curve;
+  final double offset;
+  final bool staggered;
+  final int staggeredDelayFactor;
 
   @override
   Widget build(BuildContext context) {
@@ -127,25 +126,6 @@ class AnimatedListView extends StatelessWidget {
 
 /// قائمة شبكية متحركة احترافية
 class AnimatedGridView extends StatelessWidget {
-  final List<Widget> children;
-  final ScrollController? controller;
-  final EdgeInsetsGeometry padding;
-  final bool shrinkWrap;
-  final ScrollPhysics? physics;
-  final bool? primary;
-  final Axis scrollDirection;
-  final bool reverse;
-  final AnimationType animationType;
-  final Duration duration;
-  final Duration delay;
-  final Curve curve;
-  final double offset;
-  final bool staggered;
-  final int staggeredDelayFactor;
-  final int crossAxisCount;
-  final double mainAxisSpacing;
-  final double crossAxisSpacing;
-  final double childAspectRatio;
 
   const AnimatedGridView({
     super.key,
@@ -169,6 +149,25 @@ class AnimatedGridView extends StatelessWidget {
     this.crossAxisSpacing = 16,
     this.childAspectRatio = 1.0,
   });
+  final List<Widget> children;
+  final ScrollController? controller;
+  final EdgeInsetsGeometry padding;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  final bool? primary;
+  final Axis scrollDirection;
+  final bool reverse;
+  final AnimationType animationType;
+  final Duration duration;
+  final Duration delay;
+  final Curve curve;
+  final double offset;
+  final bool staggered;
+  final int staggeredDelayFactor;
+  final int crossAxisCount;
+  final double mainAxisSpacing;
+  final double crossAxisSpacing;
+  final double childAspectRatio;
 
   @override
   Widget build(BuildContext context) {
@@ -274,10 +273,6 @@ enum AnimationType {
 
 /// ويدجت للرسوم المتحركة بتأثير التكبير
 class _ScaleAnimation extends StatefulWidget {
-  final Widget child;
-  final Duration delay;
-  final Duration duration;
-  final Curve curve;
 
   const _ScaleAnimation({
     required this.child,
@@ -285,6 +280,10 @@ class _ScaleAnimation extends StatefulWidget {
     this.duration = const Duration(milliseconds: 500),
     this.curve = Curves.easeOut,
   });
+  final Widget child;
+  final Duration delay;
+  final Duration duration;
+  final Curve curve;
 
   @override
   State<_ScaleAnimation> createState() => _ScaleAnimationState();

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:smartbiztracker_new/providers/auth_provider.dart';
+import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:smartbiztracker_new/config/routes.dart';
-import 'package:smartbiztracker_new/widgets/common/custom_app_bar.dart';
 import 'package:smartbiztracker_new/widgets/admin/product_management_widget.dart';
+import 'package:smartbiztracker_new/utils/global_ui_fixes.dart';
 
 class AdminProductsScreen extends StatefulWidget {
-  const AdminProductsScreen({Key? key}) : super(key: key);
+  const AdminProductsScreen({super.key});
 
   @override
   State<AdminProductsScreen> createState() => _AdminProductsScreenState();
@@ -20,72 +20,116 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
     final TextEditingController quantityController = TextEditingController();
     final TextEditingController categoryController = TextEditingController();
     final TextEditingController costController = TextEditingController();
-    
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('إضافة منتج جديد'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'اسم المنتج',
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: GlobalUIFixes.fixKeyboardOverflow(
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'إضافة منتج جديد',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  labelText: 'سعر البيع',
+                const SizedBox(height: 24),
+
+                // Form fields with proper spacing
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'اسم المنتج',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.inventory),
+                  ),
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: costController,
-                decoration: const InputDecoration(
-                  labelText: 'سعر الشراء (التكلفة)',
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: priceController,
+                  decoration: const InputDecoration(
+                    labelText: 'سعر البيع',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.attach_money),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: quantityController,
-                decoration: const InputDecoration(
-                  labelText: 'الكمية',
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: costController,
+                  decoration: const InputDecoration(
+                    labelText: 'سعر الشراء (التكلفة)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.money_off),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: categoryController,
-                decoration: const InputDecoration(
-                  labelText: 'التصنيف',
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: quantityController,
+                  decoration: const InputDecoration(
+                    labelText: 'الكمية',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.numbers),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: categoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'التصنيف',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.category),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('إلغاء'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Implementation to add new product will go here
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('إضافة'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Implementation to add new product will go here
-              Navigator.of(context).pop();
-            },
-            child: const Text('إضافة'),
-          ),
-        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userModel = authProvider.user;
+    final supabaseProvider = Provider.of<SupabaseProvider>(context);
+    final userModel = supabaseProvider.user;
 
     if (userModel == null) {
       // Handle case where user is not logged in
@@ -103,38 +147,27 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
       // Support RTL for Arabic
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: CustomAppBar(
-            title: 'إدارة المنتجات',
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.of(context).pop(),
+        appBar: GlobalUIFixes.fixAppBarIssues(
+          title: 'إدارة المنتجات',
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                // Refresh is handled inside the widget
+              },
+              tooltip: 'تحديث المنتجات',
             ),
-            hideStatusBarHeader: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  // Refresh is handled inside the widget
-                },
-                tooltip: 'تحديث المنتجات',
-              ),
-            ],
-          ),
+          ],
         ),
         body: ProductManagementWidget(
           onAddProduct: _showAddProductDialog,
           showHeader: true,
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            // Show dialog to add new product
-            _showAddProductDialog();
-          },
+        floatingActionButton: GlobalUIFixes.fixFABIssues(
+          onPressed: _showAddProductDialog,
           child: const Icon(Icons.add),
         ),
       ),
     );
   }
-} 
+}

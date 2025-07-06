@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:smartbiztracker_new/providers/flask_providers.dart';
 
 class FlaskLoginScreen extends StatefulWidget {
-  const FlaskLoginScreen({Key? key}) : super(key: key);
+  const FlaskLoginScreen({super.key});
 
   @override
   _FlaskLoginScreenState createState() => _FlaskLoginScreenState();
@@ -105,27 +105,47 @@ class _FlaskLoginScreenState extends State<FlaskLoginScreen> {
                     
                     // Email Field (only for registration)
                     if (_isRegistering) ...[
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        textDirection: TextDirection.ltr,
-                        decoration: const InputDecoration(
-                          labelText: 'البريد الإلكتروني',
-                          prefixIcon: Icon(Icons.email),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'الرجاء إدخال البريد الإلكتروني';
-                          }
-                          final bool emailValid = RegExp(
-                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-                              .hasMatch(value);
-                          if (!emailValid) {
-                            return 'الرجاء إدخال بريد إلكتروني صحيح';
-                          }
-                          return null;
-                        },
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textDirection: TextDirection.ltr,
+                            decoration: const InputDecoration(
+                              labelText: 'البريد الإلكتروني',
+                              hintText: 'example@sama.com',
+                              prefixIcon: Icon(Icons.email),
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'الرجاء إدخال البريد الإلكتروني';
+                              }
+                              final bool emailValid = RegExp(
+                                  r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+                                  .hasMatch(value);
+                              if (!emailValid) {
+                                return 'الرجاء إدخال بريد إلكتروني صحيح';
+                              }
+                              if (!value.toLowerCase().endsWith('@sama.com')) {
+                                return 'يجب أن ينتهي البريد الإلكتروني بـ @sama.com';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Text(
+                              'يجب أن ينتهي البريد الإلكتروني بـ @sama.com',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                     ],

@@ -10,6 +10,8 @@ import '../services/api_service.dart';
 import '../utils/app_logger.dart';
 
 class OrderProvider with ChangeNotifier {
+
+  OrderProvider(this._databaseService);
   final DatabaseService _databaseService;
   final NotificationService _notificationService = NotificationService();
   final ApiService _apiService = ApiService();
@@ -21,8 +23,6 @@ class OrderProvider with ChangeNotifier {
   OrderModel? _selectedOrder;
   bool _isLoading = false;
   String? _error;
-
-  OrderProvider(this._databaseService);
 
   List<OrderModel> get orders => _orders;
   List<OrderModel> get clientOrders => _clientOrders;
@@ -263,11 +263,9 @@ class OrderProvider with ChangeNotifier {
 
       // Send notification to client
       await _notificationService.sendOrderNotification(
-        userId: clientId,
         orderId: orderId,
-        orderNumber: orderId.substring(0, 6),
+        customerName: clientId,
         status: status,
-        message: message,
       );
 
       // Update order in lists
@@ -299,11 +297,9 @@ class OrderProvider with ChangeNotifier {
 
       // Send notification to client
       await _notificationService.sendOrderNotification(
-        userId: clientId,
         orderId: orderId,
-        orderNumber: orderId.substring(0, 6),
-        status: OrderStatus.shipped,
-        message: 'تم شحن طلبك ويمكنك تتبعه برقم: $trackingNumber',
+        customerName: clientId,
+        status: 'shipped',
       );
 
       // Update order in lists
@@ -442,21 +438,21 @@ class OrderProvider with ChangeNotifier {
     String? paymentMethod,
   }) async {
     setLoading(true);
-    
+
     try {
       // Prepare order items
-      List<OrderItem> orderItems = [];
+      final List<OrderItem> orderItems = [];
       double totalAmount = 0;
-      
+
       for (final product in products) {
         final quantity = quantities[product.id] ?? 0;
         if (quantity <= 0) continue;
-        
+
         final subtotal = product.price * quantity;
         totalAmount += subtotal;
-        
+
         orderItems.add(OrderItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + '_${product.id}',
+          id: '${DateTime.now().millisecondsSinceEpoch}_${product.id}',
           productId: product.id.toString(),
           productName: product.name,
           price: product.price,
@@ -465,17 +461,17 @@ class OrderProvider with ChangeNotifier {
           imageUrl: product.imageUrl,
         ));
       }
-      
+
       if (orderItems.isEmpty) {
         setError('لا يمكن إنشاء طلب بدون منتجات');
         setLoading(false);
         return null;
       }
-      
+
       // Create order object
       final orderNumber = 'ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(0, 10)}';
       final orderId = DateTime.now().millisecondsSinceEpoch.toString();
-      
+
       final order = OrderModel(
         id: orderId,
         orderNumber: orderNumber,
@@ -489,10 +485,10 @@ class OrderProvider with ChangeNotifier {
         address: address,
         paymentMethod: paymentMethod,
       );
-      
+
       // Send order to API
       final success = await _apiService.submitOrder(order);
-      
+
       if (success) {
         _orders.add(order);
         notifyListeners();
@@ -503,7 +499,7 @@ class OrderProvider with ChangeNotifier {
         setLoading(false);
         return null;
       }
-      
+
     } catch (e) {
       setError('حدث خطأ: ${e.toString()}');
       setLoading(false);
@@ -521,15 +517,15 @@ class OrderProvider with ChangeNotifier {
     String? address,
   }) async {
     setLoading(true);
-    
+
     try {
       // Prepare API request
-      final url = 'https://samastock.pythonanywhere.com/flutter/api/checkout';
-      final headers = {
+      const url = 'https://samastock.pythonanywhere.com/flutter/api/checkout';
+      const headers = {
         'Content-Type': 'application/json',
         'x-api-key': 'lux2025FlutterAccess',
       };
-      
+
       final body = jsonEncode({
         'customer_name': customerName,
         'customer_phone': customerPhone,
@@ -538,32 +534,32 @@ class OrderProvider with ChangeNotifier {
         'items': items,
         'address': address ?? '',
       });
-      
+
       // Make API request
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
         body: body,
       );
-      
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        
+
         if (responseData['success'] == true) {
           // Create order model from response
           final invoiceId = responseData['invoice_id'];
           final orderNumber = 'SMO-$invoiceId';
-          
+
           // Get order details
-          final orderDetails = await getSamaOrderDetails(invoiceId);
-          
+          final orderDetails = await getSamaOrderDetails((invoiceId as num?)?.toInt() ?? 0);
+
           if (orderDetails != null) {
             _orders.add(orderDetails);
             notifyListeners();
             setLoading(false);
             return orderDetails;
           }
-          
+
           // If we can't get order details, create a simplified order object
           final order = OrderModel(
             id: invoiceId.toString(),
@@ -571,19 +567,19 @@ class OrderProvider with ChangeNotifier {
             customerName: customerName,
             customerPhone: customerPhone,
             status: OrderStatus.pending,
-            totalAmount: responseData['total'] ?? 0,
+            totalAmount: (responseData['total'] as num?)?.toDouble() ?? 0.0,
             items: _createOrderItemsFromRequestItems(items),
             createdAt: DateTime.now(),
             notes: notes,
             address: address,
           );
-          
+
           _orders.add(order);
           notifyListeners();
           setLoading(false);
           return order;
         } else {
-          setError(responseData['message'] ?? 'فشل في إنشاء الطلب');
+          setError(responseData['message']?.toString() ?? 'فشل في إنشاء الطلب');
           setLoading(false);
           return null;
         }
@@ -603,20 +599,21 @@ class OrderProvider with ChangeNotifier {
   // Helper method to create order items from request items
   List<OrderItem> _createOrderItemsFromRequestItems(List<Map<String, dynamic>> items) {
     return items.map((item) {
-      final productId = item['product_id'].toString();
-      final productName = item['product_name'] ?? 'منتج';
-      final price = (item['price'] ?? 0).toDouble();
-      final quantity = item['quantity'] ?? 1;
+      final productId = item['product_id']?.toString() ?? '';
+      final productName = item['product_name']?.toString() ?? 'منتج';
+      final price = (item['price'] as num?)?.toDouble() ?? 0.0;
+      final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
       final subtotal = price * quantity;
-      
+
       return OrderItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString() + '_$productId',
+        id: '${DateTime.now().millisecondsSinceEpoch}_$productId',
         productId: productId,
         productName: productName,
+        description: item['description']?.toString(),
         price: price,
         quantity: quantity,
         subtotal: subtotal,
-        imageUrl: item['image_url'],
+        imageUrl: item['image_url']?.toString(),
       );
     }).toList();
   }
@@ -629,126 +626,126 @@ class OrderProvider with ChangeNotifier {
         'Content-Type': 'application/json',
         'x-api-key': 'lux2025FlutterAccess',
       };
-      
+
       final response = await http.get(
         Uri.parse(url),
         headers: headers,
       );
-      
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        
+
         if (responseData['success'] == true) {
           final orderData = responseData['order'];
-          
+
           // Parse items
-          List<OrderItem> orderItems = [];
+          final List<OrderItem> orderItems = [];
           if (orderData['items'] != null) {
-            for (final item in orderData['items']) {
+            for (final item in (orderData['items'] as List<dynamic>? ?? [])) {
               orderItems.add(OrderItem(
-                id: item['id'].toString(),
-                productId: item['product_id'].toString(),
-                productName: item['product_name'] ?? 'منتج',
-                price: (item['price'] ?? 0).toDouble(),
-                quantity: item['quantity'] ?? 1,
-                subtotal: (item['total'] ?? 0).toDouble(),
-                imageUrl: item['image_url'],
+                id: item['id']?.toString() ?? '',
+                productId: item['product_id']?.toString() ?? '',
+                productName: item['product_name']?.toString() ?? 'منتج',
+                price: (item['price'] as num?)?.toDouble() ?? 0.0,
+                quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+                subtotal: (item['total'] as num?)?.toDouble() ?? 0.0,
+                imageUrl: item['image_url']?.toString(),
               ));
             }
           }
-          
+
           // Create order model
           return OrderModel(
-            id: orderData['id'].toString(),
+            id: orderData['id']?.toString() ?? '',
             orderNumber: 'SMO-${orderData['id']}',
-            customerName: orderData['customer_name'] ?? '',
-            customerPhone: orderData['customer_phone'] ?? '',
-            status: orderData['status'] ?? OrderStatus.pending,
-            totalAmount: (orderData['final_amount'] ?? 0).toDouble(),
+            customerName: orderData['customer_name']?.toString() ?? '',
+            customerPhone: orderData['customer_phone']?.toString() ?? '',
+            status: _parseOrderStatusToString(orderData['status'] as String?),
+            totalAmount: (orderData['final_amount'] as num?)?.toDouble() ?? 0.0,
             items: orderItems,
-            createdAt: orderData['created_at'] != null 
-                ? DateTime.parse(orderData['created_at']) 
+            createdAt: orderData['created_at'] != null
+                ? DateTime.parse(orderData['created_at'].toString())
                 : DateTime.now(),
-            notes: orderData['notes'],
+            notes: orderData['notes']?.toString(),
           );
         }
       }
     } catch (e) {
       AppLogger.error('Error fetching order details', e);
     }
-    
+
     return null;
   }
 
   // Get user orders
   Future<List<OrderModel>> getUserOrders(String userId) async {
     setLoading(true);
-    
+
     try {
-      final url = 'https://samastock.pythonanywhere.com/flutter/api/orders';
-      final headers = {
+      const url = 'https://samastock.pythonanywhere.com/flutter/api/orders';
+      const headers = {
         'Content-Type': 'application/json',
         'x-api-key': 'lux2025FlutterAccess',
       };
-      
+
       final response = await http.get(
         Uri.parse(url),
         headers: headers,
       );
-      
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        
+
         if (responseData['success'] == true) {
-          List<OrderModel> userOrders = [];
-          
-          for (final orderData in responseData['orders']) {
+          final List<OrderModel> userOrders = [];
+
+          for (final orderData in (responseData['orders'] as List<dynamic>? ?? [])) {
             // Parse items
-            List<OrderItem> orderItems = [];
+            final List<OrderItem> orderItems = [];
             if (orderData['items'] != null) {
-              for (final item in orderData['items']) {
+              for (final item in (orderData['items'] as List<dynamic>? ?? [])) {
                 orderItems.add(OrderItem(
-                  id: item['id'].toString(),
-                  productId: item['product_id'].toString(),
-                  productName: item['product_name'] ?? 'منتج',
-                  price: (item['price'] ?? 0).toDouble(),
-                  quantity: item['quantity'] ?? 1,
-                  subtotal: (item['total'] ?? 0).toDouble(),
-                  imageUrl: item['image_url'],
+                  id: item['id']?.toString() ?? '',
+                  productId: item['product_id']?.toString() ?? '',
+                  productName: item['product_name']?.toString() ?? 'منتج',
+                  price: (item['price'] as num?)?.toDouble() ?? 0.0,
+                  quantity: (item['quantity'] as num?)?.toInt() ?? 1,
+                  subtotal: (item['total'] as num?)?.toDouble() ?? 0.0,
+                  imageUrl: item['image_url']?.toString(),
                 ));
               }
             }
-            
+
             // Create order model
             final order = OrderModel(
-              id: orderData['id'].toString(),
+              id: orderData['id']?.toString() ?? '',
               orderNumber: 'SMO-${orderData['id']}',
-              customerName: orderData['customer_name'] ?? '',
-              customerPhone: orderData['customer_phone'] ?? '',
-              status: orderData['status'] ?? OrderStatus.pending,
-              totalAmount: (orderData['final_amount'] ?? 0).toDouble(),
+              customerName: orderData['customer_name']?.toString() ?? '',
+              customerPhone: orderData['customer_phone']?.toString() ?? '',
+              status: _parseOrderStatusToString(orderData['status'] as String?),
+              totalAmount: (orderData['final_amount'] as num?)?.toDouble() ?? 0.0,
               items: orderItems,
-              createdAt: orderData['created_at'] != null 
-                  ? DateTime.parse(orderData['created_at']) 
+              createdAt: orderData['created_at'] != null
+                  ? DateTime.parse(orderData['created_at'].toString())
                   : DateTime.now(),
-              notes: orderData['notes'],
+              notes: orderData['notes']?.toString(),
             );
-            
+
             userOrders.add(order);
           }
-          
+
           _orders = userOrders;
           notifyListeners();
           setLoading(false);
           return userOrders;
         }
       }
-      
+
       // If we reach here, something went wrong
       setError('فشل في جلب الطلبات');
       setLoading(false);
       return [];
-      
+
     } catch (e) {
       AppLogger.error('Error fetching user orders', e);
       setError('حدث خطأ: ${e.toString()}');
@@ -760,11 +757,11 @@ class OrderProvider with ChangeNotifier {
   // Cancel an order
   Future<bool> cancelOrder(String orderId) async {
     setLoading(true);
-    
+
     try {
       // Send API request to cancel order
       final success = await _apiService.cancelOrder(orderId);
-      
+
       if (success) {
         // Update local order status
         final index = _orders.indexWhere((o) => o.id == orderId);
@@ -774,7 +771,7 @@ class OrderProvider with ChangeNotifier {
             orderNumber: _orders[index].orderNumber,
             customerName: _orders[index].customerName,
             customerPhone: _orders[index].customerPhone,
-            status: OrderStatus.cancelled,
+            status: 'cancelled',
             totalAmount: _orders[index].totalAmount,
             items: _orders[index].items,
             createdAt: _orders[index].createdAt,
@@ -783,11 +780,11 @@ class OrderProvider with ChangeNotifier {
             address: _orders[index].address,
             deliveryDate: _orders[index].deliveryDate,
           );
-          
+
           _orders[index] = updatedOrder;
           notifyListeners();
         }
-        
+
         setLoading(false);
         return true;
       } else {
@@ -821,5 +818,49 @@ class OrderProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Helper method to parse order status to string
+  String _parseOrderStatusToString(String? status) {
+    if (status == null) return 'pending';
+
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'pending';
+      case 'confirmed':
+        return 'confirmed';
+      case 'processing':
+        return 'processing';
+      case 'shipped':
+        return 'shipped';
+      case 'delivered':
+        return 'delivered';
+      case 'cancelled':
+        return 'cancelled';
+      default:
+        return 'pending';
+    }
+  }
+
+  // Helper method to parse order status to string (for compatibility)
+  String _parseOrderStatusToEnum(String? status) {
+    if (status == null) return OrderStatus.pending;
+
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return OrderStatus.pending;
+      case 'confirmed':
+        return OrderStatus.confirmed;
+      case 'processing':
+        return OrderStatus.processing;
+      case 'shipped':
+        return OrderStatus.shipped;
+      case 'delivered':
+        return OrderStatus.delivered;
+      case 'cancelled':
+        return OrderStatus.cancelled;
+      default:
+        return OrderStatus.pending;
+    }
   }
 }

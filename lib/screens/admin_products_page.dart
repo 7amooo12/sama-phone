@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:smartbiztracker_new/models/flask_product_model.dart';
 import 'package:smartbiztracker_new/services/flask_api_service.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class AdminProductsPage extends StatefulWidget {
-  const AdminProductsPage({Key? key}) : super(key: key);
+  const AdminProductsPage({super.key});
 
   @override
   State<AdminProductsPage> createState() => _AdminProductsPageState();

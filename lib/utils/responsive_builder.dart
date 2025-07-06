@@ -15,10 +15,6 @@ enum OrientationType {
 
 /// Screen size information
 class ScreenSizeInfo {
-  final DeviceScreenType deviceScreenType;
-  final OrientationType orientationType;
-  final Size screenSize;
-  final Size localWidgetSize;
   
   const ScreenSizeInfo({
     required this.deviceScreenType,
@@ -26,6 +22,10 @@ class ScreenSizeInfo {
     required this.screenSize,
     required this.localWidgetSize,
   });
+  final DeviceScreenType deviceScreenType;
+  final OrientationType orientationType;
+  final Size screenSize;
+  final Size localWidgetSize;
   
   bool get isMobile => deviceScreenType == DeviceScreenType.mobile;
   bool get isTablet => deviceScreenType == DeviceScreenType.tablet;
@@ -55,12 +55,12 @@ class ScreenSizeInfo {
 
 /// A builder widget that provides screen size information
 class ResponsiveBuilder extends StatelessWidget {
-  final Widget Function(BuildContext context, ScreenSizeInfo sizeInfo) builder;
   
   const ResponsiveBuilder({
     super.key,
     required this.builder,
   });
+  final Widget Function(BuildContext context, ScreenSizeInfo sizeInfo) builder;
   
   @override
   Widget build(BuildContext context) {
@@ -94,9 +94,6 @@ class ResponsiveBuilder extends StatelessWidget {
 
 /// A widget that builds different layouts based on screen size
 class ScreenTypeLayout extends StatelessWidget {
-  final Widget? mobile;
-  final Widget? tablet;
-  final Widget? desktop;
   
   const ScreenTypeLayout({
     super.key,
@@ -104,6 +101,9 @@ class ScreenTypeLayout extends StatelessWidget {
     this.tablet,
     this.desktop,
   }) : assert(mobile != null || tablet != null || desktop != null);
+  final Widget? mobile;
+  final Widget? tablet;
+  final Widget? desktop;
   
   @override
   Widget build(BuildContext context) {
@@ -163,14 +163,14 @@ class ScreenTypeLayout extends StatelessWidget {
 
 /// A widget that builds different layouts based on orientation
 class OrientationLayout extends StatelessWidget {
-  final Widget? portrait;
-  final Widget? landscape;
   
   const OrientationLayout({
     super.key,
     this.portrait,
     this.landscape,
   }) : assert(portrait != null || landscape != null);
+  final Widget? portrait;
+  final Widget? landscape;
   
   @override
   Widget build(BuildContext context) {

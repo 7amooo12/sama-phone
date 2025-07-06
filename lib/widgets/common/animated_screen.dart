@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/utils/animation_system.dart';
-import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/widgets/common/custom_app_bar.dart';
 import 'package:smartbiztracker_new/widgets/common/main_drawer.dart';
 import 'package:smartbiztracker_new/widgets/custom_loader.dart';
@@ -8,34 +7,6 @@ import 'package:smartbiztracker_new/widgets/custom_loader.dart';
 /// شاشة متحركة احترافية
 /// توفر هذه الشاشة تأثيرات حركية متعددة وخيارات تخصيص متقدمة
 class AnimatedScreen extends StatefulWidget {
-  final Widget child;
-  final String title;
-  final List<Widget>? actions;
-  final Widget? floatingActionButton;
-  final FloatingActionButtonLocation? floatingActionButtonLocation;
-  final Widget? bottomNavigationBar;
-  final bool showAppBar;
-  final bool showDrawer;
-  final bool isLoading;
-  final Color? backgroundColor;
-  final Widget? loadingWidget;
-  final AnimationType animationType;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final bool safeArea;
-  final EdgeInsetsGeometry padding;
-  final Widget? leading;
-  final bool centerTitle;
-  final PreferredSizeWidget? bottom;
-  final double? elevation;
-  final Color? appBarBackgroundColor;
-  final Color? appBarForegroundColor;
-  final bool extendBodyBehindAppBar;
-  final bool extendBody;
-  final String? currentRoute;
-  final Widget? drawer;
-  final Widget? endDrawer;
-  final GlobalKey<ScaffoldState>? scaffoldKey;
 
   const AnimatedScreen({
     super.key,
@@ -68,6 +39,34 @@ class AnimatedScreen extends StatefulWidget {
     this.endDrawer,
     this.scaffoldKey,
   });
+  final Widget child;
+  final String title;
+  final List<Widget>? actions;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final Widget? bottomNavigationBar;
+  final bool showAppBar;
+  final bool showDrawer;
+  final bool isLoading;
+  final Color? backgroundColor;
+  final Widget? loadingWidget;
+  final AnimationType animationType;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final bool safeArea;
+  final EdgeInsetsGeometry padding;
+  final Widget? leading;
+  final bool centerTitle;
+  final PreferredSizeWidget? bottom;
+  final double? elevation;
+  final Color? appBarBackgroundColor;
+  final Color? appBarForegroundColor;
+  final bool extendBodyBehindAppBar;
+  final bool extendBody;
+  final String? currentRoute;
+  final Widget? drawer;
+  final Widget? endDrawer;
+  final GlobalKey<ScaffoldState>? scaffoldKey;
 
   @override
   State<AnimatedScreen> createState() => _AnimatedScreenState();
@@ -243,32 +242,6 @@ class _AnimatedScreenState extends State<AnimatedScreen> with SingleTickerProvid
 
 /// شاشة متحركة مع خلفية متدرجة
 class GradientAnimatedScreen extends StatelessWidget {
-  final Widget child;
-  final String title;
-  final List<Widget>? actions;
-  final Widget? floatingActionButton;
-  final FloatingActionButtonLocation? floatingActionButtonLocation;
-  final Widget? bottomNavigationBar;
-  final bool showAppBar;
-  final bool showDrawer;
-  final bool isLoading;
-  final List<Color> gradientColors;
-  final AlignmentGeometry begin;
-  final AlignmentGeometry end;
-  final Widget? loadingWidget;
-  final AnimationType animationType;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final bool safeArea;
-  final EdgeInsetsGeometry padding;
-  final Widget? leading;
-  final bool centerTitle;
-  final PreferredSizeWidget? bottom;
-  final double? elevation;
-  final Color? appBarBackgroundColor;
-  final Color? appBarForegroundColor;
-  final String? currentRoute;
-  final GlobalKey<ScaffoldState>? scaffoldKey;
 
   const GradientAnimatedScreen({
     super.key,
@@ -299,6 +272,32 @@ class GradientAnimatedScreen extends StatelessWidget {
     this.currentRoute,
     this.scaffoldKey,
   });
+  final Widget child;
+  final String title;
+  final List<Widget>? actions;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
+  final Widget? bottomNavigationBar;
+  final bool showAppBar;
+  final bool showDrawer;
+  final bool isLoading;
+  final List<Color> gradientColors;
+  final AlignmentGeometry begin;
+  final AlignmentGeometry end;
+  final Widget? loadingWidget;
+  final AnimationType animationType;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final bool safeArea;
+  final EdgeInsetsGeometry padding;
+  final Widget? leading;
+  final bool centerTitle;
+  final PreferredSizeWidget? bottom;
+  final double? elevation;
+  final Color? appBarBackgroundColor;
+  final Color? appBarForegroundColor;
+  final String? currentRoute;
+  final GlobalKey<ScaffoldState>? scaffoldKey;
 
   @override
   Widget build(BuildContext context) {

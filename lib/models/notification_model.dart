@@ -11,6 +11,8 @@ class NotificationModel {
     required this.userId,
     this.route,
     this.data,
+    this.referenceId,
+    this.referenceType,
   });
 
   factory NotificationModel.fromMap(Map<String, dynamic> map, [String? docId]) {
@@ -19,13 +21,15 @@ class NotificationModel {
       title: map['title']?.toString() ?? '',
       body: map['body']?.toString() ?? '',
       type: map['type']?.toString() ?? '',
-      isRead: map['isRead'] == true,
-      createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
-      userId: map['userId']?.toString() ?? '',
+      isRead: map['read'] == true || map['isRead'] == true,
+      createdAt: _parseDateTime(map['created_at'] ?? map['createdAt']) ?? DateTime.now(),
+      userId: map['user_id']?.toString() ?? map['userId']?.toString() ?? '',
       route: map['route']?.toString(),
       data: map['data'] is Map<String, dynamic>
           ? map['data'] as Map<String, dynamic>
           : null,
+      referenceId: map['reference_id']?.toString() ?? map['referenceId']?.toString(),
+      referenceType: map['reference_type']?.toString() ?? map['referenceType']?.toString(),
     );
   }
 
@@ -36,13 +40,15 @@ class NotificationModel {
       title: json['title']?.toString() ?? '',
       body: json['body']?.toString() ?? '',
       type: json['type']?.toString() ?? '',
-      isRead: json['isRead'] == true,
-      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now(),
-      userId: json['userId']?.toString() ?? '',
+      isRead: json['read'] == true || json['isRead'] == true,
+      createdAt: _parseDateTime(json['created_at'] ?? json['createdAt']) ?? DateTime.now(),
+      userId: json['user_id']?.toString() ?? json['userId']?.toString() ?? '',
       route: json['route']?.toString(),
       data: json['data'] is Map<String, dynamic>
           ? json['data'] as Map<String, dynamic>
           : null,
+      referenceId: json['reference_id']?.toString() ?? json['referenceId']?.toString(),
+      referenceType: json['reference_type']?.toString() ?? json['referenceType']?.toString(),
     );
   }
   final String id;
@@ -54,6 +60,8 @@ class NotificationModel {
   final String userId;
   final String? route;
   final Map<String, dynamic>? data;
+  final String? referenceId;
+  final String? referenceType;
 
   // Helper method to safely parse DateTime values
   static DateTime? _parseDateTime(dynamic value) {
@@ -78,6 +86,8 @@ class NotificationModel {
       'userId': userId,
       'route': route,
       'data': data,
+      'referenceId': referenceId,
+      'referenceType': referenceType,
     };
   }
 
@@ -93,6 +103,8 @@ class NotificationModel {
     String? userId,
     String? route,
     Map<String, dynamic>? data,
+    String? referenceId,
+    String? referenceType,
   }) {
     return NotificationModel(
       id: id ?? this.id,
@@ -104,6 +116,8 @@ class NotificationModel {
       userId: userId ?? this.userId,
       route: route ?? this.route,
       data: data ?? this.data,
+      referenceId: referenceId ?? this.referenceId,
+      referenceType: referenceType ?? this.referenceType,
     );
   }
 }

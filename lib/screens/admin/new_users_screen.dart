@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:smartbiztracker_new/models/user_model.dart';
 import 'package:smartbiztracker_new/models/user_role.dart';
 import 'package:smartbiztracker_new/providers/auth_provider.dart';
-import 'package:smartbiztracker_new/widgets/custom_button.dart';
+import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:smartbiztracker_new/widgets/custom_loader.dart';
 import 'package:smartbiztracker_new/widgets/role_dropdown.dart';
 import 'package:smartbiztracker_new/widgets/common/custom_app_bar.dart';
@@ -11,6 +10,8 @@ import 'package:smartbiztracker_new/config/routes.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:smartbiztracker_new/screens/admin/email_confirmation_management_screen.dart';
+import 'package:smartbiztracker_new/screens/admin/quick_fix_screen.dart';
 
 class NewUsersScreen extends StatefulWidget {
   const NewUsersScreen({super.key});
@@ -40,10 +41,7 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
   Future<void> _approveUser(String userId) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    await authProvider.approveUserAndSetRole(
-      userId: userId,
-      roleStr: _selectedRole,
-    );
+    await authProvider.approveUserAndSetRole(userId, _selectedRole);
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -58,7 +56,7 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
   // Reject user
   Future<void> _rejectUser(String userId) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -77,11 +75,11 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
         ],
       ),
     );
-    
+
     if (confirmed != true) return;
-    
+
     await authProvider.rejectUser(userId);
-    
+
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -143,6 +141,32 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
             icon: const Icon(Icons.menu),
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.build_circle),
+              tooltip: 'أدوات الإصلاح السريع',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const QuickFixScreen(),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.email_outlined),
+              tooltip: 'إدارة تأكيد البريد الإلكتروني',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EmailConfirmationManagementScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
           hideStatusBarHeader: true,
         ),
       ),
@@ -174,6 +198,16 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
                         'لا يوجد مستخدمين بانتظار الموافقة',
                         style: Theme.of(context).textTheme.titleLarge,
                         textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () => _showCreateProfileDialog(),
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('إنشاء profile لمستخدم موجود'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
                       ),
                     ],
                   ),
@@ -259,7 +293,7 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
                                       },
                                     ),
                                     const SizedBox(height: 16),
-                                    
+
                                     // الموافقة / الرفض buttons
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -305,6 +339,123 @@ class _NewUsersScreenState extends State<NewUsersScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // إظهار نافذة إنشاء profile للمستخدم الموجود
+  void _showCreateProfileDialog() {
+    final TextEditingController userIdController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
+    String selectedRole = 'client';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إنشاء Profile لمستخدم موجود'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'للمستخدمين الموجودين في Supabase Dashboard بدون profile',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: userIdController,
+                decoration: const InputDecoration(
+                  labelText: 'User ID',
+                  hintText: '4d798c1b-ce34-4a4a-b876-cb63c3f9197e',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'البريد الإلكتروني',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'الاسم (اختياري)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'رقم الهاتف (اختياري)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedRole,
+                decoration: const InputDecoration(
+                  labelText: 'الدور',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'client', child: Text('عميل')),
+                  DropdownMenuItem(value: 'worker', child: Text('عامل')),
+                  DropdownMenuItem(value: 'accountant', child: Text('محاسب')),
+                  DropdownMenuItem(value: 'admin', child: Text('مدير')),
+                ],
+                onChanged: (value) {
+                  if (value != null) selectedRole = value;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (userIdController.text.isNotEmpty && emailController.text.isNotEmpty) {
+                Navigator.of(context).pop();
+
+                final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+                final success = await supabaseProvider.createProfileForExistingUser(
+                  userIdController.text.trim(),
+                  emailController.text.trim(),
+                  name: nameController.text.trim().isEmpty ? null : nameController.text.trim(),
+                  phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                  role: selectedRole,
+                );
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success
+                          ? 'تم إنشاء Profile بنجاح'
+                          : 'فشل في إنشاء Profile'),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                    ),
+                  );
+
+                  if (success) {
+                    // تحديث قائمة المستخدمين
+                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                    authProvider.fetchPendingApprovalUsers();
+                  }
+                }
+              }
+            },
+            child: const Text('إنشاء'),
+          ),
+        ],
       ),
     );
   }

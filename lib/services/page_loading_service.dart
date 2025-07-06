@@ -25,11 +25,9 @@ class PageLoadingService {
 
       // Preload page data
       if (page is StatefulWidget) {
-        final state = (page as StatefulWidget).createState();
-        if (state is State) {
-          await state.initState();
-        }
-      }
+        final state = (page).createState();
+        state.initState();
+            }
 
       // Remove loading indicator
       if (context.mounted) {

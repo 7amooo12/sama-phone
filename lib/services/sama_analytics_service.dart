@@ -1,93 +1,121 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
-import '../utils/logger.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/app_logger.dart';
 
 /// Service for analytics and reporting
 class SamaAnalyticsService {
-  static final SamaAnalyticsService _instance = SamaAnalyticsService._internal();
   factory SamaAnalyticsService() => _instance;
 
   SamaAnalyticsService._internal();
+  static final SamaAnalyticsService _instance = SamaAnalyticsService._internal();
 
   // Using the correct admin API endpoint
   static const String baseUrl = 'https://samastock.pythonanywhere.com/api/admin';
-  
+
   // API Key for admin dashboard
   static const String apiKey = 'sm@rtadmin2025Key';
-  
+
   // Use demo mode when API is not available
   final bool _useDemoData = false; // Changed to false to use real API data
+
+  // Supabase client for real data
+  final SupabaseClient _supabase = Supabase.instance.client;
   
+  /// Get real analytics data from Supabase
+  Future<Map<String, dynamic>> getRealAnalytics() async {
+    try {
+      AppLogger.info('🔄 جلب البيانات التحليلية الحقيقية...');
+
+      // جلب البيانات بشكل متوازي
+      final results = await Future.wait([
+        _getCustomerAnalytics(),
+        _getProductAnalytics(),
+        _getSalesAnalytics(),
+        _getWalletAnalytics(),
+        _getTopSellingProducts(),
+      ]);
+
+      final customerAnalytics = results[0] as Map<String, dynamic>;
+      final productAnalytics = results[1] as Map<String, dynamic>;
+      final salesAnalytics = results[2] as Map<String, dynamic>;
+      final walletAnalytics = results[3] as Map<String, dynamic>;
+      final topProducts = results[4] as List<Map<String, dynamic>>;
+
+      AppLogger.info('✅ تم جلب البيانات التحليلية بنجاح');
+
+      return {
+        'customers': customerAnalytics,
+        'products': productAnalytics,
+        'sales': salesAnalytics,
+        'financial': walletAnalytics,
+        'top_products': topProducts,
+      };
+    } catch (e) {
+      AppLogger.error('❌ خطأ في جلب البيانات التحليلية: $e');
+      // إرجاع بيانات وهمية في حالة الخطأ
+      return _getFallbackData();
+    }
+  }
+
   /// Get all analytics data for the dashboard
   Future<Map<String, dynamic>> getAllAnalytics() async {
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 500));
+      // استخدام البيانات الحقيقية بدلاً من الوهمية
+      return await getRealAnalytics();
+    } catch (e) {
+      AppLogger.error('خطأ في جلب التحليلات: $e');
+      // العودة للبيانات الوهمية في حالة الخطأ
+      return _getFallbackData();
+    }
+  }
 
-      // Return mock data
-      return {
+  /// Get fallback data with minimal values (no fake data)
+  Map<String, dynamic> _getFallbackData() {
+    return {
         'sales': {
-          'today': 1500,
-          'yesterday': 1200,
-          'thisWeek': 9500,
-          'lastWeek': 8200,
-          'thisMonth': 35000,
-          'lastMonth': 32000,
-          'trend': 8.5, // percentage increase
+          'today': 0,
+          'yesterday': 0,
+          'thisWeek': 0,
+          'lastWeek': 0,
+          'thisMonth': 0,
+          'lastMonth': 0,
+          'trend': 0.0,
         },
         'orders': {
-          'today': 12,
-          'thisWeek': 87,
-          'thisMonth': 320,
-          'pending': 15,
-          'processing': 22,
-          'completed': 283,
-          'cancelled': 10,
+          'today': 0,
+          'thisWeek': 0,
+          'thisMonth': 0,
+          'pending': 0,
+          'processing': 0,
+          'completed': 0,
+          'cancelled': 0,
         },
         'products': {
-          'total': 150,
-          'inStock': 120,
-          'lowStock': 15,
-          'outOfStock': 15,
-          'topSelling': [
-            {'id': 1, 'name': 'Product 1', 'sales': 52},
-            {'id': 2, 'name': 'Product 2', 'sales': 48},
-            {'id': 3, 'name': 'Product 3', 'sales': 35},
-            {'id': 4, 'name': 'Product 4', 'sales': 30},
-            {'id': 5, 'name': 'Product 5', 'sales': 25},
-          ],
+          'total': 0,
+          'inStock': 0,
+          'lowStock': 0,
+          'outOfStock': 0,
+          'topSelling': [],
         },
         'customers': {
-          'total': 250,
-          'new': 15,
-          'returning': 235,
-          'topSpenders': [
-            {'id': 1, 'name': 'Customer 1', 'total': 5200},
-            {'id': 2, 'name': 'Customer 2', 'total': 4800},
-            {'id': 3, 'name': 'Customer 3', 'total': 3500},
-          ],
+          'total': 0,
+          'new': 0,
+          'returning': 0,
+          'topSpenders': [],
         },
         'financial': {
-          'totalRevenue': 35000,
-          'expenses': 12000,
-          'profit': 23000,
-          'profitMargin': 65.7,
+          'totalRevenue': 0,
+          'expenses': 0,
+          'profit': 0,
+          'profitMargin': 0.0,
         },
         'workers': {
-          'total': 10,
-          'active': 8,
-          'performance': [
-            {'id': 1, 'name': 'Worker 1', 'efficiency': 95, 'ordersCompleted': 52},
-            {'id': 2, 'name': 'Worker 2', 'efficiency': 88, 'ordersCompleted': 48},
-            {'id': 3, 'name': 'Worker 3', 'efficiency': 82, 'ordersCompleted': 35},
-          ],
+          'total': 0,
+          'active': 0,
+          'performance': [],
         },
       };
-    } catch (e) {
-      AppLogger.error('Error fetching analytics: $e');
-      rethrow;
-    }
   }
   
   // بيانات تجريبية للعرض عند عدم توفر الاتصال
@@ -223,11 +251,277 @@ class SamaAnalyticsService {
     try {
       // Simulate report generation
       await Future.delayed(const Duration(seconds: 1));
-      
+
       return 'https://example.com/reports/mock-report-$reportType.pdf';
     } catch (e) {
       AppLogger.error('Error generating report: $e');
       rethrow;
     }
   }
-} 
+
+  // ===== طرق جلب البيانات الحقيقية =====
+
+  /// جلب إحصائيات العملاء الحقيقية
+  Future<Map<String, dynamic>> _getCustomerAnalytics() async {
+    try {
+      // جلب إجمالي العملاء
+      final totalCustomersResponse = await _supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('role', 'client');
+
+      // جلب العملاء النشطين
+      final activeCustomersResponse = await _supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('role', 'client')
+          .eq('status', 'active');
+
+      // جلب العملاء الجدد (آخر 30 يوم)
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      final newCustomersResponse = await _supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('role', 'client')
+          .filter('created_at', 'gte', thirtyDaysAgo.toIso8601String());
+
+      final totalCustomers = totalCustomersResponse.length;
+      final activeCustomers = activeCustomersResponse.length;
+      final newCustomers = newCustomersResponse.length;
+      final returningCustomers = totalCustomers - newCustomers;
+
+      // حساب معدل الاحتفاظ
+      final retentionRate = totalCustomers > 0
+          ? (returningCustomers / totalCustomers) * 100
+          : 0.0;
+
+      return {
+        'total': totalCustomers,
+        'active': activeCustomers,
+        'new': newCustomers,
+        'returning': returningCustomers,
+        'retention_rate': retentionRate,
+      };
+    } catch (e) {
+      AppLogger.error('خطأ في جلب إحصائيات العملاء: $e');
+      return {
+        'total': 0,
+        'active': 0,
+        'new': 0,
+        'returning': 0,
+        'retention_rate': 0.0,
+      };
+    }
+  }
+
+  /// جلب إحصائيات المنتجات الحقيقية
+  Future<Map<String, dynamic>> _getProductAnalytics() async {
+    try {
+      // جلب إجمالي المنتجات من Flask API
+      final response = await http.get(
+        Uri.parse('$baseUrl/analytics'),
+        headers: {'X-API-Key': apiKey},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['analytics'] != null) {
+          final products = data['analytics']['products'];
+          return {
+            'total': products['total'] ?? 0,
+            'visible': products['visible'] ?? 0,
+            'inStock': products['total'] - (products['out_of_stock'] ?? 0),
+            'lowStock': 0, // يمكن إضافة هذا لاحقاً
+            'outOfStock': products['out_of_stock'] ?? 0,
+          };
+        }
+      }
+
+      // بيانات احتياطية
+      return {
+        'total': 0,
+        'visible': 0,
+        'inStock': 0,
+        'lowStock': 0,
+        'outOfStock': 0,
+      };
+    } catch (e) {
+      AppLogger.error('خطأ في جلب إحصائيات المنتجات: $e');
+      return {
+        'total': 0,
+        'visible': 0,
+        'inStock': 0,
+        'lowStock': 0,
+        'outOfStock': 0,
+      };
+    }
+  }
+
+  /// جلب إحصائيات المبيعات الحقيقية
+  Future<Map<String, dynamic>> _getSalesAnalytics() async {
+    try {
+      // جلب الفواتير من Flask API
+      final response = await http.get(
+        Uri.parse('$baseUrl/analytics'),
+        headers: {'X-API-Key': apiKey},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['analytics'] != null) {
+          final sales = data['analytics']['sales'];
+          return {
+            'today': 0, // يمكن حسابها من البيانات اليومية
+            'thisWeek': 0,
+            'thisMonth': sales['total_amount'] ?? 0,
+            'totalInvoices': sales['total_invoices'] ?? 0,
+            'completedInvoices': sales['completed_invoices'] ?? 0,
+            'pendingInvoices': sales['pending_invoices'] ?? 0,
+            'trend': 0.0,
+          };
+        }
+      }
+
+      return {
+        'today': 0,
+        'thisWeek': 0,
+        'thisMonth': 0,
+        'totalInvoices': 0,
+        'completedInvoices': 0,
+        'pendingInvoices': 0,
+        'trend': 0.0,
+      };
+    } catch (e) {
+      AppLogger.error('خطأ في جلب إحصائيات المبيعات: $e');
+      return {
+        'today': 0,
+        'thisWeek': 0,
+        'thisMonth': 0,
+        'totalInvoices': 0,
+        'completedInvoices': 0,
+        'pendingInvoices': 0,
+        'trend': 0.0,
+      };
+    }
+  }
+
+  /// جلب إحصائيات المحافظ الحقيقية
+  Future<Map<String, dynamic>> _getWalletAnalytics() async {
+    try {
+      // جلب إجمالي أرصدة المحافظ
+      final walletsResponse = await _supabase
+          .from('wallets')
+          .select('balance, role')
+          .eq('status', 'active');
+
+      double totalRevenue = 0.0;
+      double clientBalance = 0.0;
+      double workerBalance = 0.0;
+
+      for (final wallet in walletsResponse) {
+        final balance = (wallet['balance'] as num).toDouble();
+        final role = wallet['role'] as String;
+
+        totalRevenue += balance;
+
+        if (role == 'client') {
+          clientBalance += balance;
+        } else if (role == 'worker') {
+          workerBalance += balance;
+        }
+      }
+
+      return {
+        'totalRevenue': totalRevenue,
+        'clientBalance': clientBalance,
+        'workerBalance': workerBalance,
+        'expenses': 0.0, // يمكن حسابها من المعاملات
+        'profit': totalRevenue, // مبسط
+        'profitMargin': totalRevenue > 0 ? 100.0 : 0.0,
+      };
+    } catch (e) {
+      AppLogger.error('خطأ في جلب إحصائيات المحافظ: $e');
+      return {
+        'totalRevenue': 0.0,
+        'clientBalance': 0.0,
+        'workerBalance': 0.0,
+        'expenses': 0.0,
+        'profit': 0.0,
+        'profitMargin': 0.0,
+      };
+    }
+  }
+
+  /// جلب المنتجات الأكثر مبيعاً من الفواتير الحقيقية
+  Future<List<Map<String, dynamic>>> _getTopSellingProducts() async {
+    try {
+      AppLogger.info('🔄 جلب المنتجات الأكثر مبيعاً...');
+
+      // جلب بيانات الفواتير من Flask API
+      final response = await http.get(
+        Uri.parse('https://samastock.pythonanywhere.com/api/invoices'),
+        headers: {
+          'X-API-Key': 'lux2025FlutterAccess',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['invoices'] != null) {
+          final invoices = data['invoices'] as List;
+
+          // حساب كمية المبيعات لكل منتج
+          final Map<String, Map<String, dynamic>> productSales = {};
+
+          for (final invoice in invoices) {
+            if (invoice['status'] == 'completed' && invoice['items'] != null) {
+              final items = invoice['items'] as List;
+
+              for (final item in items) {
+                final productName = item['product_name'] as String? ?? 'منتج غير معروف';
+                final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+                final price = (item['price'] as num?)?.toDouble() ?? 0.0;
+                final total = quantity * price;
+
+                if (productSales.containsKey(productName)) {
+                  productSales[productName]!['sales'] =
+                      (productSales[productName]!['sales'] as double) + quantity;
+                  productSales[productName]!['revenue'] =
+                      (productSales[productName]!['revenue'] as double) + total;
+                } else {
+                  productSales[productName] = {
+                    'name': productName,
+                    'sales': quantity,
+                    'revenue': total,
+                  };
+                }
+              }
+            }
+          }
+
+          // ترتيب المنتجات حسب الكمية المباعة
+          final sortedProducts = productSales.values.toList()
+            ..sort((a, b) => (b['sales'] as double).compareTo(a['sales'] as double));
+
+          // إرجاع أفضل 5 منتجات
+          final topProducts = sortedProducts.take(5).map((product) => {
+            'name': product['name'],
+            'sales': (product['sales'] as double).toInt(),
+            'revenue': (product['revenue'] as double).toStringAsFixed(2),
+          }).toList();
+
+          AppLogger.info('✅ تم جلب ${topProducts.length} منتج من الأكثر مبيعاً');
+          return topProducts;
+        }
+      }
+
+      AppLogger.warning('⚠️ لم يتم العثور على بيانات فواتير');
+      return [];
+
+    } catch (e) {
+      AppLogger.error('❌ خطأ في جلب المنتجات الأكثر مبيعاً: $e');
+      return [];
+    }
+  }
+}

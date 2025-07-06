@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smartbiztracker_new/models/order_model.dart';
-import 'package:smartbiztracker_new/utils/constants.dart';
 
-class SharedOrderDetailsDialog extends StatelessWidget {
-  final OrderModel order;
-  final String userRole; // 'admin', 'accountant', 'worker', 'owner'
-  
+
+class SharedOrderDetailsDialog extends StatelessWidget { // 'admin', 'accountant', 'worker', 'owner'
+
   const SharedOrderDetailsDialog({
     super.key,
     required this.order,
     required this.userRole,
   });
+  final OrderModel order;
+  final String userRole;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -67,7 +67,7 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Order details
             Expanded(
               child: SingleChildScrollView(
@@ -94,9 +94,9 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Customer information
                     const Text(
                       'بيانات العميل',
@@ -168,9 +168,9 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Order products
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -182,7 +182,7 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        
+
                         // Search field for products - visible to all roles
                         SizedBox(
                           width: 200,
@@ -212,7 +212,7 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    
+
                     if (order.items.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -272,9 +272,9 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                                           child: const Icon(Icons.image_not_supported),
                                         ),
                                   ),
-                                  
+
                                   const SizedBox(width: 16),
-                                  
+
                                   // Product details
                                   Expanded(
                                     child: Column(
@@ -320,7 +320,7 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
-                                                
+
                                                 // Admin and owner can see purchase price
                                                 if ((userRole == 'admin' || userRole == 'owner' || userRole == 'accountant') && item.purchasePrice > 0)
                                                   Text(
@@ -344,9 +344,9 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                           );
                         },
                       ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Order total
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -384,7 +384,7 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                               ),
                             ],
                           ),
-                          
+
                           // Order notes if available
                           if (order.notes != null && order.notes!.isNotEmpty) ...[
                             const Divider(height: 24),
@@ -402,7 +402,7 @@ class SharedOrderDetailsDialog extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             // Control buttons
             Container(
               padding: const EdgeInsets.all(16),
@@ -447,7 +447,7 @@ class SharedOrderDetailsDialog extends StatelessWidget {
       ),
     );
   }
-  
+
   // Show full-size image
   void _showFullImage(BuildContext context, String imageUrl, String productName) {
     showDialog(
@@ -530,14 +530,14 @@ class SharedOrderDetailsDialog extends StatelessWidget {
       ),
     );
   }
-  
+
   // Print order details
   void _printOrderDetails(BuildContext context, OrderModel order) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('جاري إرسال الطلب للطباعة...')),
     );
   }
-  
+
   // Show status update dialog
   void _showUpdateStatusDialog(BuildContext context, OrderModel order) {
     final orderStatuses = [
@@ -547,9 +547,9 @@ class SharedOrderDetailsDialog extends StatelessWidget {
       'تم التسليم',
       'ملغي'
     ];
-    
+
     String selectedStatus = order.status;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -593,4 +593,4 @@ class SharedOrderDetailsDialog extends StatelessWidget {
       ),
     );
   }
-} 
+}

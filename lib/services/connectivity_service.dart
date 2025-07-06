@@ -3,7 +3,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
 class ConnectivityService extends ChangeNotifier {
-  bool _isConnected = true;
 
   ConnectivityService() {
     Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
@@ -13,6 +12,7 @@ class ConnectivityService extends ChangeNotifier {
 
     checkConnection();
   }
+  bool _isConnected = true;
 
   bool get isConnected => _isConnected;
 

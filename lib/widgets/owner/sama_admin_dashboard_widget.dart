@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:smartbiztracker_new/utils/color_extension.dart';
+
 import 'package:intl/intl.dart' as intl;
 import 'package:smartbiztracker_new/widgets/admin/product_management_widget.dart';
 
 class SamaAdminDashboardWidget extends StatelessWidget {
+
+  const SamaAdminDashboardWidget({
+    super.key,
+    required this.dashboardData,
+    required this.isLoading,
+    this.errorMessage,
+    this.onRefresh,
+  });
   final Map<String, dynamic>? dashboardData;
   final bool isLoading;
   final String? errorMessage;
   final Function()? onRefresh;
 
-  const SamaAdminDashboardWidget({
-    Key? key,
-    required this.dashboardData,
-    required this.isLoading,
-    this.errorMessage,
-    this.onRefresh,
-  }) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     if (isLoading) {
       return Center(
         child: Column(
@@ -34,7 +33,7 @@ class SamaAdminDashboardWidget extends StatelessWidget {
         ),
       );
     }
-    
+
     if (errorMessage != null) {
       return Center(
         child: Column(
@@ -55,7 +54,7 @@ class SamaAdminDashboardWidget extends StatelessWidget {
         ),
       );
     }
-    
+
     if (dashboardData == null || dashboardData!.isEmpty) {
       return Center(
         child: Column(
@@ -74,46 +73,46 @@ class SamaAdminDashboardWidget extends StatelessWidget {
         ),
       );
     }
-    
+
     // استخراج البيانات المطلوبة من dashboardData
     final analytics = dashboardData!['analytics'] ?? {};
     final salesData = analytics['sales'] ?? {};
     final productsData = analytics['products'] ?? {};
     final inventoryData = analytics['inventory'] ?? {};
     final usersData = analytics['users'] ?? {};
-    
+
     // استخراج بيانات المبيعات الحقيقية
     final totalSales = salesData['total_invoices'] ?? 0;
     final totalRevenue = salesData['total_amount'] ?? 0.0;
     final completedInvoices = salesData['completed_invoices'] ?? 0;
     final pendingInvoices = salesData['pending_invoices'] ?? 0;
-    
+
     // استخراج بيانات المنتجات الحقيقية - تم تصحيح الوصول إلى القيم
     final totalProducts = productsData['total'] ?? 0;
     final featuredProducts = productsData['featured'] ?? 0;
     final outOfStockCount = productsData['out_of_stock'] ?? 0;
-    
+
     // استخراج قيم المخزون بشكل صحيح - تأكد من الوصول للمسار الصحيح
-    final inventoryCost = productsData['inventory_cost'] ?? 
+    final inventoryCost = productsData['inventory_cost'] ??
                          (dashboardData!['inventory_cost'] ?? 0.0);
-    final inventoryValue = productsData['inventory_value'] ?? 
+    final inventoryValue = productsData['inventory_value'] ??
                           (dashboardData!['inventory_value'] ?? 0.0);
-    
+
     // استخراج بيانات المستخدمين الحقيقية
     final totalUsers = usersData['total'] ?? 0;
     final activeUsers = usersData['active'] ?? 0;
-    
+
     // استخراج بيانات المخزون
     final inventoryMovement = inventoryData['movement'] ?? {};
     final totalQuantityChange = inventoryMovement['total_quantity_change'] ?? 0;
-    
+
     // بيانات الفواتير الحديثة
     final recentInvoices = dashboardData!['recent_invoices'] as List? ?? [];
     final lowStockProducts = dashboardData!['low_stock_products'] as List? ?? [];
 
     // حساب الربح المتوقع
     final expectedProfit = (inventoryValue - inventoryCost).toDouble();
-    
+
     return RefreshIndicator(
       onRefresh: () async {
         if (onRefresh != null) {
@@ -187,9 +186,9 @@ class SamaAdminDashboardWidget extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Key stats cards - Updated with inventory values and product counts
             GridView.count(
               crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
@@ -273,15 +272,15 @@ class SamaAdminDashboardWidget extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Products stats
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: theme.colorScheme.primary.withOpacity(0.1),
@@ -307,7 +306,7 @@ class SamaAdminDashboardWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            SizedBox(
+            const SizedBox(
               height: 500, // Set a fixed height for the widget
               child: ProductManagementWidget(
                 showHeader: false,
@@ -316,9 +315,9 @@ class SamaAdminDashboardWidget extends StatelessWidget {
                 hideVisibleFilter: true,
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Recent invoices
             if (recentInvoices.isNotEmpty)
               Card(
@@ -344,26 +343,26 @@ class SamaAdminDashboardWidget extends StatelessWidget {
                           separatorBuilder: (context, index) => const Divider(),
                           itemBuilder: (context, index) {
                             final invoice = recentInvoices[index];
-                            final date = DateTime.tryParse(invoice['created_at'] ?? '');
+                            final date = DateTime.tryParse((invoice['created_at'] as String?) ?? '');
                             final formattedDate = date != null
                                 ? intl.DateFormat('yyyy-MM-dd').format(date)
                                 : 'تاريخ غير معروف';
-                            
+
                             final statusColors = {
                               'pending': Colors.orange,
                               'completed': Colors.green,
                               'cancelled': Colors.red,
                             };
-                            
+
                             final status = invoice['status'] as String? ?? 'pending';
                             final statusColor = statusColors[status] ?? Colors.grey;
-                            
+
                             return ListTile(
                               title: Text('فاتورة #${invoice['id'] ?? '?'}'),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(invoice['customer_name'] ?? 'عميل غير معروف'),
+                                  Text((invoice['customer_name'] as String?) ?? 'عميل غير معروف'),
                                   Text(formattedDate),
                                 ],
                               ),
@@ -406,7 +405,7 @@ class SamaAdminDashboardWidget extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildStatCard({
     required BuildContext context,
     required String title,
@@ -416,7 +415,7 @@ class SamaAdminDashboardWidget extends StatelessWidget {
     required Color color,
   }) {
     final theme = Theme.of(context);
-    
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -472,9 +471,9 @@ class SamaAdminDashboardWidget extends StatelessWidget {
               ),
             ),
             // Subtitle
-            if (subtitle.isNotEmpty) 
+            if (subtitle.isNotEmpty)
               Text(
-                subtitle, 
+                subtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
@@ -485,7 +484,7 @@ class SamaAdminDashboardWidget extends StatelessWidget {
       ),
     );
   }
-  
+
   String _getStatusText(String status) {
     switch (status) {
       case 'pending':
@@ -498,4 +497,4 @@ class SamaAdminDashboardWidget extends StatelessWidget {
         return status;
     }
   }
-} 
+}

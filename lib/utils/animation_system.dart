@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:smartbiztracker_new/utils/app_constants.dart';
 
 /// أنواع الرسوم المتحركة
 enum AnimationType {
@@ -150,10 +149,10 @@ class AnimationSystem {
 
 // منحنى مخصص للرسوم المتحركة
 class SpringCurve extends Curve {
-  final double a;
-  final double w;
 
   const SpringCurve({this.a = 0.1, this.w = 19.4});
+  final double a;
+  final double w;
 
   @override
   double transformInternal(double t) {
@@ -163,10 +162,6 @@ class SpringCurve extends Curve {
 
 // ويدجت للرسوم المتحركة المتأخرة
 class _DelayedAnimation extends StatefulWidget {
-  final Widget Function(BuildContext, Animation<double>) builder;
-  final Duration delay;
-  final Duration duration;
-  final Curve curve;
 
   const _DelayedAnimation({
     required this.builder,
@@ -174,6 +169,10 @@ class _DelayedAnimation extends StatefulWidget {
     this.duration = const Duration(milliseconds: 500),
     this.curve = Curves.easeOut,
   });
+  final Widget Function(BuildContext, Animation<double>) builder;
+  final Duration delay;
+  final Duration duration;
+  final Curve curve;
 
   @override
   State<_DelayedAnimation> createState() => _DelayedAnimationState();
@@ -221,11 +220,6 @@ class _DelayedAnimationState extends State<_DelayedAnimation> with SingleTickerP
 
 // ويدجت لتأثير النبض
 class _PulseAnimation extends StatefulWidget {
-  final Widget child;
-  final Duration duration;
-  final double minScale;
-  final double maxScale;
-  final bool repeat;
 
   const _PulseAnimation({
     required this.child,
@@ -234,6 +228,11 @@ class _PulseAnimation extends StatefulWidget {
     this.maxScale = 1.05,
     this.repeat = true,
   });
+  final Widget child;
+  final Duration duration;
+  final double minScale;
+  final double maxScale;
+  final bool repeat;
 
   @override
   State<_PulseAnimation> createState() => _PulseAnimationState();
@@ -289,10 +288,6 @@ class _PulseAnimationState extends State<_PulseAnimation> with SingleTickerProvi
 
 // ويدجت لتأثير الوميض
 class _ShimmerEffect extends StatefulWidget {
-  final Widget child;
-  final Color? baseColor;
-  final Color? highlightColor;
-  final Duration duration;
 
   const _ShimmerEffect({
     required this.child,
@@ -300,6 +295,10 @@ class _ShimmerEffect extends StatefulWidget {
     this.highlightColor,
     this.duration = const Duration(milliseconds: 1500),
   });
+  final Widget child;
+  final Color? baseColor;
+  final Color? highlightColor;
+  final Duration duration;
 
   @override
   State<_ShimmerEffect> createState() => _ShimmerEffectState();
@@ -359,11 +358,11 @@ class _ShimmerEffectState extends State<_ShimmerEffect> with SingleTickerProvide
 
 // تحويل التدرج المتحرك
 class _SlidingGradientTransform extends GradientTransform {
-  final double slidePercent;
 
   const _SlidingGradientTransform({
     required this.slidePercent,
   });
+  final double slidePercent;
 
   @override
   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {

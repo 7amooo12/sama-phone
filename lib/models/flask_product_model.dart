@@ -1,21 +1,6 @@
-import 'package:flutter/foundation.dart';
+
 
 class FlaskProductModel {
-  final int id;
-  final String name;
-  final String description;
-  final double purchasePrice;
-  final double sellingPrice;
-  final double finalPrice;
-  final int stockQuantity;
-  final String? imageUrl;
-  final double discountPercent;
-  final double discountFixed;
-  final String? categoryName;
-  final bool featured;
-  final bool isVisible;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
 
   const FlaskProductModel({
     required this.id,
@@ -36,11 +21,8 @@ class FlaskProductModel {
   });
 
   factory FlaskProductModel.fromJson(Map<String, dynamic> json) {
-    // Debug print to check incoming JSON data
-    print('DEBUG: Product JSON data: ${json['name']}');
-    print('DEBUG: purchase_price in JSON: ${json['purchase_price']}');
-    print('DEBUG: selling_price in JSON: ${json['selling_price']}');
-    
+    // Parse product data from JSON
+
     return FlaskProductModel(
       id: json['id'] as int,
       name: json['name'] as String,
@@ -55,10 +37,25 @@ class FlaskProductModel {
       categoryName: json['category_name'] as String?,
       featured: json['featured'] as bool? ?? false,
       isVisible: json['is_visible'] as bool? ?? true,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
     );
   }
+  final int id;
+  final String name;
+  final String description;
+  final double purchasePrice;
+  final double sellingPrice;
+  final double finalPrice;
+  final int stockQuantity;
+  final String? imageUrl;
+  final double discountPercent;
+  final double discountFixed;
+  final String? categoryName;
+  final bool featured;
+  final bool isVisible;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Map<String, dynamic> toJson() {
     return {
@@ -67,7 +64,7 @@ class FlaskProductModel {
       'description': description,
       'purchase_price': purchasePrice,
       'selling_price': sellingPrice,
-      'final_price': finalPrice, 
+      'final_price': finalPrice,
       'stock_quantity': stockQuantity,
       'image_url': imageUrl,
       'discount_percent': discountPercent,
@@ -94,7 +91,20 @@ class FlaskProductModel {
       return '';
     }
   }
-  
+
+  // Compatibility getters for API integration
+  String get sku => id.toString();
+  String get category => categoryName ?? 'عام';
+  List<String> get images => imageUrl != null ? [imageUrl!] : <String>[];
+  String? get barcode => null; // Not available in Flask API
+  String? get supplier => null; // Not available in Flask API
+  String? get brand => null; // Not available in Flask API
+  int get quantity => stockQuantity;
+  int get minimumStock => 10; // Default value
+  bool get isActive => isVisible;
+  List<String> get tags => <String>[]; // Not available in Flask API
+  double? get discountPrice => discountFixed > 0 ? finalPrice : null;
+
   // Conversion to generic product model if needed
   Map<String, dynamic> toGenericMap() {
     return {
@@ -122,4 +132,4 @@ class FlaskProductModel {
 
   @override
   int get hashCode => id.hashCode;
-} 
+}

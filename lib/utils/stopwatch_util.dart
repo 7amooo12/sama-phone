@@ -2,9 +2,9 @@
 // This provides the same functionality but uses Dart's built-in Stopwatch
 
 class StopWatch {
-  final Stopwatch _stopwatch = Stopwatch();
   
   StopWatch();
+  final Stopwatch _stopwatch = Stopwatch();
   
   void start() {
     _stopwatch.start();

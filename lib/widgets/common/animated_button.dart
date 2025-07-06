@@ -5,37 +5,6 @@ import 'package:smartbiztracker_new/utils/style_system.dart';
 /// زر متحرك احترافي
 /// يوفر هذا الزر تأثيرات حركية متعددة وخيارات تخصيص متقدمة
 class AnimatedButton extends StatefulWidget {
-  final String text;
-  final IconData? icon;
-  final VoidCallback? onPressed;
-  final VoidCallback? onLongPress;
-  final ButtonStyle? style;
-  final bool isLoading;
-  final bool isDisabled;
-  final bool showShadow;
-  final bool enablePressAnimation;
-  final bool enableHoverAnimation;
-  final double? width;
-  final double? height;
-  final EdgeInsetsGeometry? padding;
-  final BorderRadius? borderRadius;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final Widget? loadingWidget;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-  final Color? disabledBackgroundColor;
-  final Color? disabledForegroundColor;
-  final Color? splashColor;
-  final Color? highlightColor;
-  final double elevation;
-  final double hoverElevation;
-  final double pressedElevation;
-  final double disabledElevation;
-  final BorderSide? side;
-  final TextStyle? textStyle;
-  final MainAxisAlignment mainAxisAlignment;
-  final MainAxisSize mainAxisSize;
   
   const AnimatedButton({
     super.key,
@@ -71,6 +40,37 @@ class AnimatedButton extends StatefulWidget {
     this.mainAxisAlignment = MainAxisAlignment.center,
     this.mainAxisSize = MainAxisSize.min,
   });
+  final String text;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+  final VoidCallback? onLongPress;
+  final ButtonStyle? style;
+  final bool isLoading;
+  final bool isDisabled;
+  final bool showShadow;
+  final bool enablePressAnimation;
+  final bool enableHoverAnimation;
+  final double? width;
+  final double? height;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? borderRadius;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final Widget? loadingWidget;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final Color? disabledBackgroundColor;
+  final Color? disabledForegroundColor;
+  final Color? splashColor;
+  final Color? highlightColor;
+  final double elevation;
+  final double hoverElevation;
+  final double pressedElevation;
+  final double disabledElevation;
+  final BorderSide? side;
+  final TextStyle? textStyle;
+  final MainAxisAlignment mainAxisAlignment;
+  final MainAxisSize mainAxisSize;
   
   @override
   State<AnimatedButton> createState() => _AnimatedButtonState();
@@ -219,20 +219,6 @@ class _AnimatedButtonState extends State<AnimatedButton> with SingleTickerProvid
 
 /// زر متحرك مع تأثير تدرج لوني
 class GradientAnimatedButton extends StatelessWidget {
-  final String text;
-  final IconData? icon;
-  final VoidCallback? onPressed;
-  final List<Color> gradientColors;
-  final bool isLoading;
-  final bool isDisabled;
-  final double? width;
-  final double? height;
-  final EdgeInsetsGeometry? padding;
-  final BorderRadius? borderRadius;
-  final AlignmentGeometry begin;
-  final AlignmentGeometry end;
-  final Color? foregroundColor;
-  final TextStyle? textStyle;
   
   const GradientAnimatedButton({
     super.key,
@@ -251,6 +237,20 @@ class GradientAnimatedButton extends StatelessWidget {
     this.foregroundColor,
     this.textStyle,
   });
+  final String text;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+  final List<Color> gradientColors;
+  final bool isLoading;
+  final bool isDisabled;
+  final double? width;
+  final double? height;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? borderRadius;
+  final AlignmentGeometry begin;
+  final AlignmentGeometry end;
+  final Color? foregroundColor;
+  final TextStyle? textStyle;
   
   @override
   Widget build(BuildContext context) {
@@ -298,20 +298,6 @@ class GradientAnimatedButton extends StatelessWidget {
 
 /// زر متحرك مع تأثير نبض
 class PulsingAnimatedButton extends StatelessWidget {
-  final String text;
-  final IconData? icon;
-  final VoidCallback? onPressed;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-  final bool isLoading;
-  final bool isDisabled;
-  final double? width;
-  final double? height;
-  final EdgeInsetsGeometry? padding;
-  final BorderRadius? borderRadius;
-  final Duration pulseDuration;
-  final double minScale;
-  final double maxScale;
   
   const PulsingAnimatedButton({
     super.key,
@@ -330,11 +316,25 @@ class PulsingAnimatedButton extends StatelessWidget {
     this.minScale = 1.0,
     this.maxScale = 1.05,
   });
+  final String text;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final bool isLoading;
+  final bool isDisabled;
+  final double? width;
+  final double? height;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? borderRadius;
+  final Duration pulseDuration;
+  final double minScale;
+  final double maxScale;
   
   @override
   Widget build(BuildContext context) {
     return AnimationSystem.pulse(
-      child: AnimatedButton(
+      AnimatedButton(
         text: text,
         icon: icon,
         onPressed: onPressed,

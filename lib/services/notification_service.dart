@@ -2,12 +2,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/app_logger.dart';
 import '../models/notification_model.dart';
-import 'package:realtime_client/realtime_client.dart';
 
 class NotificationService {
   final _supabase = Supabase.instance.client;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+
   Future<void> initialize() async {
     try {
       // Initialize local notifications
@@ -32,14 +31,17 @@ class NotificationService {
   Future<void> subscribeToNotifications(String userId) async {
     try {
       final channel = _supabase.channel('notifications_$userId')
-        .on(RealtimeListenTypes.postgresChanges,
-          ChannelFilter(
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-            filter: 'user_id=eq.$userId'
-          ), (payload, [_]) {
-            _handleNotificationPayload(payload);
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            _handleNotificationPayload(payload.newRecord ?? {});
           }
         ).subscribe();
 
@@ -51,7 +53,7 @@ class NotificationService {
 
   Future<void> _handleNotificationPayload(Map<String, dynamic> payload) async {
     try {
-      final notification = NotificationModel.fromJson(payload['new'] as Map<String, dynamic>);
+      final notification = NotificationModel.fromJson(payload);
       await showLocalNotification(
         notification.id,
         notification.title,
@@ -119,7 +121,7 @@ class NotificationService {
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => NotificationModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting notifications: $e');
@@ -156,11 +158,30 @@ class NotificationService {
           .select()
           .eq('user_id', userId)
           .eq('is_read', false);
-      
+
       return (response as List).length;
     } catch (e) {
       AppLogger.error('Error getting unread count: $e');
       return 0;
+    }
+  }
+
+  // Missing methods for compatibility
+  Future<void> sendOrderNotification({
+    required String orderId,
+    required String customerName,
+    required String status,
+  }) async {
+    try {
+      await showLocalNotification(
+        orderId,
+        'طلب جديد',
+        'طلب جديد من $customerName - الحالة: $status',
+        payload: 'order:$orderId',
+      );
+      AppLogger.info('Order notification sent for order: $orderId');
+    } catch (e) {
+      AppLogger.error('Error sending order notification: $e');
     }
   }
 }

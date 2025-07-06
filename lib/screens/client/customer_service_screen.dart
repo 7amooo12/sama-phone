@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:lottie/lottie.dart';
-import 'package:smartbiztracker_new/utils/color_extension.dart';
 
 class CustomerServiceScreen extends StatefulWidget {
   const CustomerServiceScreen({super.key});
@@ -104,7 +103,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.safeOpacity(0.1),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     border: Border(
                       bottom: BorderSide(
                         color: Colors.grey.shade300,

@@ -16,18 +16,6 @@ enum PageTransitionType {
 
 /// A class for creating animated page routes with optimized performance
 class AnimatedRoute<T> extends PageRoute<T> {
-  final Widget page;
-  final PageTransitionType type;
-  final Curve curve;
-  final Alignment alignment;
-  final Duration duration;
-  final Duration reverseDuration;
-  final bool fullscreenDialog;
-  final bool opaque;
-  final bool barrierDismissible;
-  final Color? barrierColor;
-  final String? barrierLabel;
-  final bool maintainState;
 
   AnimatedRoute({
     required this.page,
@@ -42,8 +30,26 @@ class AnimatedRoute<T> extends PageRoute<T> {
     this.barrierColor,
     this.barrierLabel,
     this.maintainState = true,
-    RouteSettings? settings,
-  }) : super(settings: settings);
+    super.settings,
+  });
+  final Widget page;
+  final PageTransitionType type;
+  final Curve curve;
+  final Alignment alignment;
+  final Duration duration;
+  final Duration reverseDuration;
+  @override
+  final bool fullscreenDialog;
+  @override
+  final bool opaque;
+  @override
+  final bool barrierDismissible;
+  @override
+  final Color? barrierColor;
+  @override
+  final String? barrierLabel;
+  @override
+  final bool maintainState;
 
   @override
   Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {

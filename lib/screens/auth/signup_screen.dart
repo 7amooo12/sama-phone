@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/config/constants.dart';
 import 'package:smartbiztracker_new/config/routes.dart';
+import 'package:smartbiztracker_new/models/user_role.dart';
 import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:smartbiztracker_new/widgets/custom_button.dart';
 import 'package:smartbiztracker_new/widgets/custom_loader.dart';
 import 'package:smartbiztracker_new/widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:smartbiztracker_new/models/user_model.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -61,6 +61,7 @@ class _SignupScreenState extends State<SignupScreen>
 
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
+      final context = this.context;
       final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
 
       await supabaseProvider.signUp(
@@ -71,7 +72,9 @@ class _SignupScreenState extends State<SignupScreen>
         role: UserRole.client, // Default role for new users
       );
 
-      if (supabaseProvider.user != null && context.mounted) {
+      if (!mounted) return;
+
+      if (supabaseProvider.user != null) {
         // Show success message and navigate to waiting approval screen
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -81,7 +84,7 @@ class _SignupScreenState extends State<SignupScreen>
         );
 
         Navigator.of(context).pushReplacementNamed(AppRoutes.waitingApproval);
-      } else if (context.mounted && supabaseProvider.error != null) {
+      } else if (supabaseProvider.error != null) {
         // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -157,8 +160,10 @@ class _SignupScreenState extends State<SignupScreen>
                                   CustomTextField(
                                     controller: _emailController,
                                     labelText: 'البريد الإلكتروني',
+                                    hintText: 'example@sama.com',
                                     prefixIcon: Icons.email,
                                     keyboardType: TextInputType.emailAddress,
+                                    helperText: 'يجب أن ينتهي البريد الإلكتروني بـ @sama.com',
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return 'يرجى إدخال البريد الإلكتروني';
@@ -170,6 +175,10 @@ class _SignupScreenState extends State<SignupScreen>
 
                                       if (!isValid) {
                                         return 'يرجى إدخال بريد إلكتروني صحيح';
+                                      }
+
+                                      if (!value.toLowerCase().endsWith('@sama.com')) {
+                                        return 'يجب أن ينتهي البريد الإلكتروني بـ @sama.com';
                                       }
 
                                       return null;
@@ -272,7 +281,7 @@ class _SignupScreenState extends State<SignupScreen>
                 // Loading overlay
                 if (supabaseProvider.isLoading)
                   const Positioned.fill(
-                    child: CustomLoader(showText: true),
+                    child: CustomLoader(message: 'جاري إنشاء الحساب...'),
                   ),
               ],
             ),

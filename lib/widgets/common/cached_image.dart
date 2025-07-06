@@ -1,34 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import '../../utils/image_cache_manager.dart';
+import '../../utils/image_cache_manager.dart' as custom_cache;
 import '../../utils/color_extension.dart';
 import '../../utils/app_logger.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:path_provider/path_provider.dart';
 
 /// A widget that displays an image from a URL with caching
 class CachedImage extends StatefulWidget {
-  final String imageUrl;
-  final double? width;
-  final double? height;
-  final BoxFit fit;
-  final BorderRadius? borderRadius;
-  final Widget? placeholder;
-  final Widget? errorWidget;
-  final Color? backgroundColor;
-  final bool showLoading;
-  final Duration fadeInDuration;
-  final Duration placeholderFadeOutDuration;
-  final FilterQuality filterQuality;
-  final int? maxCacheWidth;
-  final int? maxCacheHeight;
-  final double loadingIndicatorSize;
-  final Color? loadingIndicatorColor;
-  
+
   const CachedImage({
     super.key,
     required this.imageUrl,
@@ -48,7 +28,23 @@ class CachedImage extends StatefulWidget {
     this.loadingIndicatorSize = 24.0,
     this.loadingIndicatorColor,
   });
-  
+  final String imageUrl;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final BorderRadius? borderRadius;
+  final Widget? placeholder;
+  final Widget? errorWidget;
+  final Color? backgroundColor;
+  final bool showLoading;
+  final Duration fadeInDuration;
+  final Duration placeholderFadeOutDuration;
+  final FilterQuality filterQuality;
+  final int? maxCacheWidth;
+  final int? maxCacheHeight;
+  final double loadingIndicatorSize;
+  final Color? loadingIndicatorColor;
+
   @override
   State<CachedImage> createState() => _CachedImageState();
 }
@@ -63,7 +59,7 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
   bool _mounted = true;
   double? _lastWidth;
   double? _lastHeight;
-  
+
   @override
   void initState() {
     super.initState();
@@ -75,11 +71,11 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
       parent: _controller,
       curve: Curves.easeInOut,
     );
-    
+
     // Store initial dimensions for resize detection
     _lastWidth = widget.width;
     _lastHeight = widget.height;
-    
+
     // Use post-frame callback to avoid layout issues during build
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (_mounted) {
@@ -87,68 +83,68 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
       }
     });
   }
-  
+
   @override
   void didUpdateWidget(CachedImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Only reload if URL changes or dimensions change significantly
     final urlChanged = oldWidget.imageUrl != widget.imageUrl;
-    final widthChanged = _lastWidth != null && widget.width != null && 
+    final widthChanged = _lastWidth != null && widget.width != null &&
                          (_lastWidth! - widget.width!).abs() > 20;
-    final heightChanged = _lastHeight != null && widget.height != null && 
+    final heightChanged = _lastHeight != null && widget.height != null &&
                           (_lastHeight! - widget.height!).abs() > 20;
-                          
+
     if (urlChanged || widthChanged || heightChanged) {
       _isLoading = true;
       _hasError = false;
       _imageFile = null;
       _imageData = null;
       _controller.reset();
-      
+
       // Update stored dimensions
       _lastWidth = widget.width;
       _lastHeight = widget.height;
-      
+
       // Safely update state
       if (_mounted) {
         _loadImage();
       }
     }
   }
-  
+
   @override
   void dispose() {
     _mounted = false;
     _controller.dispose();
-    
+
     // Help garbage collection
     _imageData = null;
     _imageFile = null;
-    
+
     super.dispose();
   }
-  
+
   // Safe setState helper
   void _safeSetState(VoidCallback fn) {
     if (_mounted && mounted) {
       setState(fn);
     }
   }
-  
+
   Future<void> _loadImage() async {
-    if (widget.imageUrl.isEmpty) {
+    if (widget.imageUrl.isEmpty || widget.imageUrl == 'null' || Uri.tryParse(widget.imageUrl) == null) {
       _safeSetState(() {
         _hasError = true;
         _isLoading = false;
       });
       return;
     }
-    
+
     try {
       // Try to get the cached image file
-      final cachedFile = await ImageCacheManager().getCachedImageFile(widget.imageUrl);
-      
+      final cachedFile = await custom_cache.ImageCacheManager().getCachedImageFile(widget.imageUrl);
+
       if (cachedFile != null) {
         _safeSetState(() {
           _imageFile = cachedFile;
@@ -157,10 +153,10 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
         _controller.forward();
         return;
       }
-      
+
       // If not cached, download and cache
-      final imageData = await ImageCacheManager().getImageData(widget.imageUrl);
-      
+      final imageData = await custom_cache.ImageCacheManager().getImageData(widget.imageUrl);
+
       if (imageData != null) {
         _safeSetState(() {
           _imageData = imageData;
@@ -181,7 +177,7 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
       });
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -195,26 +191,26 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
       child: _buildContent(),
     );
   }
-  
+
   Widget _buildContent() {
     if (_isLoading) {
       return _buildPlaceholder();
     }
-    
+
     if (_hasError) {
       return _buildErrorWidget();
     }
-    
+
     return FadeTransition(
       opacity: _animation,
       child: _buildImage(),
     );
   }
-  
+
   Widget _buildImage() {
     final cacheWidth = widget.maxCacheWidth ?? _calculateCacheSize(widget.width);
     final cacheHeight = widget.maxCacheHeight ?? _calculateCacheSize(widget.height);
-    
+
     if (_imageFile != null) {
       return Image.file(
         _imageFile!,
@@ -231,7 +227,7 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
         gaplessPlayback: true,
       );
     }
-    
+
     if (_imageData != null) {
       return Image.memory(
         _imageData!,
@@ -248,14 +244,14 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
         gaplessPlayback: true,
       );
     }
-    
+
     return _buildErrorWidget();
   }
-  
+
   // Calculate appropriate cache size to reduce memory usage
   int? _calculateCacheSize(double? dimension) {
     if (dimension == null || dimension <= 0) return null;
-    
+
     // Default to some reasonable max size if we can't get the device pixel ratio
     double devicePixelRatio;
     try {
@@ -263,7 +259,7 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
     } catch (e) {
       devicePixelRatio = 2.0; // Default fallback
     }
-    
+
     // Optimize max size based on device capabilities
     // Lower-end devices should use smaller cache sizes
     int maxSize;
@@ -277,44 +273,96 @@ class _CachedImageState extends State<CachedImage> with SingleTickerProviderStat
       // Low-end devices
       maxSize = 512;
     }
-    
+
     final pixelDimension = dimension * devicePixelRatio;
     if (pixelDimension <= maxSize) return pixelDimension.floor();
-    
+
     return maxSize;
   }
-  
+
   Widget _buildPlaceholder() {
     if (widget.placeholder != null) {
       return widget.placeholder!;
     }
-    
+
     return widget.showLoading
-        ? Center(
-            child: SizedBox(
-              width: widget.loadingIndicatorSize,
-              height: widget.loadingIndicatorSize,
-              child: CircularProgressIndicator(
-                strokeWidth: widget.loadingIndicatorSize / 10,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  widget.loadingIndicatorColor ?? Theme.of(context).colorScheme.primary,
-                ),
+        ? Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.grey[100]!,
+                  Colors.grey[200]!,
+                ],
+              ),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: widget.loadingIndicatorSize,
+                    height: widget.loadingIndicatorSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: widget.loadingIndicatorSize / 12,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        widget.loadingIndicatorColor ?? Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'جاري التحميل...',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           )
         : const SizedBox.shrink();
   }
-  
+
   Widget _buildErrorWidget() {
     if (widget.errorWidget != null) {
       return widget.errorWidget!;
     }
-    
-    return Center(
-      child: Icon(
-        Icons.broken_image,
-        color: Colors.grey.safeOpacity(0.5),
-        size: 24,
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.red[50]!,
+            Colors.red[100]!,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.broken_image_outlined,
+              color: Colors.red[300],
+              size: 32,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'فشل في التحميل',
+              style: TextStyle(
+                color: Colors.red[400],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

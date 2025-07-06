@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class AppLocalizations {
-  final Locale locale;
 
   AppLocalizations(this.locale);
+  final Locale locale;
 
   // Helper method to keep the code in the widgets concise
   static AppLocalizations of(BuildContext context) {
@@ -41,6 +41,8 @@ class AppLocalizations {
       'product': 'Product',
       'no_products_found': 'No products found',
       'in_stock': 'in stock',
+      'opening_balance': 'Opening Balance',
+      'current_stock': 'Current Stock',
       'out_of_stock': 'Out of stock',
       'price': 'Price',
       'category': 'Category',
@@ -74,6 +76,8 @@ class AppLocalizations {
       'product': 'منتج',
       'no_products_found': 'لا توجد منتجات',
       'in_stock': 'متوفر',
+      'opening_balance': 'رصيد أول مدة',
+      'current_stock': 'المخزون الحالي',
       'out_of_stock': 'غير متوفر',
       'price': 'السعر',
       'category': 'الفئة',

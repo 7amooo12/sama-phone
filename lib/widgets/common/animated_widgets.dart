@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 
 /// A widget that animates its child when it appears
 class AnimatedAppear extends StatefulWidget {
-  final Widget child;
-  final Duration duration;
-  final Duration delay;
-  final Curve curve;
-  final Offset offset;
-  final bool animate;
   
   const AnimatedAppear({
     super.key,
@@ -18,6 +12,12 @@ class AnimatedAppear extends StatefulWidget {
     this.offset = const Offset(0, 50),
     this.animate = true,
   });
+  final Widget child;
+  final Duration duration;
+  final Duration delay;
+  final Curve curve;
+  final Offset offset;
+  final bool animate;
   
   @override
   State<AnimatedAppear> createState() => _AnimatedAppearState();
@@ -101,10 +101,6 @@ class _AnimatedAppearState extends State<AnimatedAppear> with SingleTickerProvid
 
 /// A widget that animates its size
 class AnimatedSize extends StatefulWidget {
-  final Widget child;
-  final Duration duration;
-  final Curve curve;
-  final AlignmentGeometry alignment;
   
   const AnimatedSize({
     super.key,
@@ -113,6 +109,10 @@ class AnimatedSize extends StatefulWidget {
     this.curve = Curves.easeOut,
     this.alignment = Alignment.center,
   });
+  final Widget child;
+  final Duration duration;
+  final Curve curve;
+  final AlignmentGeometry alignment;
   
   @override
   State<AnimatedSize> createState() => _AnimatedSizeState();
@@ -139,11 +139,6 @@ class _AnimatedSizeState extends State<AnimatedSize> with SingleTickerProviderSt
 
 /// A widget that animates its child with a pulse effect
 class PulseAnimation extends StatefulWidget {
-  final Widget child;
-  final Duration duration;
-  final Curve curve;
-  final bool repeat;
-  final bool autoStart;
   
   const PulseAnimation({
     super.key,
@@ -153,6 +148,11 @@ class PulseAnimation extends StatefulWidget {
     this.repeat = true,
     this.autoStart = true,
   });
+  final Widget child;
+  final Duration duration;
+  final Curve curve;
+  final bool repeat;
+  final bool autoStart;
   
   @override
   State<PulseAnimation> createState() => PulseAnimationState();
@@ -224,11 +224,6 @@ class PulseAnimationState extends State<PulseAnimation> with SingleTickerProvide
 
 /// A widget that animates its child with a shimmer effect
 class ShimmerLoading extends StatefulWidget {
-  final Widget child;
-  final Color baseColor;
-  final Color highlightColor;
-  final Duration duration;
-  final bool enabled;
   
   const ShimmerLoading({
     super.key,
@@ -238,6 +233,11 @@ class ShimmerLoading extends StatefulWidget {
     this.duration = const Duration(milliseconds: 1500),
     this.enabled = true,
   });
+  final Widget child;
+  final Color baseColor;
+  final Color highlightColor;
+  final Duration duration;
+  final bool enabled;
   
   @override
   State<ShimmerLoading> createState() => _ShimmerLoadingState();

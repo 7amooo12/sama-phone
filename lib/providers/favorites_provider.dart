@@ -63,9 +63,9 @@ class FavoritesProvider with ChangeNotifier {
       final favoritesData = prefs.getString('favorites');
 
       if (favoritesData != null) {
-        final List<dynamic> decodedData = json.decode(favoritesData);
+        final List<dynamic> decodedData = json.decode(favoritesData) as List<dynamic>;
         _favorites = decodedData
-            .map((item) => Product.fromJson(item))
+            .map((item) => Product.fromJson(item as Map<String, dynamic>))
             .toList();
       }
     } catch (e) {

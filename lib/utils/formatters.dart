@@ -2,7 +2,11 @@ import 'package:intl/intl.dart';
 import 'constants.dart';
 
 class Formatters {
-    static final _currencyFormatter = NumberFormat.currency(    symbol: 'جنيه ',    decimalDigits: 2,  );
+  static final _currencyFormatter = NumberFormat.currency(
+    locale: 'ar_EG',
+    symbol: 'ج.م',
+    decimalDigits: 2,
+  );
 
   static final _numberFormatter = NumberFormat.decimalPattern();
   static final _dateFormatter = DateFormat(AppConstants.dateFormat);
@@ -13,22 +17,99 @@ class Formatters {
     return _currencyFormatter.format(value);
   }
 
-    static String formatEgyptianPound(double value) {    return '${value.toStringAsFixed(2)} جنيه';  }
+  static String formatEgyptianPound(double value) {
+    return '${value.toStringAsFixed(2)} ج.م';
+  }
+
+  /// Format treasury balance with full precision and proper Arabic formatting
+  static String formatTreasuryBalance(double balance, String currencySymbol) {
+    // Always show full decimal precision for treasury balances
+    final formattedNumber = balance.toStringAsFixed(2);
+
+    // Add thousand separators for better readability
+    final parts = formattedNumber.split('.');
+    final integerPart = parts[0];
+    final decimalPart = parts.length > 1 ? parts[1] : '00';
+
+    // Add thousand separators to integer part
+    String formattedInteger = '';
+    for (int i = 0; i < integerPart.length; i++) {
+      if (i > 0 && (integerPart.length - i) % 3 == 0) {
+        formattedInteger += ',';
+      }
+      formattedInteger += integerPart[i];
+    }
+
+    return '$formattedInteger.$decimalPart $currencySymbol';
+  }
+
+  /// Format treasury balance for display in AnimatedBalanceWidget
+  static String formatAnimatedBalance(double balance) {
+    // For animated balance, use consistent decimal precision
+    if (balance.abs() >= 1000000000) {
+      // Billions - show abbreviated format with full precision
+      return '${(balance / 1000000000).toStringAsFixed(2)}B';
+    } else if (balance.abs() >= 1000000) {
+      // Millions - show abbreviated format with full precision
+      return '${(balance / 1000000).toStringAsFixed(2)}M';
+    } else {
+      // For amounts under one million, always show full precision with thousand separators
+      return _addThousandSeparators(balance.toStringAsFixed(2));
+    }
+  }
+
+  /// Add thousand separators to a formatted number string
+  static String _addThousandSeparators(String numberString) {
+    final parts = numberString.split('.');
+    final integerPart = parts[0];
+    final decimalPart = parts.length > 1 ? parts[1] : '';
+
+    String formattedInteger = '';
+    for (int i = 0; i < integerPart.length; i++) {
+      if (i > 0 && (integerPart.length - i) % 3 == 0) {
+        formattedInteger += ',';
+      }
+      formattedInteger += integerPart[i];
+    }
+
+    return decimalPart.isNotEmpty ? '$formattedInteger.$decimalPart' : formattedInteger;
+  }
+
+  /// Convert SAR to EGP using current exchange rate
+  static double convertSarToEgp(double sarAmount) {
+    const double exchangeRate = 8.25; // 1 SAR = 8.25 EGP
+    return sarAmount * exchangeRate;
+  }
+
+  /// Format currency with automatic SAR to EGP conversion
+  static String formatCurrencyWithConversion(double value, {String fromCurrency = 'SAR'}) {
+    double egpValue = value;
+    if (fromCurrency == 'SAR') {
+      egpValue = convertSarToEgp(value);
+    }
+    return formatEgyptianPound(egpValue);
+  }
 
   static String formatNumber(num value) {
     return _numberFormatter.format(value);
   }
 
   static String formatDate(DateTime date) {
-    return _dateFormatter.format(date);
+    // Convert to local time if UTC to ensure proper timezone handling
+    final localDate = date.isUtc ? date.toLocal() : date;
+    return _dateFormatter.format(localDate);
   }
 
   static String formatTime(DateTime time) {
-    return _timeFormatter.format(time);
+    // Convert to local time if UTC to ensure proper timezone handling
+    final localTime = time.isUtc ? time.toLocal() : time;
+    return _timeFormatter.format(localTime);
   }
 
   static String formatDateTime(DateTime dateTime) {
-    return _dateTimeFormatter.format(dateTime);
+    // Convert to local time if UTC to ensure proper timezone handling
+    final localDateTime = dateTime.isUtc ? dateTime.toLocal() : dateTime;
+    return _dateTimeFormatter.format(localDateTime);
   }
 
   static String formatFileSize(int bytes) {

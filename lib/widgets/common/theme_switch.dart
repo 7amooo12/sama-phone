@@ -1,25 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:smartbiztracker_new/utils/animation_system.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/utils/theme_provider_new.dart';
 
 /// ويدجت للتبديل بين الوضع الفاتح والوضع الداكن
 class ThemeSwitch extends StatelessWidget {
-  final double size;
-  final Color? lightModeColor;
-  final Color? darkModeColor;
-  final Color? backgroundColor;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final bool showText;
-  final String? lightModeText;
-  final String? darkModeText;
-  final TextStyle? textStyle;
-  final double elevation;
-  final BorderRadius? borderRadius;
-  final EdgeInsetsGeometry padding;
-  final VoidCallback? onChanged;
   
   const ThemeSwitch({
     super.key,
@@ -38,6 +23,20 @@ class ThemeSwitch extends StatelessWidget {
     this.padding = const EdgeInsets.all(8),
     this.onChanged,
   });
+  final double size;
+  final Color? lightModeColor;
+  final Color? darkModeColor;
+  final Color? backgroundColor;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final bool showText;
+  final String? lightModeText;
+  final String? darkModeText;
+  final TextStyle? textStyle;
+  final double elevation;
+  final BorderRadius? borderRadius;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onChanged;
   
   @override
   Widget build(BuildContext context) {
@@ -52,7 +51,7 @@ class ThemeSwitch extends StatelessWidget {
     
     return InkWell(
       onTap: () {
-        themeProvider.toggleTheme();
+        // Theme switching disabled - permanent dark mode
         if (onChanged != null) onChanged!();
       },
       borderRadius: defaultBorderRadius,
@@ -133,20 +132,6 @@ class ThemeSwitch extends StatelessWidget {
 
 /// ويدجت للتبديل بين الوضع الفاتح والوضع الداكن بتأثير متحرك
 class AnimatedThemeSwitch extends StatefulWidget {
-  final double size;
-  final Color? lightModeColor;
-  final Color? darkModeColor;
-  final Color? backgroundColor;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final bool showText;
-  final String? lightModeText;
-  final String? darkModeText;
-  final TextStyle? textStyle;
-  final double elevation;
-  final BorderRadius? borderRadius;
-  final EdgeInsetsGeometry padding;
-  final VoidCallback? onChanged;
   
   const AnimatedThemeSwitch({
     super.key,
@@ -165,6 +150,20 @@ class AnimatedThemeSwitch extends StatefulWidget {
     this.padding = const EdgeInsets.all(8),
     this.onChanged,
   });
+  final double size;
+  final Color? lightModeColor;
+  final Color? darkModeColor;
+  final Color? backgroundColor;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final bool showText;
+  final String? lightModeText;
+  final String? darkModeText;
+  final TextStyle? textStyle;
+  final double elevation;
+  final BorderRadius? borderRadius;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onChanged;
   
   @override
   State<AnimatedThemeSwitch> createState() => _AnimatedThemeSwitchState();
@@ -234,7 +233,7 @@ class _AnimatedThemeSwitchState extends State<AnimatedThemeSwitch> with SingleTi
     
     return GestureDetector(
       onTap: () {
-        themeProvider.toggleTheme();
+        // Theme switching disabled - permanent dark mode
         _controller.reset();
         _controller.forward();
         if (widget.onChanged != null) widget.onChanged!();

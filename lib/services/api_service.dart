@@ -1,14 +1,11 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:smartbiztracker_new/config/constants.dart';
 import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:dio/dio.dart';
 import 'package:smartbiztracker_new/utils/logger.dart';
 import 'package:html/parser.dart' as htmlParser;
-import 'package:html/dom.dart' as dom;
-import '../utils/app_logger.dart';
-import '../models/user_model.dart';
+
 
 class ApiService {
   ApiService({
@@ -140,7 +137,7 @@ class ApiService {
       AppLogger.info('جاري تحميل المنتجات من API: $apiUrl');
 
       // تأكد من أن عنوان API صحيح
-      if (!apiUrl.contains('sama-app.com')) {
+      if (!apiUrl.contains('samastock.pythonanywhere.com')) {
         AppLogger.warning('عنوان API غير صحيح: $apiUrl');
         throw Exception('عنوان API غير صحيح: $apiUrl');
       }
@@ -150,11 +147,33 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'x-api-key': 'lux2025FlutterAccess',
         },
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body) as List<dynamic>;
+        final dynamic responseData = json.decode(response.body);
+
+        List<dynamic> data;
+        if (responseData is List) {
+          // إذا كانت الاستجابة قائمة مباشرة
+          data = responseData;
+        } else if (responseData is Map<String, dynamic>) {
+          // إذا كانت الاستجابة كائن يحتوي على قائمة المنتجات
+          if (responseData.containsKey('products')) {
+            data = responseData['products'] as List<dynamic>;
+          } else if (responseData.containsKey('data')) {
+            data = responseData['data'] as List<dynamic>;
+          } else if (responseData.containsKey('items')) {
+            data = responseData['items'] as List<dynamic>;
+          } else {
+            // إذا كان الكائن يحتوي على منتج واحد فقط
+            data = [responseData];
+          }
+        } else {
+          throw Exception('تنسيق استجابة API غير متوقع: ${responseData.runtimeType}');
+        }
+
         AppLogger.info('تم تحميل ${data.length} منتج من API');
 
         return data
@@ -181,23 +200,23 @@ class ApiService {
   Future<List<ProductModel>> getSamaProducts() async {
     try {
       AppLogger.info('جاري تحميل المنتجات من SAMA API...');
-      
+
       // قائمة لتخزين جميع المنتجات من كل الصفحات
-      List<ProductModel> allProducts = [];
-      
+      final List<ProductModel> allProducts = [];
+
       // إعداد التصفيح
       int currentPage = 1;
-      int maxPages = 15; // زيادة الحد الأقصى للصفحات للحصول على كل المنتجات
+      const int maxPages = 15; // زيادة الحد الأقصى للصفحات للحصول على كل المنتجات
       bool hasMorePages = true;
-      
+
       // إنشاء هيدر المصادقة الأساسية
-      String basicAuth = 'Basic ' + base64.encode(utf8.encode('$samaAdminUsername:$samaAdminPassword'));
-      
+      final String basicAuth = 'Basic ${base64.encode(utf8.encode('$samaAdminUsername:$samaAdminPassword'))}';
+
       // استمرار في جلب الصفحات حتى الانتهاء من جميع المنتجات
       while (hasMorePages && currentPage <= maxPages) {
         final adminUrl = '$samaApiBaseUrl/admin/products?page=$currentPage&per_page=100';
         AppLogger.info('جاري تحميل الصفحة $currentPage: $adminUrl');
-        
+
         final response = await client.get(
           Uri.parse(adminUrl),
           headers: {
@@ -205,39 +224,39 @@ class ApiService {
             'Authorization': basicAuth,
           },
         ).timeout(const Duration(seconds: 45)); // زيادة وقت الانتظار
-        
+
         if (response.statusCode == 200) {
           AppLogger.info('تم استلام الصفحة $currentPage بنجاح (${response.body.length} بايت)');
-          
+
           // تحليل المنتجات من HTML
           final pageProducts = _extractProductsFromHtml(response.body, currentPage);
-          
+
           if (pageProducts.isNotEmpty) {
             // إضافة منتجات الصفحة الحالية إلى القائمة الكلية
             allProducts.addAll(pageProducts);
             AppLogger.info('تم تحميل ${pageProducts.length} منتج من الصفحة $currentPage، الإجمالي: ${allProducts.length}');
-            
+
             // البحث عن وجود صفحات أخرى
             final document = htmlParser.parse(response.body);
-            
+
             // البحث عن عناصر التصفيح
             final nextPageLinks = document.querySelectorAll('a.next, a[rel="next"], .pagination a:contains("Next"), .pagination a:contains("التالي"), .pagination li:not(.active):not(.disabled) a');
             bool foundNextPage = false;
-            
+
             for (var link in nextPageLinks) {
               final text = link.text.trim().toLowerCase();
               final href = link.attributes['href'] ?? '';
-              
+
               // إذا كان هذا رابط الصفحة التالية
-              if (text.contains('next') || 
-                  text.contains('التالي') || 
+              if (text.contains('next') ||
+                  text.contains('التالي') ||
                   href.contains('page=${currentPage + 1}') ||
                   (RegExp(r'[^\d]' + (currentPage + 1).toString() + r'[^\d]').hasMatch(href))) {
                 foundNextPage = true;
                 break;
               }
             }
-            
+
             if (foundNextPage) {
               currentPage++;
             } else {
@@ -251,16 +270,16 @@ class ApiService {
         } else {
           AppLogger.error('فشل في تحميل الصفحة $currentPage، رمز الحالة: ${response.statusCode}');
           hasMorePages = false;
-          
+
           // محاولة إرجاع ما تم تحميله إذا كان لدينا منتجات بالفعل
           if (allProducts.isNotEmpty) {
             AppLogger.info('إرجاع ${allProducts.length} منتج تم تحميلها بالفعل');
             return allProducts;
           }
-          
+
           // محاولة استخدام API بديل إذا فشل HTML
           try {
-            final apiUrl = '$samaApiBaseUrl/api/products';
+            const apiUrl = '$samaApiBaseUrl/api/products';
             final apiResponse = await client.get(
               Uri.parse(apiUrl),
               headers: {
@@ -269,7 +288,7 @@ class ApiService {
                 'Authorization': basicAuth,
               },
             ).timeout(const Duration(seconds: 30));
-            
+
             if (apiResponse.statusCode == 200) {
               try {
                 final data = json.decode(apiResponse.body);
@@ -290,13 +309,13 @@ class ApiService {
           }
         }
       }
-      
+
       // التحقق من وجود منتجات
       if (allProducts.isEmpty) {
         AppLogger.warning('لم يتم العثور على أي منتجات من SAMA API بعد محاولة $currentPage صفحات');
         return [];
       }
-      
+
       AppLogger.info('إجمالي المنتجات التي تم تحميلها: ${allProducts.length}');
       return allProducts;
     } catch (e) {
@@ -308,69 +327,69 @@ class ApiService {
   // Helper method to extract products from HTML response
   List<ProductModel> _extractProductsFromHtml(String htmlContent, int page) {
     AppLogger.info('استخراج بيانات المنتجات من HTML للصفحة $page...');
-    List<ProductModel> products = [];
-    
+    final List<ProductModel> products = [];
+
     try {
       final document = htmlParser.parse(htmlContent);
       AppLogger.info('تم تحليل HTML بنجاح، البحث عن المنتجات...');
-      
+
       // أولاً: محاولة إيجاد الجداول (أسلوب واجهة الإدارة)
       final tables = document.querySelectorAll('table.table, table.products-table, table.data-table, table.admin-table, table');
-      
+
       if (tables.isNotEmpty) {
         AppLogger.info('تم العثور على ${tables.length} جدول في HTML');
-        
+
         // البحث عن جدول المنتجات (عادةً الجدول الأكبر)
         var productTable = tables.first;
         int maxCells = 0;
-        
+
         for (var table in tables) {
           final rows = table.querySelectorAll('tr');
           int cellCount = 0;
-          
+
           for (var row in rows) {
             cellCount += row.querySelectorAll('td, th').length;
           }
-          
+
           if (cellCount > maxCells) {
             maxCells = cellCount;
             productTable = table;
           }
         }
-        
+
         final rows = productTable.querySelectorAll('tr');
         AppLogger.info('تم العثور على ${rows.length} صف في جدول المنتجات');
-        
+
         // استخراج خريطة الأعمدة من صف الترويسة
-        Map<String, int> columnMap = {};
+        final Map<String, int> columnMap = {};
         if (rows.isNotEmpty) {
           final headerCells = rows.first.querySelectorAll('th');
-          
+
           for (int i = 0; i < headerCells.length; i++) {
             final headerText = headerCells[i].text.trim().toLowerCase();
-            
-            if (headerText.contains('name') || headerText.contains('product') || 
+
+            if (headerText.contains('name') || headerText.contains('product') ||
                 headerText.contains('اسم') || headerText.contains('منتج')) {
               columnMap['name'] = i;
-            } else if (headerText.contains('description') || headerText.contains('desc') || 
+            } else if (headerText.contains('description') || headerText.contains('desc') ||
                        headerText.contains('وصف') || headerText.contains('تفاصيل')) {
               columnMap['description'] = i;
-            } else if (headerText.contains('price') || headerText.contains('سعر') || 
+            } else if (headerText.contains('price') || headerText.contains('سعر') ||
                        headerText.contains('selling')) {
               columnMap['price'] = i;
-            } else if (headerText.contains('purchase') || headerText.contains('cost') || 
+            } else if (headerText.contains('purchase') || headerText.contains('cost') ||
                        headerText.contains('شراء') || headerText.contains('تكلفة')) {
               columnMap['cost'] = i;
-            } else if (headerText.contains('quantity') || headerText.contains('stock') || 
+            } else if (headerText.contains('quantity') || headerText.contains('stock') ||
                        headerText.contains('كمية') || headerText.contains('مخزون')) {
               columnMap['quantity'] = i;
-            } else if (headerText.contains('category') || headerText.contains('فئة') || 
+            } else if (headerText.contains('category') || headerText.contains('فئة') ||
                        headerText.contains('تصنيف')) {
               columnMap['category'] = i;
-            } else if (headerText.contains('image') || headerText.contains('photo') || 
+            } else if (headerText.contains('image') || headerText.contains('photo') ||
                        headerText.contains('صورة')) {
               columnMap['image'] = i;
-            } else if (headerText.contains('sku') || headerText.contains('code') || 
+            } else if (headerText.contains('sku') || headerText.contains('code') ||
                        headerText.contains('رمز')) {
               columnMap['sku'] = i;
             } else if (headerText.contains('status') || headerText.contains('حالة')) {
@@ -382,33 +401,33 @@ class ApiService {
             }
           }
         }
-        
+
         // صفوف المنتجات (تخطي صف الترويسة)
         for (int i = 1; i < rows.length; i++) {
           final row = rows[i];
           final cells = row.querySelectorAll('td');
-          
+
           if (cells.length >= 3) { // تأكد من وجود بيانات كافية
             try {
               // استخراج البيانات من الخلايا باستخدام خريطة الأعمدة
-              String id = 'sama_${page}_${i}';
-              String name = 'منتج ${page}_${i}';
+              String id = 'sama_${page}_$i';
+              String name = 'منتج ${page}_$i';
               String description = '';
               String category = 'عام';
               double price = 0.0;
               double manufacturingCost = 0.0;
               int quantity = 0;
-              String sku = 'SKU-${page}-${i}';
-              List<String> images = [];
+              String sku = 'SKU-$page-$i';
+              final List<String> images = [];
               String imageUrl = '';
               bool isActive = true;
-              
+
               // استخراج المعرف
               if (columnMap.containsKey('id') && columnMap['id']! < cells.length) {
                 final idCell = cells[columnMap['id']!];
                 final idText = idCell.text.trim();
                 final idMatch = RegExp(r'\d+').firstMatch(idText);
-                
+
                 if (idMatch != null) {
                   id = 'sama_${idMatch.group(0)}';
                 } else {
@@ -426,11 +445,11 @@ class ApiService {
                   }
                 }
               }
-              
+
               // استخراج الاسم
               if (columnMap.containsKey('name') && columnMap['name']! < cells.length) {
                 final nameCell = cells[columnMap['name']!];
-                
+
                 // تجربة البحث عن الاسم في رابط أولاً
                 final nameLink = nameCell.querySelector('a');
                 if (nameLink != null) {
@@ -438,14 +457,14 @@ class ApiService {
                 } else {
                   name = nameCell.text.trim();
                 }
-                
-                if (name.isEmpty) name = 'منتج ${page}_${i}';
-              } else if (cells.length > 0) {
+
+                if (name.isEmpty) name = 'منتج ${page}_$i';
+              } else if (cells.isNotEmpty) {
                 // استخدام العمود الأول إذا لم نجد عمود الاسم
                 name = cells[0].text.trim();
-                if (name.isEmpty) name = 'منتج ${page}_${i}';
+                if (name.isEmpty) name = 'منتج ${page}_$i';
               }
-              
+
               // استخراج الوصف
               if (columnMap.containsKey('description') && columnMap['description']! < cells.length) {
                 description = cells[columnMap['description']!].text.trim();
@@ -463,7 +482,7 @@ class ApiService {
                   if (description.isNotEmpty) break;
                 }
               }
-              
+
               // استخراج التصنيف
               if (columnMap.containsKey('category') && columnMap['category']! < cells.length) {
                 final catCell = cells[columnMap['category']!];
@@ -476,13 +495,13 @@ class ApiService {
                 }
                 if (category.isEmpty) category = 'عام';
               }
-              
+
               // استخراج السعر
               if (columnMap.containsKey('price') && columnMap['price']! < cells.length) {
                 final priceText = cells[columnMap['price']!].text.trim();
                 price = _extractNumericValue(priceText);
               }
-              
+
               // استخراج سعر التكلفة
               if (columnMap.containsKey('cost') && columnMap['cost']! < cells.length) {
                 final costText = cells[columnMap['cost']!].text.trim();
@@ -491,7 +510,7 @@ class ApiService {
                 // تقدير سعر التكلفة كنسبة من سعر البيع
                 manufacturingCost = price * 0.7;
               }
-              
+
               // استخراج الكمية
               if (columnMap.containsKey('quantity') && columnMap['quantity']! < cells.length) {
                 final qtyCell = cells[columnMap['quantity']!];
@@ -503,24 +522,24 @@ class ApiService {
                   quantity = _extractNumericValue(qtyCell.text.trim()).toInt();
                 }
               }
-              
+
               // استخراج SKU
               if (columnMap.containsKey('sku') && columnMap['sku']! < cells.length) {
                 sku = cells[columnMap['sku']!].text.trim();
                 if (sku.isEmpty) sku = 'SKU-${id.replaceAll('sama_', '')}';
               }
-              
+
               // استخراج الحالة
               if (columnMap.containsKey('status') && columnMap['status']! < cells.length) {
                 final statusCell = cells[columnMap['status']!];
                 final statusText = statusCell.text.trim().toLowerCase();
-                
+
                 // البحث عن علامات الحالة النشطة
-                isActive = !statusText.contains('hidden') && 
+                isActive = !statusText.contains('hidden') &&
                           !statusText.contains('مخفي') &&
                           !statusText.contains('غير متاح') &&
                           !statusText.contains('unavailable');
-                
+
                 // البحث عن علامات بصرية للحالة
                 final statusBadge = statusCell.querySelector('.badge, span');
                 if (statusBadge != null) {
@@ -532,37 +551,37 @@ class ApiService {
                   }
                 }
               }
-              
+
               // استخراج الصور - 1: من عمود الصورة
               if (columnMap.containsKey('image') && columnMap['image']! < cells.length) {
                 final imgCell = cells[columnMap['image']!];
                 final imgElement = imgCell.querySelector('img');
-                
+
                 if (imgElement != null && imgElement.attributes.containsKey('src')) {
                   final src = imgElement.attributes['src']!;
                   imageUrl = _normalizeImageUrl(src, samaApiBaseUrl);
                   images.add(imageUrl);
                 }
               }
-              
+
               // استخراج الصور - 2: البحث في جميع الخلايا
               if (images.isEmpty) {
                 for (var cell in cells) {
                   final imgElements = cell.querySelectorAll('img');
-                  
+
                   for (var img in imgElements) {
                     if (img.attributes.containsKey('src')) {
                       final src = img.attributes['src']!;
-                      
+
                       // استبعاد أيقونات الإجراءات والشعارات
                       if (!src.contains('logo') && !src.contains('icon') &&
                           !src.contains('edit') && !src.contains('delete') &&
                           src.length > 5) {
-                          
+
                         final normalizedUrl = _normalizeImageUrl(src, samaApiBaseUrl);
                         if (!images.contains(normalizedUrl)) {
                           images.add(normalizedUrl);
-                          
+
                           // استخدام أول صورة صالحة كصورة رئيسية
                           if (imageUrl.isEmpty) {
                             imageUrl = normalizedUrl;
@@ -573,11 +592,11 @@ class ApiService {
                   }
                 }
               }
-              
+
               // استخراج الصور - 3: استخدام معرف المنتج للبحث عن صورة
               if (images.isEmpty && id.contains('sama_')) {
                 final productId = id.replaceAll('sama_', '');
-                
+
                 // محاولة أنماط URL محتملة للصور
                 final possibleUrls = [
                   '$samaApiBaseUrl/static/uploads/product_$productId.jpg',
@@ -586,31 +605,31 @@ class ApiService {
                   '$samaApiBaseUrl/media/products/$productId.jpg',
                   '$samaApiBaseUrl/uploads/products/$productId.jpg',
                 ];
-                
+
                 images.addAll(possibleUrls);
                 imageUrl = possibleUrls.first;
               }
-              
+
               // استخراج الصور - 4: استخراج من روابط التعديل
               if ((images.isEmpty || imageUrl.isEmpty) && columnMap.containsKey('actions')) {
                 final actionsCell = cells[columnMap['actions']!];
                 final links = actionsCell.querySelectorAll('a');
-                
+
                 for (var link in links) {
                   if (link.attributes.containsKey('href')) {
                     final href = link.attributes['href']!;
-                    
+
                     if (href.contains('edit') || href.contains('product')) {
                       final idMatch = RegExp(r'\/(\d+)(\/|$)').firstMatch(href);
                       if (idMatch != null) {
                         final productId = idMatch.group(1);
                         final imageUrl = '$samaApiBaseUrl/static/uploads/product_$productId.jpg';
-                        
+
                         if (!images.contains(imageUrl)) {
                           images.add(imageUrl);
-                          
+
                           // إذا كان المعرف لم يستخرج سابقاً من العمود، نستخدم المعرف من الرابط
-                          if (id == 'sama_${page}_${i}') {
+                          if (id == 'sama_${page}_$i') {
                             id = 'sama_$productId';
                           }
                         }
@@ -619,7 +638,7 @@ class ApiService {
                   }
                 }
               }
-              
+
               // تكوين نموذج المنتج
               final product = ProductModel(
                 id: id,
@@ -639,7 +658,7 @@ class ApiService {
                 updatedAt: DateTime.now(),
                 manufacturingCost: manufacturingCost,
               );
-              
+
               products.add(product);
             } catch (e) {
               AppLogger.error('خطأ في استخراج بيانات المنتج من الصف رقم $i في الصفحة $page', e);
@@ -655,78 +674,78 @@ class ApiService {
         AppLogger.info('استخدام أسلوب البطاقات لاستخراج المنتجات...');
         final productCards = document.querySelectorAll(
             '.product-card, .product-item, .card, .product, .product-wrapper, .item, .card-body, div[data-product-id]');
-        
+
         for (int i = 0; i < productCards.length; i++) {
           final card = productCards[i];
-          
+
           try {
             // استخراج المعرف
-            String id = 'sama_card_${page}_${i}';
-            final productIdAttr = card.attributes['data-product-id'] ?? 
-                                card.attributes['data-id'] ?? 
+            String id = 'sama_card_${page}_$i';
+            final productIdAttr = card.attributes['data-product-id'] ??
+                                card.attributes['data-id'] ??
                                 card.attributes['id'];
-            
+
             if (productIdAttr != null && productIdAttr.isNotEmpty) {
               final idMatch = RegExp(r'\d+').firstMatch(productIdAttr);
               if (idMatch != null) {
                 id = 'sama_${idMatch.group(0)}';
               }
             }
-            
+
             // استخراج الاسم
-            String name = 'منتج بطاقة ${page}_${i}';
+            String name = 'منتج بطاقة ${page}_$i';
             final nameElement = card.querySelector('h1, h2, h3, h4, h5, .product-title, .title, .name, .card-title');
             if (nameElement != null) {
               name = nameElement.text.trim();
             }
-            
+
             // استخراج الوصف
             String description = '';
             final descElement = card.querySelector('.description, .desc, .product-description, .details, .card-text, .product-details');
             if (descElement != null) {
               description = descElement.text.trim();
             }
-            
+
             // استخراج السعر
             double price = 0.0;
             final priceElement = card.querySelector('.price, .product-price, .amount, .selling-price, .card-price');
             if (priceElement != null) {
               price = _extractNumericValue(priceElement.text.trim());
             }
-            
+
             // استخراج سعر التكلفة
             double manufacturingCost = price * 0.7;
             final costElement = card.querySelector('.cost, .purchase-price');
             if (costElement != null) {
               manufacturingCost = _extractNumericValue(costElement.text.trim());
             }
-            
+
             // استخراج الكمية
             int quantity = 10;
             final quantityElement = card.querySelector('.quantity, .stock, .inventory');
             if (quantityElement != null) {
               quantity = _extractNumericValue(quantityElement.text.trim()).toInt();
             }
-            
+
             // استخراج التصنيف
             String category = 'عام';
             final categoryElement = card.querySelector('.category, .product-category, .badge');
             if (categoryElement != null) {
               category = categoryElement.text.trim();
             }
-            
+
             // استخراج الصورة
             String imageUrl = '';
-            List<String> images = [];
+            final List<String> images = [];
             final imgElement = card.querySelector('img');
             if (imgElement != null && imgElement.attributes.containsKey('src')) {
               final src = imgElement.attributes['src']!;
               imageUrl = _normalizeImageUrl(src, samaApiBaseUrl);
               images.add(imageUrl);
             }
-            
+
             // استخراج المعرف من الروابط إذا لم نجده سابقاً
-            if (id == 'sama_card_${page}_${i}') {
+            if (id == 'sama_card_${page}_$i') {
               final linkElement = card.querySelector('a[href*="product"], a[href*="edit"]');
               if (linkElement != null && linkElement.attributes.containsKey('href')) {
                 final href = linkElement.attributes['href']!;
@@ -736,14 +755,14 @@ class ApiService {
                 }
               }
             }
-            
+
             // إذا لم نجد صورة، نحاول الاعتماد على معرف المنتج
             if (images.isEmpty && id.contains('sama_')) {
               final productId = id.replaceAll('sama_', '');
               imageUrl = '$samaApiBaseUrl/static/uploads/product_$productId.jpg';
               images.add(imageUrl);
             }
-            
+
             // تكوين نموذج المنتج
             final product = ProductModel(
               id: id,
@@ -762,19 +781,19 @@ class ApiService {
               manufacturingCost: manufacturingCost,
               supplier: 'SAMA Store',
             );
-            
+
             products.add(product);
           } catch (e) {
             AppLogger.error('خطأ في استخراج بيانات المنتج من البطاقة رقم $i في الصفحة $page', e);
           }
         }
       }
-      
+
       AppLogger.info('تم استخراج ${products.length} منتج من الصفحة $page');
     } catch (e) {
       AppLogger.error('خطأ أثناء تحليل HTML للصفحة $page', e);
     }
-    
+
     return products;
   }
 
@@ -782,17 +801,17 @@ class ApiService {
   String _normalizeImageUrl(String src, String baseUrl) {
     // تجاهل الروابط الفارغة
     if (src.isEmpty) return '';
-    
+
     // إذا كان URL كامل، استخدمه كما هو
     if (src.startsWith('http://') || src.startsWith('https://')) {
       return src;
     }
-    
+
     // معالجة روابط بروتوكول نسبي
     if (src.startsWith('//')) {
       return 'https:$src';
     }
-    
+
     // إذا كان URL نسبي، أضفه إلى URL الأساسي
     if (src.startsWith('/')) {
       // تأكد من عدم تكرار الشرطة
@@ -971,70 +990,70 @@ class ApiService {
   // Helper method to convert JSON data to ProductModel list
   List<ProductModel> _convertToProductModels(List<dynamic> data) {
     AppLogger.info('تحويل بيانات JSON: عدد ${data.length} منتج');
-    
+
     return data.map((item) {
       final Map<String, dynamic> productData = item as Map<String, dynamic>;
-      
+
       // Debug log to see all keys available in the data
       AppLogger.info('مفاتيح بيانات المنتج: ${productData.keys.join(', ')}');
-      
+
       // Add any missing fields with default values
       if (!productData.containsKey('id')) {
         productData['id'] = productData['id'] ?? productData['_id'] ?? productData['productId'] ?? 'product_${DateTime.now().millisecondsSinceEpoch}';
       }
-      
+
       // Handle numeric fields
       if (!productData.containsKey('quantity') || productData['quantity'] == null) {
-        productData['quantity'] = productData['quantity'] ?? 
-                                  productData['stock'] ?? 
-                                  productData['inventory'] ?? 
+        productData['quantity'] = productData['quantity'] ??
+                                  productData['stock'] ??
+                                  productData['inventory'] ??
                                   productData['available'] ?? 0;
       }
-      
+
       if (!productData.containsKey('price') || productData['price'] == null) {
-        productData['price'] = productData['price'] ?? 
-                              productData['sellingPrice'] ?? 
-                              productData['salePrice'] ?? 
+        productData['price'] = productData['price'] ??
+                              productData['sellingPrice'] ??
+                              productData['salePrice'] ??
                               productData['retailPrice'] ?? 0.0;
       }
-      
+
       if (!productData.containsKey('manufacturingCost') || productData['manufacturingCost'] == null) {
-        productData['manufacturingCost'] = productData['manufacturingCost'] ?? 
-                                          productData['purchasePrice'] ?? 
-                                          productData['costPrice'] ?? 
-                                          productData['buyingPrice'] ?? 
+        productData['manufacturingCost'] = productData['manufacturingCost'] ??
+                                          productData['purchasePrice'] ??
+                                          productData['costPrice'] ??
+                                          productData['buyingPrice'] ??
                                           (productData['price'] != null ? (productData['price'] * 0.7) : 0.0);
       }
-      
+
       if (!productData.containsKey('discountPrice') || productData['discountPrice'] == null) {
-        productData['discountPrice'] = productData['discountPrice'] ?? 
-                                      productData['salePrice'] ?? 
-                                      productData['specialPrice'] ?? 
-                                      productData['promotionPrice'] ?? null;
+        productData['discountPrice'] = productData['discountPrice'] ??
+                                      productData['salePrice'] ??
+                                      productData['specialPrice'] ??
+                                      productData['promotionPrice'];
       }
-      
+
       if (!productData.containsKey('reorderPoint')) {
-        productData['reorderPoint'] = productData['reorderPoint'] ?? 
-                                     productData['reorderLevel'] ?? 
+        productData['reorderPoint'] = productData['reorderPoint'] ??
+                                     productData['reorderLevel'] ??
                                      productData['minStock'] ?? 5;
       }
-      
+
       if (!productData.containsKey('minimumStock')) {
-        productData['minimumStock'] = productData['minimumStock'] ?? 
-                                     productData['minStock'] ?? 
+        productData['minimumStock'] = productData['minimumStock'] ??
+                                     productData['minStock'] ??
                                      productData['minQuantity'] ?? 10;
       }
-      
+
       // Handle image fields
       if (!productData.containsKey('imageUrl') || productData['imageUrl'] == null || productData['imageUrl'] == '') {
-        productData['imageUrl'] = productData['imageUrl'] ?? 
-                                 productData['image'] ?? 
-                                 productData['productImage'] ?? 
-                                 productData['thumbnail'] ?? 
-                                 productData['photo'] ?? 
+        productData['imageUrl'] = productData['imageUrl'] ??
+                                 productData['image'] ??
+                                 productData['productImage'] ??
+                                 productData['thumbnail'] ??
+                                 productData['photo'] ??
                                  'https://via.placeholder.com/300x300.png?text=No+Image';
       }
-      
+
       if (!productData.containsKey('images') || productData['images'] == null) {
         if (productData['imageUrl'] != null) {
           productData['images'] = [productData['imageUrl']];
@@ -1046,35 +1065,35 @@ class ApiService {
           productData['images'] = ['https://via.placeholder.com/300x300.png?text=No+Image'];
         }
       }
-      
+
       // Handle string fields
       if (!productData.containsKey('category') || productData['category'] == null || productData['category'] == '') {
-        productData['category'] = productData['category'] ?? 
-                                 productData['productCategory'] ?? 
-                                 productData['categoryName'] ?? 
+        productData['category'] = productData['category'] ??
+                                 productData['productCategory'] ??
+                                 productData['categoryName'] ??
                                  productData['group'] ?? 'عام';
       }
-      
+
       if (!productData.containsKey('supplier') || productData['supplier'] == null || productData['supplier'] == '') {
-        productData['supplier'] = productData['supplier'] ?? 
-                                 productData['vendor'] ?? 
-                                 productData['manufacturer'] ?? 
+        productData['supplier'] = productData['supplier'] ??
+                                 productData['vendor'] ??
+                                 productData['manufacturer'] ??
                                  productData['brand'] ?? 'متجر النجف والثريات';
       }
-      
+
       if (!productData.containsKey('description') || productData['description'] == null || productData['description'] == '') {
-        productData['description'] = productData['description'] ?? 
-                                    productData['productDescription'] ?? 
-                                    productData['details'] ?? 
-                                    productData['info'] ?? 
+        productData['description'] = productData['description'] ??
+                                    productData['productDescription'] ??
+                                    productData['details'] ??
+                                    productData['info'] ??
                                     'منتج من متجر النجف والثريات';
       }
-      
+
       if (!productData.containsKey('sku') || productData['sku'] == null || productData['sku'] == '') {
-        productData['sku'] = productData['sku'] ?? 
-                            productData['productCode'] ?? 
-                            productData['itemCode'] ?? 
-                            productData['barcode'] ?? 
+        productData['sku'] = productData['sku'] ??
+                            productData['productCode'] ??
+                            productData['itemCode'] ??
+                            productData['barcode'] ??
                             'SKU-${DateTime.now().millisecondsSinceEpoch}';
       }
 
@@ -1082,18 +1101,18 @@ class ApiService {
       if (!productData.containsKey('createdAt') || productData['createdAt'] == null) {
         productData['createdAt'] = DateTime.now().toIso8601String();
       }
-      
+
       // Convert the boolean field
       if (!productData.containsKey('isActive')) {
-        productData['isActive'] = productData['isActive'] ?? 
-                                 productData['active'] ?? 
-                                 productData['published'] ?? 
+        productData['isActive'] = productData['isActive'] ??
+                                 productData['active'] ??
+                                 productData['published'] ??
                                  productData['visible'] ?? true;
       }
 
       // Debug log to verify price and manufacturingCost
       AppLogger.info('بيانات السعر للمنتج: ${productData['name']} - سعر البيع: ${productData['price']}, سعر الشراء: ${productData['manufacturingCost']}');
-      
+
       try {
         return ProductModel.fromJson(productData);
       } catch (e) {
@@ -1126,7 +1145,7 @@ class ApiService {
     if (value == null) return null;
     if (value is double) return value;
     if (value is int) return value.toDouble();
-    
+
     try {
       return double.parse(value.toString());
     } catch (e) {
@@ -1137,7 +1156,7 @@ class ApiService {
   int? _parseInt(dynamic value) {
     if (value == null) return null;
     if (value is int) return value;
-    
+
     try {
       return int.parse(value.toString());
     } catch (e) {
@@ -1157,10 +1176,10 @@ class ApiService {
   Future<bool> submitOrder(dynamic order) async {
     try {
       AppLogger.info('Submitting new order: ${order.id}');
-      
-      final endpoint = '${AppConstants.ordersApi}/create';
+
+      const endpoint = '${AppConstants.ordersApi}/create';
       final response = await httpPost(endpoint, order.toJson());
-      
+
       if (response['success']) {
         AppLogger.info('Order submitted successfully: ${order.id}');
         return true;
@@ -1178,10 +1197,10 @@ class ApiService {
   Future<bool> cancelOrder(String orderId) async {
     try {
       AppLogger.info('Cancelling order: $orderId');
-      
+
       final endpoint = '${AppConstants.ordersApi}/$orderId/cancel';
       final response = await httpPut(endpoint, {'status': 'cancelled'});
-      
+
       if (response['success']) {
         AppLogger.info('Order cancelled successfully: $orderId');
         return true;
@@ -1192,6 +1211,17 @@ class ApiService {
     } catch (e) {
       AppLogger.error('Error cancelling order', e);
       return false;
+    }
+  }
+
+  /// Dispose method to clean up resources
+  void dispose() {
+    try {
+      client.close();
+      dio.close();
+      AppLogger.info('ApiService disposed successfully');
+    } catch (e) {
+      AppLogger.error('Error disposing ApiService', e);
     }
   }
 }

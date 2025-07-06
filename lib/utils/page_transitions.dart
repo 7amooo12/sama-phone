@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smartbiztracker_new/utils/animation_system.dart';
 
 /// نظام الانتقالات المخصصة بين الصفحات
 /// يوفر هذا الملف مجموعة من الانتقالات المخصصة التي يمكن استخدامها للتنقل بين الصفحات
@@ -317,8 +316,8 @@ class PageTransitions {
         
         return _CubePageTransition(
           animation: curvedAnimation,
-          child: child,
           rightToLeft: rightToLeft,
+          child: child,
         );
       },
     );
@@ -327,15 +326,15 @@ class PageTransitions {
 
 /// ويدجت للانتقال بتأثير المكعب ثلاثي الأبعاد
 class _CubePageTransition extends StatelessWidget {
-  final Animation<double> animation;
-  final Widget child;
-  final bool rightToLeft;
   
   const _CubePageTransition({
     required this.animation,
     required this.child,
     this.rightToLeft = true,
   });
+  final Animation<double> animation;
+  final Widget child;
+  final bool rightToLeft;
   
   @override
   Widget build(BuildContext context) {

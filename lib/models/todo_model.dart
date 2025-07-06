@@ -1,8 +1,4 @@
 class Todo {
-  final String id;
-  final String title;
-  final bool isComplete;
-  final String? userId;
 
   Todo({
     required this.id,
@@ -16,6 +12,10 @@ class Todo {
         title = json['title'] as String,
         isComplete = json['is_complete'] as bool,
         userId = json['user_id'] as String?;
+  final String id;
+  final String title;
+  final bool isComplete;
+  final String? userId;
 
   Map<String, dynamic> toJson() {
     return {

@@ -3,16 +3,16 @@ import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 
 class ProductStatsWidget extends StatelessWidget {
-  final List<ProductModel> products;
-  final bool isExpanded;
-  final VoidCallback onToggle;
 
   const ProductStatsWidget({
-    Key? key,
+    super.key,
     required this.products,
     required this.isExpanded,
     required this.onToggle,
-  }) : super(key: key);
+  });
+  final List<ProductModel> products;
+  final bool isExpanded;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {

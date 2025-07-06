@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 
 // General placeholder screen
 class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final String message;
-  final IconData icon;
   
   const PlaceholderScreen({
-    Key? key,
+    super.key,
     required this.title,
     this.message = 'هذه الصفحة قيد التطوير',
     this.icon = Icons.construction,
-  }) : super(key: key);
+  });
+  final String title;
+  final String message;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {

@@ -1,19 +1,20 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 class SecureStorageService {
-  static final SecureStorageService _instance = SecureStorageService._internal();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-
-  // Keys for storage
-  static const String _credentialsKey = 'user_credentials';
-  static const String _rememberMeKey = 'remember_me';
 
   factory SecureStorageService() {
     return _instance;
   }
 
   SecureStorageService._internal();
+  static final SecureStorageService _instance = SecureStorageService._internal();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  // Keys for storage
+  static const String _credentialsKey = 'user_credentials';
+  static const String _rememberMeKey = 'remember_me';
 
   // Save user credentials securely
   Future<void> saveCredentials(String email, String password) async {
@@ -33,13 +34,14 @@ class SecureStorageService {
     if (data == null) return null;
     
     try {
-      final Map<String, dynamic> decoded = jsonDecode(data);
+      final decoded = jsonDecode(data);
+      final Map<String, dynamic> decodedMap = (decoded as Map<String, dynamic>? ?? {});
       return {
-        'email': decoded['email'],
-        'password': decoded['password'],
+        'email': decodedMap['email'] as String? ?? '',
+        'password': decodedMap['password'] as String? ?? '',
       };
     } catch (e) {
-      print('Error decoding credentials: $e');
+      debugPrint('Error decoding credentials: $e');
       return null;
     }
   }

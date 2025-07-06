@@ -62,10 +62,10 @@ class AppConstants {
   static const loadingAnimationPath = 'assets/animations/loading.json';
 
   // API Constants
-  static const baseUrl = 'https://api.sama-app.com';
+  static const baseUrl = 'https://samastock.pythonanywhere.com';
   static const secondaryUrl = 'https://dashboard.sama-app.com';
   static const connectTimeout = 30000; // 30 seconds
-  static const productsApi = '/api/products';
+  static const productsApi = '/flutter/api/api/products';
   static const authLoginUrl = '/api/auth/login';
 
   // Default credentials (only for development)

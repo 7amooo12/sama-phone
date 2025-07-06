@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/config/routes.dart';
 import 'package:smartbiztracker_new/providers/home_provider.dart';
-import 'package:smartbiztracker_new/models/user_model.dart';
+import 'package:smartbiztracker_new/models/user_role.dart';
 import 'package:provider/provider.dart';
 import 'package:smartbiztracker_new/utils/color_extension.dart';
 

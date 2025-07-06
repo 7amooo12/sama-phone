@@ -8,7 +8,7 @@ import '../../utils/style_system.dart';
 import '../../widgets/common/custom_app_bar.dart';
 
 class CartScreen extends StatefulWidget {
-  const CartScreen({Key? key}) : super(key: key);
+  const CartScreen({super.key});
 
   @override
   _CartScreenState createState() => _CartScreenState();

@@ -1,23 +1,29 @@
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
-import '../utils/logger.dart';
+import '../utils/app_logger.dart';
 
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final _supabase = Supabase.instance.client;
   final _uuid = const Uuid();
 
-  // Upload a file to Firebase Storage
+  // Upload a file to Supabase Storage
   Future<String> uploadFile(File file, String folder) async {
     try {
       final fileName = '${_uuid.v4()}${path.extension(file.path)}';
-      final ref = _storage.ref().child('$folder/$fileName');
-      final uploadTask = ref.putFile(file);
-      final snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
+      final filePath = '$folder/$fileName';
+      final bytes = await file.readAsBytes();
+
+      await _supabase.storage
+          .from('attachments')
+          .uploadBinary(filePath, bytes);
+
+      return _supabase.storage
+          .from('attachments')
+          .getPublicUrl(filePath);
     } catch (e) {
-      AppLogger.error('Error uploading file', e);
+      AppLogger.error('Error uploading file: $e');
       throw Exception('Failed to upload file');
     }
   }
@@ -32,18 +38,24 @@ class StorageService {
       }
       return urls;
     } catch (e) {
-      AppLogger.error('Error uploading files', e);
+      AppLogger.error('Error uploading files: $e');
       throw Exception('Failed to upload files');
     }
   }
 
-  // Delete a file from Firebase Storage
+  // Delete a file from Supabase Storage
   Future<void> deleteFile(String url) async {
     try {
-      final ref = _storage.refFromURL(url);
-      await ref.delete();
+      // Extract file path from URL
+      final uri = Uri.parse(url);
+      final pathSegments = uri.pathSegments;
+      if (pathSegments.length >= 3) {
+        final bucket = pathSegments[pathSegments.length - 3];
+        final filePath = pathSegments.sublist(pathSegments.length - 2).join('/');
+        await _supabase.storage.from(bucket).remove([filePath]);
+      }
     } catch (e) {
-      AppLogger.error('Error deleting file', e);
+      AppLogger.error('Error deleting file: $e');
       throw Exception('Failed to delete file');
     }
   }
@@ -55,48 +67,52 @@ class StorageService {
         await deleteFile(url);
       }
     } catch (e) {
-      AppLogger.error('Error deleting files', e);
+      AppLogger.error('Error deleting files: $e');
       throw Exception('Failed to delete files');
     }
   }
 
-  // Get file metadata
+  // Get file metadata (simplified for Supabase)
   Future<Map<String, dynamic>> getFileMetadata(String url) async {
     try {
-      final ref = _storage.refFromURL(url);
-      final metadata = await ref.getMetadata();
+      // For Supabase, we can extract basic info from URL
+      final uri = Uri.parse(url);
+      final fileName = uri.pathSegments.last;
       return {
-        'name': metadata.name,
-        'size': metadata.size,
-        'contentType': metadata.contentType,
-        'timeCreated': metadata.timeCreated,
-        'updated': metadata.updated,
+        'name': fileName,
+        'url': url,
+        'contentType': _getContentTypeFromExtension(fileName),
       };
     } catch (e) {
-      AppLogger.error('Error getting file metadata', e);
+      AppLogger.error('Error getting file metadata: $e');
       throw Exception('Failed to get file metadata');
     }
   }
 
-  // Update file metadata
-  Future<void> updateFileMetadata(
-      String url, Map<String, String> metadata) async {
-    try {
-      final ref = _storage.refFromURL(url);
-      await ref.updateMetadata(SettableMetadata(customMetadata: metadata));
-    } catch (e) {
-      AppLogger.error('Error updating file metadata', e);
-      throw Exception('Failed to update file metadata');
+  // Helper method to get content type from file extension
+  String _getContentTypeFromExtension(String fileName) {
+    final extension = path.extension(fileName).toLowerCase();
+    switch (extension) {
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.pdf':
+        return 'application/pdf';
+      default:
+        return 'application/octet-stream';
     }
   }
 
   // Get file download URL
-  Future<String> getDownloadURL(String path) async {
+  Future<String> getDownloadURL(String filePath) async {
     try {
-      final ref = _storage.ref().child(path);
-      return await ref.getDownloadURL();
+      return _supabase.storage
+          .from('attachments')
+          .getPublicUrl(filePath);
     } catch (e) {
-      AppLogger.error('Error getting download URL', e);
+      AppLogger.error('Error getting download URL: $e');
       throw Exception('Failed to get download URL');
     }
   }
@@ -104,15 +120,20 @@ class StorageService {
   // List files in a folder
   Future<List<String>> listFiles(String folder) async {
     try {
-      final ListResult result = await _storage.ref().child(folder).listAll();
+      final response = await _supabase.storage
+          .from('attachments')
+          .list(path: folder);
+
       final urls = <String>[];
-      for (final ref in result.items) {
-        final url = await ref.getDownloadURL();
+      for (final file in response) {
+        final url = _supabase.storage
+            .from('attachments')
+            .getPublicUrl('$folder/${file.name}');
         urls.add(url);
       }
       return urls;
     } catch (e) {
-      AppLogger.error('Error listing files', e);
+      AppLogger.error('Error listing files: $e');
       throw Exception('Failed to list files');
     }
   }

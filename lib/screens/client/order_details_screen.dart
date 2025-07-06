@@ -6,12 +6,12 @@ import '../../providers/order_provider.dart';
 import '../../utils/app_localizations.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
-  final OrderModel order;
 
   const OrderDetailsScreen({
-    Key? key,
+    super.key,
     required this.order,
-  }) : super(key: key);
+  });
+  final OrderModel order;
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +218,7 @@ class OrderDetailsScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceVariant,
+                        color: theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(

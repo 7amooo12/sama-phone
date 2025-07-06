@@ -24,7 +24,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     final TextEditingController priceController = TextEditingController();
     final TextEditingController quantityController = TextEditingController();
     final TextEditingController categoryController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -83,10 +83,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   Widget build(BuildContext context) {
     // Try to access Supabase provider first
     final supabaseProvider = Provider.of<SupabaseProvider>(context);
-    
+
     // Check if we have a logged in user from Supabase
     final userModel = supabaseProvider.user;
-    
+
     // If Supabase user is null, try to get user from AuthProvider as fallback
     final authUser = userModel ?? (
       Provider.of<AuthProvider>(context, listen: false).user
@@ -130,16 +130,12 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
         currentRoute: AppRoutes.productManagement,
       ),
-      body: ProductManagementWidget(
-        onAddProduct: _showAddProductDialog,
+      body: const ProductManagementWidget(
         showHeader: true,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Show dialog to add new product
-          _showAddProductDialog();
-        },
-        child: const Icon(Icons.add),
+        hideAddButton: true,
+        hideAdvancedSearch: true,
+        hideExportButton: true,
+        hideLowStockButton: true,
       ),
     );
   }

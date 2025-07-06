@@ -4,102 +4,58 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 
 class ThemeProviderNew extends ChangeNotifier {
-  static const String _themePreferenceKey = 'theme_preference';
-  bool _isDarkMode = false;
-  ThemeMode _themeMode = ThemeMode.system;
-
-  bool get isDarkMode => _isDarkMode;
-  ThemeMode get themeMode => _themeMode;
 
   ThemeProviderNew() {
-    _loadThemePreference();
-  }
-
-  Future<void> _loadThemePreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedTheme = prefs.getString(_themePreferenceKey);
-
-    if (savedTheme != null) {
-      switch (savedTheme) {
-        case 'dark':
-          _isDarkMode = true;
-          _themeMode = ThemeMode.dark;
-          break;
-        case 'light':
-          _isDarkMode = false;
-          _themeMode = ThemeMode.light;
-          break;
-        case 'system':
-        default:
-          _themeMode = ThemeMode.system;
-          _isDarkMode = WidgetsBinding.instance.window.platformBrightness == Brightness.dark;
-          break;
-      }
-      notifyListeners();
-    }
-  }
-
-  Future<void> _saveThemePreference(String theme) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_themePreferenceKey, theme);
-  }
-
-  void toggleTheme() {
-    if (_themeMode == ThemeMode.system) {
-      _themeMode = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
-    } else {
-      _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    }
-    _isDarkMode = _themeMode == ThemeMode.dark;
+    // Enforce permanent dark mode - no loading from preferences
+    _isDarkMode = true;
+    _themeMode = ThemeMode.dark;
     _updateStatusBarColor();
-    _saveThemePreference(_themeMode == ThemeMode.dark ? 'dark' : 'light');
-    notifyListeners();
+  }
+
+  // Permanently set to dark mode
+  bool _isDarkMode = true;
+  ThemeMode _themeMode = ThemeMode.dark;
+
+  // Always return dark mode
+  bool get isDarkMode => true;
+  ThemeMode get themeMode => ThemeMode.dark;
+
+  // Removed theme preference loading - permanent dark mode
+
+  // Disabled theme switching - always dark mode
+  void toggleTheme() {
+    // Do nothing - theme is permanently dark
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
-    if (_themeMode == mode) return;
-    _themeMode = mode;
-    _isDarkMode = mode == ThemeMode.dark || (mode == ThemeMode.system && WidgetsBinding.instance.window.platformBrightness == Brightness.dark);
-    _updateStatusBarColor();
-    await _saveThemePreference(mode == ThemeMode.dark ? 'dark' : mode == ThemeMode.light ? 'light' : 'system');
-    notifyListeners();
+    // Do nothing - theme is permanently dark
   }
 
   Future<void> setDarkMode() async {
-    await setThemeMode(ThemeMode.dark);
+    // Already dark mode - do nothing
   }
 
   Future<void> setLightMode() async {
-    await setThemeMode(ThemeMode.light);
+    // Disabled - permanent dark mode only
   }
 
   void _updateStatusBarColor() {
-    if (_isDarkMode) {
-      SystemChrome.setSystemUIOverlayStyle(
-        SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: StyleSystem.backgroundDark,
-          systemNavigationBarIconBrightness: Brightness.light,
-        ),
-      );
-    } else {
-      SystemChrome.setSystemUIOverlayStyle(
-        SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          systemNavigationBarColor: StyleSystem.backgroundLight,
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-      );
-    }
+    // Always set dark mode status bar styling
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFF0F172A), // Luxury dark background
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
   }
 
   ThemeData getTheme() {
-    return _isDarkMode ? _buildDarkTheme() : _buildLightTheme();
+    return _buildDarkTheme(); // Always return dark theme
   }
 
-  ThemeData get lightTheme => _buildLightTheme();
+  ThemeData get lightTheme => _buildDarkTheme(); // Return dark theme even for light
   ThemeData get darkTheme => _buildDarkTheme();
 
   ThemeData _buildLightTheme() {
@@ -117,7 +73,6 @@ class ThemeProviderNew extends ChangeNotifier {
       primaryColor: StyleSystem.primaryColor,
       scaffoldBackgroundColor: StyleSystem.backgroundLight,
       cardColor: StyleSystem.backgroundLight,
-      dialogBackgroundColor: StyleSystem.backgroundLight,
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
@@ -128,7 +83,7 @@ class ThemeProviderNew extends ChangeNotifier {
           color: StyleSystem.primaryColor,
           fontWeight: FontWeight.bold,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle(
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
         ),
@@ -152,7 +107,7 @@ class ThemeProviderNew extends ChangeNotifier {
         shadowColor: Colors.black.withOpacity(0.05),
       ),
       inputDecorationTheme: StyleSystem.textFieldTheme,
-      textTheme: TextTheme(
+      textTheme: const TextTheme(
         displayLarge: StyleSystem.displayLarge,
         displayMedium: StyleSystem.displayMedium,
         displaySmall: StyleSystem.displaySmall,
@@ -169,18 +124,18 @@ class ThemeProviderNew extends ChangeNotifier {
         labelMedium: StyleSystem.labelMedium,
         labelSmall: StyleSystem.labelSmall,
       ),
-      dividerTheme: DividerThemeData(
+      dividerTheme: const DividerThemeData(
         color: StyleSystem.neutralLight,
         thickness: 1,
         space: 1,
       ),
-      iconTheme: IconThemeData(
+      iconTheme: const IconThemeData(
         color: StyleSystem.neutralMedium,
         size: 24,
       ),
-      listTileTheme: ListTileThemeData(
+      listTileTheme: const ListTileThemeData(
         iconColor: StyleSystem.neutralMedium,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(StyleSystem.radiusMedium)),
         ),
@@ -199,9 +154,9 @@ class ThemeProviderNew extends ChangeNotifier {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: StyleSystem.backgroundLight,
         selectedIconTheme: IconThemeData(color: StyleSystem.primaryColor),
-        unselectedIconTheme: IconThemeData(color: StyleSystem.neutralMedium),
+        unselectedIconTheme: const IconThemeData(color: StyleSystem.neutralMedium),
         selectedLabelTextStyle: TextStyle(color: StyleSystem.primaryColor, fontWeight: FontWeight.bold),
-        unselectedLabelTextStyle: TextStyle(color: StyleSystem.neutralMedium),
+        unselectedLabelTextStyle: const TextStyle(color: StyleSystem.neutralMedium),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: StyleSystem.primaryColor,
@@ -211,7 +166,7 @@ class ThemeProviderNew extends ChangeNotifier {
           borderRadius: BorderRadius.circular(16),
         ),
         extendedPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      ),
+      ), dialogTheme: const DialogThemeData(backgroundColor: StyleSystem.backgroundLight),
     );
   }
 
@@ -232,7 +187,6 @@ class ThemeProviderNew extends ChangeNotifier {
       primaryColor: StyleSystem.primaryColor,
       scaffoldBackgroundColor: StyleSystem.backgroundDark,
       cardColor: StyleSystem.surfaceDark,
-      dialogBackgroundColor: StyleSystem.surfaceDark,
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
@@ -243,26 +197,26 @@ class ThemeProviderNew extends ChangeNotifier {
           color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle(
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: StyleSystem.primaryButtonStyle.copyWith(
-          backgroundColor: MaterialStateProperty.all(StyleSystem.primaryColor),
-          shadowColor: MaterialStateProperty.all(StyleSystem.primaryColor.withOpacity(0.5)),
+          backgroundColor: WidgetStateProperty.all(StyleSystem.primaryColor),
+          shadowColor: WidgetStateProperty.all(StyleSystem.primaryColor.withValues(alpha: 0.5)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: StyleSystem.outlinedButtonStyle.copyWith(
-          foregroundColor: MaterialStateProperty.all(Colors.white),
-          side: MaterialStateProperty.all(const BorderSide(color: Colors.white70, width: 1.5)),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          side: WidgetStateProperty.all(const BorderSide(color: Colors.white70, width: 1.5)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: StyleSystem.textButtonStyle.copyWith(
-          foregroundColor: MaterialStateProperty.all(Colors.white),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
         ),
       ),
       cardTheme: CardTheme(
@@ -320,10 +274,10 @@ class ThemeProviderNew extends ChangeNotifier {
         color: Colors.white70,
         size: 24,
       ),
-      listTileTheme: ListTileThemeData(
+      listTileTheme: const ListTileThemeData(
         iconColor: Colors.white70,
         textColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(StyleSystem.radiusMedium)),
         ),
@@ -342,9 +296,9 @@ class ThemeProviderNew extends ChangeNotifier {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: StyleSystem.surfaceDark,
         selectedIconTheme: IconThemeData(color: StyleSystem.primaryColor),
-        unselectedIconTheme: IconThemeData(color: Colors.white54),
+        unselectedIconTheme: const IconThemeData(color: Colors.white54),
         selectedLabelTextStyle: TextStyle(color: StyleSystem.primaryColor, fontWeight: FontWeight.bold),
-        unselectedLabelTextStyle: TextStyle(color: Colors.white54),
+        unselectedLabelTextStyle: const TextStyle(color: Colors.white54),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: StyleSystem.primaryColor,
@@ -354,7 +308,7 @@ class ThemeProviderNew extends ChangeNotifier {
           borderRadius: BorderRadius.circular(16),
         ),
         extendedPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      ),
+      ), dialogTheme: const DialogThemeData(backgroundColor: StyleSystem.surfaceDark),
     );
   }
 } 

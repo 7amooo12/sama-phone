@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/utils/color_extension.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../utils/accountant_theme_config.dart';
 
 class ProductStatusCard extends StatelessWidget {
   const ProductStatusCard({
@@ -7,122 +9,172 @@ class ProductStatusCard extends StatelessWidget {
     required this.name,
     required this.quantity,
     this.isLowStock = false,
-    this.needsReorder = false,
     this.onTap,
   });
   final String name;
   final int quantity;
   final bool isLowStock;
-  final bool needsReorder;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    // Determine status color based on stock and reorder status
+    // Determine status color based on stock levels
     Color statusColor;
-    String statusText;
+    Color glowColor;
+    IconData statusIcon;
 
-    if (needsReorder) {
-      statusColor = Colors.red;
-      statusText = 'إعادة طلب';
-    } else if (isLowStock) {
-      statusColor = Colors.orange;
-      statusText = 'مخزون منخفض';
+    if (quantity == 0) {
+      statusColor = AccountantThemeConfig.dangerRed;
+      glowColor = Colors.red;
+      statusIcon = Icons.error_outline;
+    } else if (quantity <= 5) {
+      statusColor = AccountantThemeConfig.warningOrange;
+      glowColor = Colors.orange;
+      statusIcon = Icons.warning_amber;
     } else {
-      statusColor = Colors.green;
-      statusText = 'متوفر';
+      statusColor = AccountantThemeConfig.primaryGreen;
+      glowColor = AccountantThemeConfig.primaryGreen;
+      statusIcon = Icons.check_circle;
     }
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AccountantThemeConfig.cardGradient,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: glowColor.withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: glowColor.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Product icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.safeOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.inventory_2,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Product details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: 80,
+              maxHeight: 100,
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Product icon with glow effect
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        glowColor.withOpacity(0.2),
+                        glowColor.withOpacity(0.1),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'المخزون: $quantity وحدة',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Status badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.safeOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: statusColor,
-                    width: 1,
+                    shape: BoxShape.circle,
+                    boxShadow: AccountantThemeConfig.glowShadows(glowColor),
+                  ),
+                  child: Icon(
+                    Icons.inventory_2,
+                    color: glowColor,
+                    size: 24,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      needsReorder
-                          ? Icons.add_shopping_cart
-                          : isLowStock
-                              ? Icons.warning_amber
-                              : Icons.check_circle,
-                      size: 14,
-                      color: statusColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      statusText,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                const SizedBox(width: 16),
+
+                // Product details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        name,
+                        style: AccountantThemeConfig.headlineSmall.copyWith(
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.inventory,
+                            size: 14,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'المخزون: $quantity وحدة',
+                            style: AccountantThemeConfig.bodyMedium.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Quantity display with color-coded indicator
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        statusColor.withOpacity(0.2),
+                        statusColor.withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: statusColor.withOpacity(0.3),
+                      width: 1,
+                    ),
+                    boxShadow: AccountantThemeConfig.glowShadows(statusColor),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        statusIcon,
+                        size: 16,
+                        color: statusColor,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        quantity.toString(),
+                        style: GoogleFonts.cairo(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        '📦',
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -8,10 +8,7 @@ import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/utils/scroll_behavior.dart';
 import 'package:smartbiztracker_new/services/app_performance_service.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'package:smartbiztracker_new/screens/welcome_screen.dart';
-import 'package:smartbiztracker_new/screens/common/splash_screen.dart';
-import 'package:smartbiztracker_new/providers/auth_provider.dart';
+
 
 class App extends StatefulWidget {
   const App({super.key});
@@ -44,7 +41,7 @@ class _AppState extends State<App> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     // Optimize system UI
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -58,13 +55,13 @@ class _AppState extends State<App> {
           ? Brightness.light
           : Brightness.dark,
     ));
-    
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SmartBizTracker',
-      theme: StyleSystem.lightTheme,
+      theme: StyleSystem.darkTheme, // Force dark theme
       darkTheme: StyleSystem.darkTheme,
-      themeMode: themeProvider.themeMode,
+      themeMode: ThemeMode.dark, // Force dark mode permanently
       locale: const Locale('ar', 'EG'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -79,19 +76,7 @@ class _AppState extends State<App> {
         applyAndroidOverscrollIndicator: false,
         useAlwaysBouncingScroll: true,
       ),
-      home: Consumer<AuthProvider>(
-        builder: (context, authProvider, _) {
-          if (authProvider.isLoading) {
-            return const SplashScreen();
-          }
-          
-          if (!authProvider.isAuthenticated) {
-            return const WelcomeScreen();
-          }
-          
-          return const AuthWrapper();
-        },
-      ),
+      home: const AuthWrapper(),
       routes: AppRoutes.routes,
       navigatorKey: AppRoutes.navigatorKey,
       onUnknownRoute: (settings) {
@@ -104,14 +89,17 @@ class _AppState extends State<App> {
         );
       },
       builder: (context, child) {
+        // Optimize app for performance and avoid blank screens
         if (child == null) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final optimizedChild = _isPerformanceInitialized 
+        // Apply performance optimizations to the whole app
+        final optimizedChild = _isPerformanceInitialized
             ? _buildOptimizedChild(context, child)
             : child;
-        
+
+        // Ensure a Material parent for all widgets in the app
         return Directionality(
           textDirection: TextDirection.rtl,
           child: Material(
@@ -122,10 +110,12 @@ class _AppState extends State<App> {
       },
     );
   }
-  
+
   Widget _buildOptimizedChild(BuildContext context, Widget child) {
+    // Apply performance optimizations to the widget tree
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
+        // Optimize scrolling performance
         return false;
       },
       child: RepaintBoundary(
@@ -133,4 +123,4 @@ class _AppState extends State<App> {
       ),
     );
   }
-} 
+}

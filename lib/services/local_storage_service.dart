@@ -4,9 +4,9 @@ import '../utils/app_logger.dart';
 
 /// Service to handle local storage for offline mode
 class LocalStorageService {
-  static final LocalStorageService _instance = LocalStorageService._internal();
   factory LocalStorageService() => _instance;
   LocalStorageService._internal();
+  static final LocalStorageService _instance = LocalStorageService._internal();
 
   late SharedPreferences _prefs;
   
@@ -19,7 +19,7 @@ class LocalStorageService {
   /// Store data in local storage
   Future<bool> storeData(String key, dynamic data) async {
     try {
-      String jsonData = json.encode(data);
+      final String jsonData = json.encode(data);
       await _prefs.setString(key, jsonData);
       return true;
     } catch (e) {
@@ -31,7 +31,7 @@ class LocalStorageService {
   /// Get data from local storage
   dynamic getData(String key) {
     try {
-      String? jsonData = _prefs.getString(key);
+      final String? jsonData = _prefs.getString(key);
       if (jsonData == null) {
         return null;
       }
@@ -67,7 +67,7 @@ class LocalStorageService {
   /// Store sync queue for offline changes
   Future<bool> addToSyncQueue(String table, Map<String, dynamic> data, String operation) async {
     try {
-      List<Map<String, dynamic>> syncQueue = getSyncQueue();
+      final List<Map<String, dynamic>> syncQueue = getSyncQueue();
       
       syncQueue.add({
         'table': table,
@@ -86,7 +86,7 @@ class LocalStorageService {
   /// Get sync queue
   List<Map<String, dynamic>> getSyncQueue() {
     try {
-      dynamic data = getData('sync_queue');
+      final dynamic data = getData('sync_queue');
       if (data == null) {
         return [];
       }
@@ -100,7 +100,7 @@ class LocalStorageService {
   /// Remove item from sync queue
   Future<bool> removeFromSyncQueue(int index) async {
     try {
-      List<Map<String, dynamic>> syncQueue = getSyncQueue();
+      final List<Map<String, dynamic>> syncQueue = getSyncQueue();
       if (index >= 0 && index < syncQueue.length) {
         syncQueue.removeAt(index);
         return await storeData('sync_queue', syncQueue);
@@ -135,7 +135,7 @@ class LocalStorageService {
   /// Get user data for offline login
   Map<String, dynamic>? getUserData() {
     try {
-      dynamic data = getData('user_data');
+      final dynamic data = getData('user_data');
       if (data == null) {
         return null;
       }
@@ -180,7 +180,7 @@ class LocalStorageService {
   /// Get cached table data
   List<Map<String, dynamic>> getCachedTableData(String table) {
     try {
-      dynamic data = getData('table_$table');
+      final dynamic data = getData('table_$table');
       if (data == null) {
         return [];
       }

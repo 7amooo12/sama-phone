@@ -4,10 +4,10 @@ import 'constants.dart';
 class Validators {
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return 'البريد الإلكتروني مطلوب';
     }
     if (!AppConstants.emailPattern.hasMatch(value)) {
-      return 'Please enter a valid email';
+      return 'يرجى إدخال بريد إلكتروني صحيح';
     }
     return null;
   }
@@ -34,10 +34,10 @@ class Validators {
 
   static String? validatePhone(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return 'رقم الهاتف مطلوب';
     }
     if (!AppConstants.phonePattern.hasMatch(value)) {
-      return 'Please enter a valid phone number';
+      return 'يرجى إدخال رقم هاتف صحيح';
     }
     return null;
   }
@@ -122,5 +122,21 @@ class Validators {
       return 'Only ${allowedExtensions.join(', ')} files are allowed';
     }
     return null;
+  }
+
+  // Convenience methods for common validations
+  static String? required(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'هذا الحقل مطلوب';
+    }
+    return null;
+  }
+
+  static String? email(String? value) {
+    return validateEmail(value);
+  }
+
+  static String? phone(String? value) {
+    return validatePhone(value);
   }
 }

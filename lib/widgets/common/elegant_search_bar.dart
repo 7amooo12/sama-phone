@@ -3,29 +3,9 @@ import 'package:flutter/services.dart';
 import 'dart:ui';
 
 class ElegantSearchBar extends StatefulWidget {
-  final TextEditingController controller;
-  final Function(String)? onChanged;
-  final Function()? onClear;
-  final String hintText;
-  final IconData? prefixIcon;
-  final Widget? suffixWidget;
-  final bool autofocus;
-  final bool autoFillFromClipboard;
-  final bool showAnimation;
-  final double elevation;
-  final Color? backgroundColor;
-  final Color? textColor;
-  final Color? borderColor;
-  final Color? fillColor;
-  final Color? hintColor;
-  final Color? iconColor;
-  final VoidCallback? onTap;
-  final BorderRadius? borderRadius;
-  final EdgeInsetsGeometry? margin;
-  final EdgeInsetsGeometry contentPadding;
 
   const ElegantSearchBar({
-    Key? key,
+    super.key,
     required this.controller,
     this.onChanged,
     this.onClear,
@@ -46,7 +26,27 @@ class ElegantSearchBar extends StatefulWidget {
     this.borderRadius,
     this.margin,
     this.contentPadding = const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-  }) : super(key: key);
+  });
+  final TextEditingController controller;
+  final Function(String)? onChanged;
+  final Function()? onClear;
+  final String hintText;
+  final IconData? prefixIcon;
+  final Widget? suffixWidget;
+  final bool autofocus;
+  final bool autoFillFromClipboard;
+  final bool showAnimation;
+  final double elevation;
+  final Color? backgroundColor;
+  final Color? textColor;
+  final Color? borderColor;
+  final Color? fillColor;
+  final Color? hintColor;
+  final Color? iconColor;
+  final VoidCallback? onTap;
+  final BorderRadius? borderRadius;
+  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry contentPadding;
 
   @override
   State<ElegantSearchBar> createState() => _ElegantSearchBarState();
@@ -135,12 +135,12 @@ class _ElegantSearchBarState extends State<ElegantSearchBar> with SingleTickerPr
             borderRadius: borderRadius,
             boxShadow: [
               BoxShadow(
-                color: Color(0x0D000000),
+                color: const Color(0x0D000000),
                 blurRadius: widget.elevation,
                 offset: const Offset(0, 3),
               ),
               BoxShadow(
-                color: Color(0x05000000),
+                color: const Color(0x05000000),
                 blurRadius: widget.elevation * 2,
                 offset: const Offset(0, 6),
               ),
@@ -213,17 +213,9 @@ class _ElegantSearchBarState extends State<ElegantSearchBar> with SingleTickerPr
 
 // A fancier search bar with advanced styling
 class GlassSearchBar extends StatefulWidget {
-  final TextEditingController controller;
-  final Function(String)? onChanged;
-  final Function()? onClear;
-  final String hintText;
-  final Color accentColor;
-  final bool autofocus;
-  final EdgeInsetsGeometry? margin;
-  final VoidCallback? onTap;
 
   const GlassSearchBar({
-    Key? key,
+    super.key,
     required this.controller,
     this.onChanged,
     this.onClear,
@@ -232,7 +224,15 @@ class GlassSearchBar extends StatefulWidget {
     this.autofocus = false,
     this.margin,
     this.onTap,
-  }) : super(key: key);
+  });
+  final TextEditingController controller;
+  final Function(String)? onChanged;
+  final Function()? onClear;
+  final String hintText;
+  final Color accentColor;
+  final bool autofocus;
+  final EdgeInsetsGeometry? margin;
+  final VoidCallback? onTap;
 
   @override
   State<GlassSearchBar> createState() => _GlassSearchBarState();

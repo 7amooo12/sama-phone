@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 
 /// Animated loading indicator with pulsing effect
 class AnimatedLoading extends StatefulWidget {
-  final double size;
-  final Color color;
-  final String? message;
   
   const AnimatedLoading({
-    Key? key, 
+    super.key, 
     this.size = 50.0, 
     this.color = Colors.blue,
     this.message
-  }) : super(key: key);
+  });
+  final double size;
+  final Color color;
+  final String? message;
 
   @override
   State<AnimatedLoading> createState() => _AnimatedLoadingState();

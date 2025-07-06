@@ -3,7 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 
 class AboutUsScreen extends StatelessWidget {
-  const AboutUsScreen({Key? key}) : super(key: key);
+  const AboutUsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,7 @@ class AboutUsScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: StyleSystem.primaryColor.withOpacity(0.3),
+                          color: StyleSystem.primaryColor.withValues(alpha: 0.3),
                           blurRadius: 20,
                           spreadRadius: 5,
                         )
@@ -70,7 +70,7 @@ class AboutUsScreen extends StatelessWidget {
                       color: Colors.white,
                       shadows: [
                         Shadow(
-                          color: StyleSystem.primaryColor.withOpacity(0.5),
+                          color: StyleSystem.primaryColor.withValues(alpha: 0.5),
                           blurRadius: 10,
                         )
                       ],
@@ -81,7 +81,7 @@ class AboutUsScreen extends StatelessWidget {
                     'تسوق المستقبل، اليوم',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ).animate().fadeIn(delay: 600.ms),
                 ],
@@ -202,7 +202,7 @@ class AboutUsScreen extends StatelessWidget {
       text,
       style: TextStyle(
         fontSize: 16,
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         height: 1.6,
       ),
       textAlign: TextAlign.justify,
@@ -211,12 +211,12 @@ class AboutUsScreen extends StatelessWidget {
 
   Widget _buildCategoryCard(String title, IconData icon, Color color) {
     return Card(
-      color: StyleSystem.backgroundDark.withOpacity(0.7),
+      color: StyleSystem.backgroundDark.withValues(alpha: 0.7),
       elevation: 5,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
         side: BorderSide(
-          color: color.withOpacity(0.5),
+          color: color.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -257,7 +257,7 @@ class AboutUsScreen extends StatelessWidget {
             text,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],
@@ -270,10 +270,10 @@ class AboutUsScreen extends StatelessWidget {
       width: 50,
       height: 50,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,
         border: Border.all(
-          color: color.withOpacity(0.5),
+          color: color.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -312,7 +312,7 @@ class AboutUsScreen extends StatelessWidget {
 
   Widget _buildTeamMemberCard(String name, String role, String description, String imageUrl) {
     return Card(
-      color: StyleSystem.backgroundDark.withOpacity(0.7),
+      color: StyleSystem.backgroundDark.withValues(alpha: 0.7),
       elevation: 5,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
@@ -341,7 +341,7 @@ class AboutUsScreen extends StatelessWidget {
             role,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 10),
@@ -349,7 +349,7 @@ class AboutUsScreen extends StatelessWidget {
             description,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
             textAlign: TextAlign.center,
           ),

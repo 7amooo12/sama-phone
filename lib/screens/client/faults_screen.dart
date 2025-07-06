@@ -64,10 +64,15 @@ class _FaultsScreenState extends State<FaultsScreen>
           title: _itemNameController.text.trim(),
           description: _detailsController.text.trim(),
           reporterId: user.id,
+          reportedBy: user.name, // Add the required reportedBy parameter
+          assignedTo: '', // Empty initially, will be assigned by admin
           createdAt: DateTime.now(),
           status: FaultStatus.newStatus,
           category: _faultTypeController.text.trim(),
           priority: FaultPriority.medium,
+          attachments: [], // Add required attachments parameter
+          isResolved: false, // Add required isResolved parameter
+          location: '', // Add required location parameter
           metadata: {
             'clientName': user.name,
             'quantity': int.parse(_quantityController.text.trim()),

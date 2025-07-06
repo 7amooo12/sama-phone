@@ -9,7 +9,7 @@ extension ColorExtension on Color {
   Color safeOpacity(double opacity) {
     // Make sure opacity is between 0.0 and 1.0
     final safeOpacity = opacity.clamp(0.0, 1.0);
-    return withOpacity(safeOpacity);
+    return withValues(alpha: safeOpacity);
   }
 
   /// Creates a lighter version of this color
@@ -73,7 +73,7 @@ extension ColorExtension on Color {
       255 - r.toInt(),
       255 - g.toInt(),
       255 - b.toInt(),
-      opacity,
+      a,
     );
   }
 
@@ -100,7 +100,7 @@ extension ColorExtension on Color {
       (r1 + (r2 - r1) * strength).round(),
       (g1 + (g2 - g1) * strength).round(),
       (b1 + (b2 - b1) * strength).round(),
-      opacity,
+      a,
     );
   }
 
@@ -147,9 +147,9 @@ extension ColorExtension on Color {
     
     return Color.fromARGB(
       255,
-      _mix(red, another.red, amount),
-      _mix(green, another.green, amount),
-      _mix(blue, another.blue, amount),
+      _mix(r.toInt(), another.r.toInt(), amount),
+      _mix(g.toInt(), another.g.toInt(), amount),
+      _mix(b.toInt(), another.b.toInt(), amount),
     );
   }
   

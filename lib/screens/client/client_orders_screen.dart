@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../config/routes.dart';
 import '../../models/order_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/order_provider.dart';
 import '../../utils/app_localizations.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/error_widget.dart';
@@ -12,7 +12,7 @@ import '../../widgets/orders/shared_order_details_dialog.dart';
 import '../../services/order_service.dart';
 
 class ClientOrdersScreen extends StatefulWidget {
-  const ClientOrdersScreen({Key? key}) : super(key: key);
+  const ClientOrdersScreen({super.key});
 
   @override
   _ClientOrdersScreenState createState() => _ClientOrdersScreenState();
@@ -104,7 +104,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
               ),
             ),
           ),
-          
+
           // Orders list
           Expanded(
             child: _isLoading
@@ -163,7 +163,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.pushNamed(context, '/products');
+              Navigator.pushNamed(context, AppRoutes.clientProductsBrowser);
             },
             icon: const Icon(Icons.shopping_bag),
             label: Text(appLocalizations.translate('browse_products') ?? 'تصفح المنتجات'),
@@ -183,7 +183,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
       itemBuilder: (context, index) {
         final order = _filteredOrders[index];
         final orderDate = order.createdAt;
-        
+
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           clipBehavior: Clip.antiAlias,
@@ -225,7 +225,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Order summary
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -252,13 +252,13 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 12),
-                      
+
                       // Products preview (showing first 2 items)
                       if (order.items.isNotEmpty)
                         ...order.items.take(2).map((item) => _buildOrderItemPreview(item)),
-                      
+
                       // Show more items indicator if needed
                       if (order.items.length > 2)
                         Padding(
@@ -274,7 +274,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
                     ],
                   ),
                 ),
-                
+
                 // View details button
                 Container(
                   width: double.infinity,
@@ -344,9 +344,9 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
               ),
               child: const Icon(Icons.shopping_bag, size: 24),
             ),
-          
+
           const SizedBox(width: 12),
-          
+
           // Product name and quantity
           Expanded(
             child: Column(
@@ -370,7 +370,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
               ],
             ),
           ),
-          
+
           // Subtotal
           Text(
             '${item.subtotal.toStringAsFixed(2)} جنيه',
@@ -387,7 +387,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
   Widget _buildStatusChip(String status, AppLocalizations appLocalizations) {
     Color statusColor;
     String statusText;
-    
+
     switch (status) {
       case OrderStatus.pending:
         statusColor = Colors.amber;
@@ -419,7 +419,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
         statusText = status;
         break;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -459,27 +459,27 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
         ),
       ),
     );
-    
+
     // Import services
     final stockWarehouseApi = StockWarehouseApiService();
-    
+
     // Get order details
     Future.microtask(() async {
       try {
         // Try to get detailed order information
         final orderId = int.tryParse(order.id);
         OrderModel detailedOrder = order;
-        
+
         if (orderId != null) {
           final orderDetail = await stockWarehouseApi.getOrderDetail(orderId);
           if (orderDetail != null) {
             detailedOrder = orderDetail;
           }
         }
-        
+
         // Close loading dialog
         if (context.mounted) Navigator.of(context).pop();
-        
+
         // Show order details dialog
         if (context.mounted) {
           showDialog(
@@ -493,13 +493,13 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
       } catch (e) {
         // Close loading dialog
         if (context.mounted) Navigator.of(context).pop();
-        
+
         // Show error
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('خطأ في تحميل تفاصيل الطلب: $e')),
           );
-          
+
           // Show basic details even if error
           showDialog(
             context: context,
@@ -512,4 +512,4 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
       }
     });
   }
-} 
+}

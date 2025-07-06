@@ -1,8 +1,4 @@
-class AnalyticsDashboardModel {
-  final UserStats users;
-  final ProductStats products;
-  final SalesStats sales;
-  final InventoryStats? inventory; // Optional for backward compatibility
+class AnalyticsDashboardModel { // Optional for backward compatibility
 
   const AnalyticsDashboardModel({
     required this.users,
@@ -13,18 +9,19 @@ class AnalyticsDashboardModel {
 
   factory AnalyticsDashboardModel.fromJson(Map<String, dynamic> json) {
     return AnalyticsDashboardModel(
-      users: UserStats.fromJson(json['users']),
-      products: ProductStats.fromJson(json['products']),
-      sales: SalesStats.fromJson(json['sales']),
-      inventory: json['inventory'] != null ? InventoryStats.fromJson(json['inventory']) : null,
+      users: UserStats.fromJson(json['users'] as Map<String, dynamic>),
+      products: ProductStats.fromJson(json['products'] as Map<String, dynamic>),
+      sales: SalesStats.fromJson(json['sales'] as Map<String, dynamic>),
+      inventory: json['inventory'] != null ? InventoryStats.fromJson(json['inventory'] as Map<String, dynamic>) : null,
     );
   }
+  final UserStats users;
+  final ProductStats products;
+  final SalesStats sales;
+  final InventoryStats? inventory;
 }
 
 class UserStats {
-  final int total;
-  final int active;
-  final int pending;
 
   const UserStats({
     required this.total,
@@ -39,13 +36,12 @@ class UserStats {
       pending: json['pending'] as int,
     );
   }
+  final int total;
+  final int active;
+  final int pending;
 }
 
 class ProductStats {
-  final int total;
-  final int visible;
-  final int outOfStock;
-  final int featured;
 
   const ProductStats({
     required this.total,
@@ -62,15 +58,13 @@ class ProductStats {
       featured: json['featured'] as int,
     );
   }
+  final int total;
+  final int visible;
+  final int outOfStock;
+  final int featured;
 }
 
 class SalesStats {
-  final int totalInvoices;
-  final int completedInvoices;
-  final int pendingInvoices;
-  final double totalAmount;
-  final List<DailySales> daily;
-  final List<CategorySales> byCategory;
 
   const SalesStats({
     required this.totalInvoices,
@@ -95,11 +89,15 @@ class SalesStats {
           .toList(),
     );
   }
+  final int totalInvoices;
+  final int completedInvoices;
+  final int pendingInvoices;
+  final double totalAmount;
+  final List<DailySales> daily;
+  final List<CategorySales> byCategory;
 }
 
 class DailySales {
-  final String date;
-  final double sales;
 
   const DailySales({required this.date, required this.sales});
 
@@ -109,11 +107,11 @@ class DailySales {
       sales: json['sales'] as double,
     );
   }
+  final String date;
+  final double sales;
 }
 
 class CategorySales {
-  final String category;
-  final double sales;
 
   const CategorySales({required this.category, required this.sales});
 
@@ -123,24 +121,23 @@ class CategorySales {
       sales: json['sales'] as double,
     );
   }
+  final String category;
+  final double sales;
 }
 
 class InventoryStats {
-  final MovementStats movement;
 
   const InventoryStats({required this.movement});
 
   factory InventoryStats.fromJson(Map<String, dynamic> json) {
     return InventoryStats(
-      movement: MovementStats.fromJson(json['movement']),
+      movement: MovementStats.fromJson(json['movement'] as Map<String, dynamic>),
     );
   }
+  final MovementStats movement;
 }
 
 class MovementStats {
-  final int additions;
-  final int reductions;
-  final int totalQuantityChange;
 
   const MovementStats({
     required this.additions,
@@ -155,4 +152,7 @@ class MovementStats {
       totalQuantityChange: json['total_quantity_change'] as int,
     );
   }
-} 
+  final int additions;
+  final int reductions;
+  final int totalQuantityChange;
+}

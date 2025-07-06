@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/providers/product_provider.dart';
 import 'package:smartbiztracker_new/providers/auth_provider.dart';
+import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:smartbiztracker_new/config/routes.dart';
-import 'package:smartbiztracker_new/widgets/custom_loader.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:smartbiztracker_new/utils/color_extension.dart';
 import 'package:smartbiztracker_new/widgets/common/custom_app_bar.dart';
 import 'package:smartbiztracker_new/widgets/common/main_drawer.dart';
 import 'package:smartbiztracker_new/widgets/common/advanced_search_bar.dart';
-import 'package:smartbiztracker_new/widgets/unified_product_card.dart';
+import 'package:smartbiztracker_new/widgets/common/professional_product_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smartbiztracker_new/utils/app_logger.dart';
-import 'package:flutter/rendering.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -22,7 +20,8 @@ class ProductsScreen extends StatefulWidget {
   State<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> {
+class _ProductsScreenState extends State<ProductsScreen>
+    with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -30,25 +29,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
   bool _showStats = true;
   bool _showZeroQuantityProducts = false;
   final ScrollController _scrollController = ScrollController();
+  bool _showFab = false;
+  late AnimationController _fabAnimationController;
+  late Animation<double> _fabAnimation;
 
   @override
   void initState() {
     super.initState();
     _setupScrollController();
-    
+    _initializeAnimations();
+
     // تحميل المنتجات من SAMA API
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         final productProvider = Provider.of<ProductProvider>(context, listen: false);
         productProvider.setUseSamaAdmin(true); // مفعل استخدام SAMA Admin API
-        
+
         AppLogger.info('بدء تحميل المنتجات من SAMA Admin API');
         await productProvider.loadSamaAdminProductsWithToJSON(); // استخدام طريقة toJSON لمعالجة استجابة API بشكل أفضل
-        
+
         // تحقق من عدد المنتجات المحملة
         final productsCount = productProvider.samaAdminProducts.length;
         AppLogger.info('تم تحميل $productsCount منتج من SAMA Admin API');
-        
+
         // إذا لم يتم تحميل أي منتجات، حاول مرة أخرى
         if (productsCount == 0) {
           AppLogger.warning('لم يتم تحميل أي منتجات، محاولة إعادة التحميل...');
@@ -60,19 +63,33 @@ class _ProductsScreenState extends State<ProductsScreen> {
     });
   }
 
+  void _initializeAnimations() {
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _fabAnimation = CurvedAnimation(
+      parent: _fabAnimationController,
+      curve: Curves.elasticOut,
+    );
+  }
+
   void _setupScrollController() {
     _scrollController.addListener(() {
-      if (_scrollController.position.userScrollDirection == ScrollDirection.reverse) {
-        if (_showStats) {
-          setState(() {
-            _showStats = false;
-          });
-        }
-      } else if (_scrollController.position.userScrollDirection == ScrollDirection.forward) {
-        if (!_showStats && _scrollController.position.pixels <= 50) {
-          setState(() {
-            _showStats = true;
-          });
+      final shouldShowStats = _scrollController.offset <= 100;
+      final shouldShowFab = _scrollController.offset > 200;
+
+      if (shouldShowStats != _showStats || shouldShowFab != _showFab) {
+        setState(() {
+          _showStats = shouldShowStats;
+          _showFab = shouldShowFab;
+        });
+
+        if (_showFab) {
+          _fabAnimationController.forward();
+        } else {
+          _fabAnimationController.reverse();
         }
       }
     });
@@ -82,14 +99,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _fabAnimationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userModel = authProvider.user;
+
+    // استخدام مزود Supabase أولاً
+    final supabaseProvider = Provider.of<SupabaseProvider>(context);
+    final supabaseUser = supabaseProvider.user;
+
+    // استخدام مزود Auth كإجراء احتياطي
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userModel = supabaseUser ?? authProvider.user;
 
     if (userModel == null) {
       // Handle case where user is not logged in
@@ -139,7 +163,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 final productProvider = Provider.of<ProductProvider>(context, listen: false);
                 productProvider.setUseSamaAdmin(true); // تفعيل استخدام SAMA Admin API
                 await productProvider.loadSamaAdminProductsWithToJSON(); // استخدام طريقة toJSON للتعامل مع استجابة API بشكل أفضل
-                
+
                 // عرض رسالة نجاح التحديث
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -171,7 +195,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ? products
               : products.where((product) =>
                   product.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-          
+
           // Filter out zero quantity products if needed
           final displayProducts = _showZeroQuantityProducts || _searchQuery.isNotEmpty
               ? filteredBySearch
@@ -179,26 +203,31 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
           return Column(
             children: [
-              // Search bar
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: AdvancedSearchBar(
-                  controller: _searchController,
-                  hintText: 'بحث عن منتج...',
-                  accentColor: theme.colorScheme.primary,
-                  showSearchAnimation: true,
-                  onChanged: (query) {
-                    setState(() {
-                      _searchQuery = query;
-                    });
-                  },
-                  onSubmitted: (query) {
-                    setState(() {
-                      _searchQuery = query;
-                    });
-                  },
+              // Search bar - يختفي عند التمرير
+              if (_showStats)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: _showStats ? null : 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: AdvancedSearchBar(
+                      controller: _searchController,
+                      hintText: 'بحث عن منتج...',
+                      accentColor: theme.colorScheme.primary,
+                      showSearchAnimation: true,
+                      onChanged: (query) {
+                        setState(() {
+                          _searchQuery = query;
+                        });
+                      },
+                      onSubmitted: (query) {
+                        setState(() {
+                          _searchQuery = query;
+                        });
+                      },
+                    ),
+                  ),
                 ),
-              ),
 
               // Collapsible Product Statistics
               if (_showStats)
@@ -216,63 +245,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                 ),
 
-              // SAMA API connection info
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline, 
-                            color: theme.colorScheme.secondary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'البيانات مزامنة من متجر SAMA (API)',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.secondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (!_showZeroQuantityProducts && products.where((p) => p.quantity == 0).isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.visibility_off,
-                                color: theme.colorScheme.secondary,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'يوجد ${products.where((p) => p.quantity == 0).length} منتج مخفي (اضغط على أيقونة العين لإظهارها)',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.secondary,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+
 
               // Products list
               Expanded(
@@ -294,14 +267,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.error_outline,
                                       color: Colors.red,
                                       size: 48,
                                     ),
-                                    SizedBox(height: 16),
+                                    const SizedBox(height: 16),
                                     Text('حدث خطأ: $errorMessage'),
-                                    SizedBox(height: 16),
+                                    const SizedBox(height: 16),
                                     ElevatedButton(
                                       onPressed: () {
                                         productProvider.loadSamaAdminProductsWithToJSON();
@@ -341,20 +314,34 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                         ? _buildGridView(displayProducts, _scrollController)
                                         : _buildListView(displayProducts, _scrollController),
                                   ),
+
+                    // Floating Action Button for scroll to top
+                    if (_showFab)
+                      Positioned(
+                        bottom: 20,
+                        right: 20,
+                        child: ScaleTransition(
+                          scale: _fabAnimation,
+                          child: FloatingActionButton(
+                            onPressed: () {
+                              _scrollController.animateTo(
+                                0,
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: Colors.white,
+                            child: const Icon(Icons.keyboard_arrow_up),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
             ],
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Show add new product dialog
-          _showAddProductDialog(context);
-        },
-        tooltip: 'إضافة منتج جديد',
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -367,7 +354,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.75,
+          childAspectRatio: 0.75, // زيادة الارتفاع لاستيعاب المحتوى المحسن
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
         ),
@@ -376,16 +363,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
           return AnimationConfiguration.staggeredGrid(
             position: index,
             columnCount: 2,
-            duration: const Duration(milliseconds: 375),
+            duration: const Duration(milliseconds: 200), // أسرع
             child: ScaleAnimation(
+              duration: const Duration(milliseconds: 150), // أسرع
               child: FadeInAnimation(
-                child: _buildProductCard(
-                  name: products[index].name,
-                  price: products[index].price,
-                  quantity: products[index].quantity,
-                  onTap: () {
-                    _showProductDetails(context, products[index]);
-                  },
+                duration: const Duration(milliseconds: 150), // أسرع
+                child: ProfessionalProductCard(
+                  product: products[index],
+                  cardType: ProductCardType.owner,
+                  onTap: () => _showProductDetails(context, products[index]),
+                  currencySymbol: 'جنيه',
                 ),
               ),
             ),
@@ -398,29 +385,38 @@ class _ProductsScreenState extends State<ProductsScreen> {
   // List view for products
   Widget _buildListView(List<ProductModel> products, ScrollController scrollController) {
     return AnimationLimiter(
-      child: ListView.builder(
-        controller: scrollController,
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          return AnimationConfiguration.staggeredList(
-            position: index,
-            duration: const Duration(milliseconds: 375),
-            child: SlideAnimation(
-              verticalOffset: 50.0,
-              child: FadeInAnimation(
-                child: _buildProductCard(
-                  name: products[index].name,
-                  price: products[index].price,
-                  quantity: products[index].quantity,
-                  onTap: () {
-                    _showProductDetails(context, products[index]);
-                  },
+        child: GridView.builder(
+          controller: scrollController,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.75, // زيادة الارتفاع لاستيعاب المحتوى المحسن
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: products.length,
+          itemBuilder: (context, index) {
+            return AnimationConfiguration.staggeredGrid(
+              position: index,
+              columnCount: 2,
+              duration: const Duration(milliseconds: 200), // أسرع
+              child: SlideAnimation(
+                verticalOffset: 30.0, // أقل
+                duration: const Duration(milliseconds: 150), // أسرع
+                child: FadeInAnimation(
+                  duration: const Duration(milliseconds: 150), // أسرع
+                  child: ProfessionalProductCard(
+                    product: products[index],
+                    cardType: ProductCardType.owner,
+                    onTap: () => _showProductDetails(context, products[index]),
+                    currencySymbol: 'جنيه',
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -430,7 +426,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     // استخدام bestImageUrl getter للحصول على الصورة بالمسار الصحيح
     final imageUrl = product.bestImageUrl;
     AppLogger.info('عرض تفاصيل المنتج: ${product.name} - صورة: $imageUrl');
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -526,175 +522,433 @@ class _ProductsScreenState extends State<ProductsScreen> {
   // Build product card placeholder - replaced by CollapsibleProductStats
 
   Widget _buildProductCard({
-    required String name,
-    required double price,
-    required int quantity,
+    required ProductModel product,
     VoidCallback? onTap,
   }) {
     final theme = Theme.of(context);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product image with CachedNetworkImage
-            Consumer<ProductProvider>(
-              builder: (context, productProvider, _) {
-                final product = productProvider.samaAdminProducts.firstWhere(
-                  (p) => p.name == name,
-                  orElse: () => ProductModel(
-                    id: '',
-                    name: name,
-                    description: '',
-                    price: price,
-                    quantity: quantity,
-                    category: '',
-                    images: [],
-                    sku: '',
-                    isActive: true,
-                    createdAt: DateTime.now(),
-                    reorderPoint: 0,
-                  ),
-                );
+    // حساب الربحية
+    final purchasePrice = product.purchasePrice ?? 0.0;
+    final sellPrice = product.price;
+    final profit = sellPrice - purchasePrice;
+    final profitPercentage = purchasePrice > 0 ? ((profit / purchasePrice) * 100) : 0.0;
 
-                // استخدام bestImageUrl للحصول على الصورة بشكل صحيح من SAMA API
-                String imageUrl = product.bestImageUrl;
-                
-                return ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  child: SizedBox(
-                    height: 120,
-                    width: double.infinity,
-                    child: imageUrl.isNotEmpty && !imageUrl.contains('placeholder.com')
-                      ? CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: theme.colorScheme.primary.withOpacity(0.1),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  theme.colorScheme.primary,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Colors.grey.shade50,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+                spreadRadius: 0,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: onTap,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // صورة المنتج المحسنة
+                    Stack(
+                      children: [
+                        Container(
+                          height: 140,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.grey.shade100,
+                                Colors.grey.shade200,
+                              ],
+                            ),
+                          ),
+                          child: product.bestImageUrl.isNotEmpty && !product.bestImageUrl.contains('placeholder.com')
+                              ? ClipRRect(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(20),
+                                    topRight: Radius.circular(20),
+                                  ),
+                                  child: CachedNetworkImage(
+                                    imageUrl: product.bestImageUrl,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    placeholder: (context, url) => Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.grey.shade200,
+                                            Colors.grey.shade100,
+                                          ],
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              width: 30,
+                                              height: 30,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  theme.primaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'جاري التحميل...',
+                                              style: TextStyle(
+                                                color: Colors.grey.shade600,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) {
+                                      AppLogger.error('خطأ في تحميل الصورة: $url - $error');
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.grey.shade200,
+                                              Colors.grey.shade300,
+                                            ],
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.image_not_supported_outlined,
+                                                size: 40,
+                                                color: Colors.grey.shade500,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'لا توجد صورة',
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    memCacheWidth: 300,
+                                    maxWidthDiskCache: 600,
+                                    fadeOutDuration: const Duration(milliseconds: 300),
+                                    fadeInDuration: const Duration(milliseconds: 700),
+                                  ),
+                                )
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.grey.shade200,
+                                        Colors.grey.shade300,
+                                      ],
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.inventory_2_outlined,
+                                          size: 50,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'منتج ساما',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                                strokeWidth: 2,
+                        ),
+
+                        // مؤشر حالة المخزون
+                        if (product.quantity <= 5 && product.quantity > 0)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.orange.shade300,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                'كمية محدودة',
+                                style: TextStyle(
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 8,
+                                ),
                               ),
                             ),
                           ),
-                          errorWidget: (context, url, error) {
-                            AppLogger.error('خطأ في تحميل الصورة: $url - $error');
-                            return Container(
-                              color: theme.colorScheme.primary.withOpacity(0.1),
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+
+                        // مؤشر الربحية
+                        if (profit > 0)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.green.shade400,
+                                    Colors.green.shade600,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.green.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '${profitPercentage.toStringAsFixed(0)}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 9,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    // تفاصيل المنتج المحسنة
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // اسم المنتج
+                            Text(
+                              product.name,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade800,
+                                height: 1.2,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // الكمية المتوفرة
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: product.quantity > 10
+                                    ? Colors.green.shade50
+                                    : product.quantity > 0
+                                        ? Colors.orange.shade50
+                                        : Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: product.quantity > 10
+                                      ? Colors.green.shade200
+                                      : product.quantity > 0
+                                          ? Colors.orange.shade200
+                                          : Colors.red.shade200,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 12,
+                                    color: product.quantity > 10
+                                        ? Colors.green.shade700
+                                        : product.quantity > 0
+                                            ? Colors.orange.shade700
+                                            : Colors.red.shade700,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${product.quantity}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: product.quantity > 10
+                                          ? Colors.green.shade700
+                                          : product.quantity > 0
+                                              ? Colors.orange.shade700
+                                              : Colors.red.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 6),
+
+                            // أسعار الشراء والبيع
+                            if (purchasePrice > 0) ...[
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.shopping_cart_outlined,
+                                    size: 12,
+                                    color: Colors.blue.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'شراء: ${purchasePrice.toStringAsFixed(0)}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.blue.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                            ],
+
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.sell_outlined,
+                                  size: 12,
+                                  color: Colors.green.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'بيع: ${sellPrice.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.green.shade600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // الربحية
+                            if (profit > 0) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.green.shade100,
+                                      Colors.green.shade50,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: Colors.green.shade200,
+                                    width: 0.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      Icons.image_not_supported,
-                                      size: 30,
-                                      color: theme.colorScheme.primary,
+                                      Icons.trending_up,
+                                      size: 10,
+                                      color: Colors.green.shade700,
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(width: 2),
                                     Text(
-                                      'الصورة غير متوفرة',
+                                      'ربح: ${profit.toStringAsFixed(0)} ج',
                                       style: TextStyle(
-                                        fontSize: 10,
-                                        color: theme.colorScheme.primary,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green.shade700,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          },
-                          // Optimize memory usage
-                          memCacheWidth: 300,
-                          maxWidthDiskCache: 600,
-                          fadeOutDuration: const Duration(milliseconds: 300),
-                          fadeInDuration: const Duration(milliseconds: 700),
-                        )
-                      : Container(
-                          color: theme.colorScheme.primary.withOpacity(0.1),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.inventory,
-                                  size: 40,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'لا توجد صورة',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                            ],
+                          ],
                         ),
-                  ),
-                );
-              },
-            ),
-
-            // Product details
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${price.toStringAsFixed(2)} جنيه',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.inventory_2,
-                        size: 14,
-                        color: quantity > 10
-                            ? Colors.green
-                            : quantity > 0
-                                ? Colors.orange
-                                : Colors.red,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'المخزون: $quantity',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -702,20 +956,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
 }
 
 class CollapsibleProductStats extends StatefulWidget {
-  final int totalProducts;
-  final int availableProducts;
-  final int unavailableProducts;
-  final int lowStockProducts;
-  final VoidCallback onViewAdminPressed;
 
   const CollapsibleProductStats({
-    Key? key,
+    super.key,
     required this.totalProducts,
     required this.availableProducts,
     required this.unavailableProducts,
     required this.lowStockProducts,
     required this.onViewAdminPressed,
-  }) : super(key: key);
+  });
+  final int totalProducts;
+  final int availableProducts;
+  final int unavailableProducts;
+  final int lowStockProducts;
+  final VoidCallback onViewAdminPressed;
 
   @override
   State<CollapsibleProductStats> createState() => _CollapsibleProductStatsState();

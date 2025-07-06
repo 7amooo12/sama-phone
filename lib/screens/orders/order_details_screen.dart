@@ -1,26 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/models/order_model.dart';
 import 'package:smartbiztracker_new/utils/app_localizations.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:smartbiztracker_new/utils/accountant_theme_config.dart';
+import 'package:smartbiztracker_new/widgets/common/optimized_image.dart';
 import 'package:provider/provider.dart';
 import 'package:smartbiztracker_new/providers/auth_provider.dart';
+import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 
 class OrderDetailsScreen extends StatelessWidget {
-  final OrderModel order;
 
-  const OrderDetailsScreen({Key? key, required this.order}) : super(key: key);
+  const OrderDetailsScreen({super.key, required this.order});
+  final OrderModel order;
 
   @override
   Widget build(BuildContext context) {
     final appLocalizations = AppLocalizations.of(context);
     final screenSize = MediaQuery.of(context).size;
+
+    // استخدام مزود Supabase أولاً
+    final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userRole = authProvider.userRole;
+    final user = supabaseProvider.user ?? authProvider.user;
+    final userRole = user?.role.value ?? 'guest';
+
     final canEdit = userRole == 'admin' || userRole == 'owner';
     final canViewPrices = userRole == 'admin' || userRole == 'owner' || userRole == 'accountant';
     final canPrint = userRole == 'admin' || userRole == 'owner' || userRole == 'accountant';
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(appLocalizations.translate('order_details') ?? 'تفاصيل الطلب'),
@@ -43,9 +49,9 @@ class OrderDetailsScreen extends StatelessWidget {
               },
             ),
           ],
-          if (canEdit && order.status.toLowerCase() != "delivered" && 
-              order.status.toLowerCase() != "cancelled" && 
-              order.status.toLowerCase() != "canceled") ...[
+          if (canEdit && order.status.toLowerCase() != 'delivered' &&
+              order.status.toLowerCase() != 'cancelled' &&
+              order.status.toLowerCase() != 'canceled') ...[
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () {
@@ -74,12 +80,12 @@ class OrderDetailsScreen extends StatelessWidget {
             children: [
               _buildOrderHeader(context),
               const SizedBox(height: 20),
-              
+
               _buildSectionHeader(appLocalizations.translate('customer_info') ?? 'معلومات العميل'),
               _buildCustomerCard(context),
-              
+
               const SizedBox(height: 20),
-              
+
               _buildSectionHeader(appLocalizations.translate('order_items') ?? 'عناصر الطلب'),
               if (order.items.isEmpty) ...[
                 _buildEmptyItemsCard(),
@@ -87,21 +93,21 @@ class OrderDetailsScreen extends StatelessWidget {
                 _buildProductsGridView(context, canViewPrices),
                 if (canViewPrices) _buildOrderSummaryCard(context),
               ],
-              
+
               const SizedBox(height: 20),
-              
+
               if (canViewPrices && order.paymentMethod != null) ...[
                 _buildSectionHeader(appLocalizations.translate('payment_info') ?? 'معلومات الدفع'),
                 _buildPaymentMethodCard(context),
                 const SizedBox(height: 20),
               ],
-              
+
               if (order.notes != null && order.notes!.isNotEmpty) ...[
                 _buildSectionHeader(appLocalizations.translate('notes') ?? 'ملاحظات'),
                 _buildNotesCard(context),
                 const SizedBox(height: 20),
               ],
-              
+
               if (canEdit) _buildActionButtons(context),
             ],
           ),
@@ -152,7 +158,7 @@ class OrderDetailsScreen extends StatelessWidget {
                 ),
                 child: Text(
                   order.status,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -179,7 +185,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // إضافة طريقة عرض جديدة على شكل شبكة للمنتجات
   Widget _buildProductsGridView(BuildContext context, bool canViewPrices) {
     return Card(
@@ -212,7 +218,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // عنصر المنتج في عرض الشبكة
   Widget _buildProductGridItem(BuildContext context, OrderItem item, bool canViewPrices) {
     return InkWell(
@@ -244,15 +250,16 @@ class OrderDetailsScreen extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                     child: (item.imageUrl != null && item.imageUrl!.isNotEmpty)
-                        ? CachedNetworkImage(
-                            imageUrl: item.imageUrl!,
+                        ? OptimizedImage(
+                            imageUrl: _formatImageUrl(item.imageUrl!),
                             fit: BoxFit.cover,
-                            placeholder: (context, url) => Shimmer.fromColors(
-                              baseColor: Colors.grey[300]!,
-                              highlightColor: Colors.grey[100]!,
-                              child: Container(color: Colors.white),
+                            placeholder: Container(
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
                             ),
-                            errorWidget: (context, url, error) => _buildImageErrorWidget(item.productName),
+                            errorWidget: _buildImageErrorWidget(item.productName),
                           )
                         : _buildImageErrorWidget(item.productName),
                   ),
@@ -264,9 +271,9 @@ class OrderDetailsScreen extends StatelessWidget {
               flex: 4,
               child: Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(15)),
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,13 +289,14 @@ class OrderDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
                       children: [
                         if (canViewPrices) ...[
                           _buildInfoChip(
                             Icons.attach_money,
-                            '${item.price.toStringAsFixed(2)}',
+                            AccountantThemeConfig.formatCurrency(item.price),
                             Colors.green.shade100,
                             Colors.green.shade700,
                           ),
@@ -305,7 +313,7 @@ class OrderDetailsScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       _buildInfoChip(
                         Icons.calculate,
-                        'الإجمالي: ${item.subtotal.toStringAsFixed(2)}',
+                        'الإجمالي: ${AccountantThemeConfig.formatCurrency(item.subtotal)}',
                         Colors.blue.shade50,
                         Colors.blue.shade700,
                         fullWidth: true,
@@ -320,11 +328,11 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // عرض صورة المنتج في حوار منبثق
   void _showProductImageDialog(BuildContext context, OrderItem item, bool canViewPrices) {
     if (item.imageUrl == null || item.imageUrl!.isEmpty) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -361,19 +369,18 @@ class OrderDetailsScreen extends StatelessWidget {
                 maxScale: 3,
                 child: Hero(
                   tag: 'product_image_${item.id}',
-                  child: CachedNetworkImage(
-                    imageUrl: item.imageUrl!,
+                  child: OptimizedImage(
+                    imageUrl: _formatImageUrl(item.imageUrl!),
                     fit: BoxFit.contain,
-                    placeholder: (context, url) => Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(
-                        width: double.infinity,
-                        height: 300,
-                        color: Colors.white,
+                    placeholder: Container(
+                      width: double.infinity,
+                      height: 300,
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                    errorWidget: (context, url, error) => Container(
+                    errorWidget: Container(
                       width: double.infinity,
                       height: 300,
                       color: Colors.grey.shade100,
@@ -424,7 +431,7 @@ class OrderDetailsScreen extends StatelessWidget {
                         _buildDetailRow(
                           Icons.attach_money,
                           'السعر',
-                          item.price.toStringAsFixed(2),
+                          AccountantThemeConfig.formatCurrency(item.price),
                           Colors.green.shade700,
                         ),
                       ],
@@ -441,7 +448,7 @@ class OrderDetailsScreen extends StatelessWidget {
                     _buildDetailRow(
                       Icons.calculate,
                       'الإجمالي',
-                      item.subtotal.toStringAsFixed(2),
+                      AccountantThemeConfig.formatCurrency(item.subtotal),
                       Colors.blue.shade700,
                     ),
                     if (item.purchasePrice > 0) ...[
@@ -449,7 +456,7 @@ class OrderDetailsScreen extends StatelessWidget {
                       _buildDetailRow(
                         Icons.trending_up,
                         'الربح',
-                        (item.subtotal - (item.purchasePrice * item.quantity)).toStringAsFixed(2),
+                        AccountantThemeConfig.formatCurrency(item.subtotal - (item.purchasePrice * item.quantity)),
                         Colors.green.shade700,
                       ),
                     ],
@@ -462,7 +469,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // ويدجت خطأ تحميل الصورة
   Widget _buildImageErrorWidget(String productName) {
     return Container(
@@ -490,7 +497,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // عنصر معلومات صغير (Chip)
   Widget _buildInfoChip(IconData icon, String text, Color bgColor, Color fgColor, {bool fullWidth = false}) {
     return Container(
@@ -564,7 +571,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // ملخص الطلب (المجاميع والربح)
   Widget _buildOrderSummaryCard(BuildContext context) {
     return Card(
@@ -640,7 +647,7 @@ class OrderDetailsScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 15),
                 ),
                 Text(
-                  order.totalAmount.toStringAsFixed(2),
+                  AccountantThemeConfig.formatCurrency(order.totalAmount),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -658,7 +665,7 @@ class OrderDetailsScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 15),
                 ),
                 Text(
-                  _calculateProfit(order).toStringAsFixed(2),
+                  AccountantThemeConfig.formatCurrency(_calculateProfit(order)),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -740,7 +747,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // بطاقة معلومات الدفع
   Widget _buildPaymentMethodCard(BuildContext context) {
     return Card(
@@ -786,7 +793,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // بطاقة الملاحظات
   Widget _buildNotesCard(BuildContext context) {
     return Card(
@@ -810,7 +817,7 @@ class OrderDetailsScreen extends StatelessWidget {
                   child: Icon(Icons.note, color: Colors.purple.shade700),
                 ),
                 const SizedBox(width: 12),
-                Text(
+                const Text(
                   'ملاحظات',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -830,7 +837,7 @@ class OrderDetailsScreen extends StatelessWidget {
               ),
               child: Text(
                 order.notes!,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 15,
                   height: 1.5,
                 ),
@@ -841,7 +848,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // إذا لم يكن هناك عناصر في الطلب
   Widget _buildEmptyItemsCard() {
     return Card(
@@ -873,7 +880,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // أزرار الإجراءات في أسفل الصفحة
   Widget _buildActionButtons(BuildContext context) {
     return Padding(
@@ -902,9 +909,9 @@ class OrderDetailsScreen extends StatelessWidget {
               ),
             ),
           ),
-          if (order.status.toLowerCase() != "delivered" && 
-              order.status.toLowerCase() != "cancelled" && 
-              order.status.toLowerCase() != "canceled")
+          if (order.status.toLowerCase() != 'delivered' &&
+              order.status.toLowerCase() != 'cancelled' &&
+              order.status.toLowerCase() != 'canceled')
             ElevatedButton.icon(
               onPressed: () {
                 // Implement edit functionality
@@ -930,7 +937,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // ترويسة القسم
   Widget _buildSectionHeader(String title) {
     return Padding(
@@ -958,7 +965,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   // صف معلومات (أسلوب عادي)
   Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
     return Row(
@@ -991,18 +998,18 @@ class OrderDetailsScreen extends StatelessWidget {
       ],
     );
   }
-  
+
   // صف معلومات (أسلوب فاتح لرأس الطلب)
   Widget _buildInfoRowLight(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.9), size: 18),
+        Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 18),
         const SizedBox(width: 8),
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
             fontSize: 14,
           ),
         ),
@@ -1018,7 +1025,7 @@ class OrderDetailsScreen extends StatelessWidget {
       ],
     );
   }
-  
+
   // Helper para mostrar un elemento de detalle con icono y texto
   Widget _buildDetailItem({
     required IconData icon,
@@ -1054,10 +1061,10 @@ class OrderDetailsScreen extends StatelessWidget {
       ],
     );
   }
-  
+
   Color _getStatusColor(String status) {
     status = status.toLowerCase();
-    
+
     if (status.contains('complet') || status.contains('تم')) {
       return Colors.green;
     } else if (status.contains('pend') || status.contains('انتظار')) {
@@ -1070,11 +1077,11 @@ class OrderDetailsScreen extends StatelessWidget {
       return Colors.grey;
     }
   }
-  
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
-  
+
   String _formatPaymentMethod(String method) {
     // Format payment method for display
     switch (method.toLowerCase()) {
@@ -1091,7 +1098,7 @@ class OrderDetailsScreen extends StatelessWidget {
         return method;
     }
   }
-  
+
   double _calculateProfit(OrderModel order) {
     double totalCost = 0.0;
     for (var item in order.items) {
@@ -1099,4 +1106,22 @@ class OrderDetailsScreen extends StatelessWidget {
     }
     return order.totalAmount - totalCost;
   }
-} 
+
+  /// Format image URL to ensure proper loading
+  String _formatImageUrl(String imageUrl) {
+    if (imageUrl.isEmpty) return '';
+
+    // If it's already a complete URL, return it
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+
+    // If it's a relative path, construct the full URL
+    if (imageUrl.startsWith('/')) {
+      return 'https://samastock.pythonanywhere.com$imageUrl';
+    }
+
+    // If it's just a filename, add the full path
+    return 'https://samastock.pythonanywhere.com/static/uploads/$imageUrl';
+  }
+}

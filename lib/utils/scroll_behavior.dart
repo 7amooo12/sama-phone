@@ -6,8 +6,6 @@ import 'package:flutter/foundation.dart';
 /// This applies better physics for scrolling and enables platform-specific
 /// behaviors while disabling glow effects on Android for a more polished look.
 class OptimizedScrollBehavior extends ScrollBehavior {
-  final bool applyAndroidOverscrollIndicator;
-  final bool useAlwaysBouncingScroll;
 
   /// Creates an optimized scroll behavior
   ///
@@ -17,6 +15,8 @@ class OptimizedScrollBehavior extends ScrollBehavior {
     this.applyAndroidOverscrollIndicator = false,
     this.useAlwaysBouncingScroll = true,
   });
+  final bool applyAndroidOverscrollIndicator;
+  final bool useAlwaysBouncingScroll;
 
   @override
   Widget buildOverscrollIndicator(

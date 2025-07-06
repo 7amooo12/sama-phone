@@ -2,17 +2,9 @@ import 'package:flutter/material.dart';
 
 /// A utility widget that prevents RenderFlex overflow errors in Row widgets
 class SafeRow extends StatelessWidget {
-  final List<Widget> children;
-  final MainAxisAlignment mainAxisAlignment;
-  final CrossAxisAlignment crossAxisAlignment;
-  final MainAxisSize mainAxisSize;
-  final TextDirection? textDirection;
-  final VerticalDirection verticalDirection;
-  final TextBaseline? textBaseline;
-  final bool overflow;
 
   const SafeRow({
-    Key? key,
+    super.key,
     required this.children,
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.crossAxisAlignment = CrossAxisAlignment.center,
@@ -21,7 +13,15 @@ class SafeRow extends StatelessWidget {
     this.verticalDirection = VerticalDirection.down,
     this.textBaseline,
     this.overflow = true,
-  }) : super(key: key);
+  });
+  final List<Widget> children;
+  final MainAxisAlignment mainAxisAlignment;
+  final CrossAxisAlignment crossAxisAlignment;
+  final MainAxisSize mainAxisSize;
+  final TextDirection? textDirection;
+  final VerticalDirection verticalDirection;
+  final TextBaseline? textBaseline;
+  final bool overflow;
 
   @override
   Widget build(BuildContext context) {
@@ -55,17 +55,9 @@ class SafeRow extends StatelessWidget {
 
 /// A utility widget that prevents RenderFlex overflow errors in Column widgets
 class SafeColumn extends StatelessWidget {
-  final List<Widget> children;
-  final MainAxisAlignment mainAxisAlignment;
-  final CrossAxisAlignment crossAxisAlignment;
-  final MainAxisSize mainAxisSize;
-  final TextDirection? textDirection;
-  final VerticalDirection verticalDirection;
-  final TextBaseline? textBaseline;
-  final bool overflow;
 
   const SafeColumn({
-    Key? key,
+    super.key,
     required this.children,
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.crossAxisAlignment = CrossAxisAlignment.center, 
@@ -74,7 +66,15 @@ class SafeColumn extends StatelessWidget {
     this.verticalDirection = VerticalDirection.down,
     this.textBaseline,
     this.overflow = true,
-  }) : super(key: key);
+  });
+  final List<Widget> children;
+  final MainAxisAlignment mainAxisAlignment;
+  final CrossAxisAlignment crossAxisAlignment;
+  final MainAxisSize mainAxisSize;
+  final TextDirection? textDirection;
+  final VerticalDirection verticalDirection;
+  final TextBaseline? textBaseline;
+  final bool overflow;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +107,17 @@ class SafeColumn extends StatelessWidget {
 
 /// A utility widget to wrap Text widgets to prevent overflow
 class SafeText extends StatelessWidget {
+
+  const SafeText(
+    this.text, {
+    super.key,
+    this.style,
+    this.textAlign,
+    this.maxLines = 1,
+    this.overflow = TextOverflow.ellipsis,
+    this.softWrap = true,
+    this.textScaleFactor,
+  });
   final String text;
   final TextStyle? style;
   final TextAlign? textAlign;
@@ -114,17 +125,6 @@ class SafeText extends StatelessWidget {
   final TextOverflow overflow;
   final bool softWrap;
   final double? textScaleFactor;
-
-  const SafeText(
-    this.text, {
-    Key? key,
-    this.style,
-    this.textAlign,
-    this.maxLines = 1,
-    this.overflow = TextOverflow.ellipsis,
-    this.softWrap = true,
-    this.textScaleFactor,
-  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import '../models/analytics_dashboard_model.dart';
 
 class AnalyticsService {
-  // نمط Singleton
-  static final AnalyticsService _instance = AnalyticsService._internal();
   factory AnalyticsService() => _instance;
   AnalyticsService._internal();
+  // نمط Singleton
+  static final AnalyticsService _instance = AnalyticsService._internal();
 
   // الثوابت
   static const String _baseUrl = 'https://samastock.pythonanywhere.com'; // قم بتغيير هذا للرابط الفعلي الخاص بك

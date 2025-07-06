@@ -4,6 +4,7 @@ import 'package:smartbiztracker_new/utils/app_constants.dart';
 import 'package:smartbiztracker_new/services/api_service.dart';
 import 'package:smartbiztracker_new/widgets/custom_button.dart';
 import 'package:smartbiztracker_new/widgets/custom_loader.dart';
+import 'package:smartbiztracker_new/utils/app_logger.dart';
 
 class ExternalLinksScreen extends StatefulWidget {
   const ExternalLinksScreen({super.key});
@@ -76,7 +77,7 @@ class _ExternalLinksScreenState extends State<ExternalLinksScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.link,
                         size: 48,
                         color: Theme.of(context).primaryColor,
@@ -174,10 +175,24 @@ class _WebViewScreen extends StatefulWidget {
 }
 
 class _WebViewScreenState extends State<_WebViewScreen> {
-  final GlobalKey _webViewKey = GlobalKey();
+  late final GlobalKey _webViewKey;
   InAppWebViewController? _webViewController;
   bool _isLoading = true;
   double _progress = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Create unique key for each WebView instance
+    _webViewKey = GlobalKey(debugLabel: 'webview_${DateTime.now().millisecondsSinceEpoch}');
+  }
+
+  @override
+  void dispose() {
+    // Properly dispose WebView controller
+    _webViewController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -201,11 +216,12 @@ class _WebViewScreenState extends State<_WebViewScreen> {
       ),
       body: Stack(
         children: [
-          InAppWebView(
-            key: _webViewKey,
-            initialUrlRequest: URLRequest(
-              url: WebUri(widget.url),
-            ),
+          Container(
+            child: const InAppWebView(
+              key: _webViewKey,
+              initialUrlRequest: URLRequest(
+                url: WebUri(widget.url),
+              ),
             initialSettings: InAppWebViewSettings(
               useShouldOverrideUrlLoading: true,
               mediaPlaybackRequiresUserGesture: false,
@@ -263,9 +279,21 @@ class _WebViewScreenState extends State<_WebViewScreen> {
               });
             },
             onReceivedError: (controller, request, error) {
-              // Handle loading errors
-              print("WebView Error: $error");
+              // Handle loading errors gracefully
+              AppLogger.error('WebView Error: ${error.description}');
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('خطأ في تحميل الصفحة: ${error.description}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
+            ),
           ),
 
           // Show progress bar while loading

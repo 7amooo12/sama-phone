@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/utils/app_localizations.dart';
 
 class LoadingWidget extends StatelessWidget {
-  final String? message;
 
   const LoadingWidget({
-    Key? key,
+    super.key,
     this.message,
-  }) : super(key: key);
+  });
+  final String? message;
 
   @override
   Widget build(BuildContext context) {

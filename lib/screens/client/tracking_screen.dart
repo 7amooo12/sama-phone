@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:lottie/lottie.dart';
 import 'package:smartbiztracker_new/utils/color_extension.dart';
+import 'package:smartbiztracker_new/utils/app_logger.dart';
 
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
@@ -150,10 +151,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
         // WebView for tracking
         Expanded(
-          child: InAppWebView(
-            initialUrlRequest: URLRequest(
-              url: WebUri.uri(Uri.parse(_trackingLink!)),
-            ),
+          child: Container(
+            key: ValueKey('tracking_webview_${DateTime.now().millisecondsSinceEpoch}'),
+            child: InAppWebView(
+              key: ValueKey('webview_${_trackingLink.hashCode}'),
+              initialUrlRequest: URLRequest(
+                url: WebUri.uri(Uri.parse(_trackingLink!)),
+              ),
             initialSettings: InAppWebViewSettings(
               useShouldOverrideUrlLoading: true,
               mediaPlaybackRequiresUserGesture: false,
@@ -190,10 +194,27 @@ class _TrackingScreenState extends State<TrackingScreen> {
               ''');
             },
             onProgressChanged: (controller, progress) {
-              setState(() {
-                _webViewProgress = progress / 100;
-              });
+              if (mounted) {
+                setState(() {
+                  _webViewProgress = progress / 100;
+                });
+              }
             },
+            onReceivedError: (controller, request, error) {
+              AppLogger.error('Tracking WebView Error: ${error.description}');
+              if (mounted) {
+                setState(() {
+                  _isWebViewLoading = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('خطأ في تحميل صفحة التتبع: ${error.description}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            ),
           ),
         ),
 

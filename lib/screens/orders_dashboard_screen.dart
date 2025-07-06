@@ -5,7 +5,7 @@ import 'package:intl/intl.dart' as intl;
 import 'dart:io';
 
 class OrdersDashboardScreen extends StatefulWidget {
-  const OrdersDashboardScreen({Key? key}) : super(key: key);
+  const OrdersDashboardScreen({super.key});
 
   @override
   _OrdersDashboardScreenState createState() => _OrdersDashboardScreenState();
@@ -92,17 +92,17 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('لوحة الطلبات', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('لوحة الطلبات', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: _isLoading ? null : _fetchData,
             tooltip: 'تحديث البيانات',
           ),
         ],
       ),
       body: _isLoading
-          ? Center(
+          ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -124,20 +124,20 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
   Widget _buildErrorView() {
     return Center(
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: Colors.red, size: 64),
-            SizedBox(height: 24),
-            Text(
+            const Icon(Icons.error_outline, color: Colors.red, size: 64),
+            const SizedBox(height: 24),
+            const Text(
               'حدثت مشكلة أثناء تحميل البيانات',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(8),
@@ -145,33 +145,33 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
               ),
               child: Text(
                 _error!,
-                style: TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _isRetrying ? null : _fetchData,
-              icon: Icon(Icons.refresh),
+              icon: const Icon(Icons.refresh),
               label: Text(_isRetrying ? 'جاري إعادة المحاولة...' : 'إعادة المحاولة'),
               style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               ),
             ),
             if (!_isRetrying) ...[
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextButton(
                 onPressed: _retryWithDelay,
-                child: Text('إعادة المحاولة تلقائياً بعد 3 ثوان'),
+                child: const Text('إعادة المحاولة تلقائياً بعد 3 ثوان'),
               ),
             ],
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              icon: Icon(Icons.arrow_back),
-              label: Text('العودة'),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('العودة'),
             ),
           ],
         ),
@@ -181,7 +181,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
 
   Widget _buildDashboard() {
     if (_analytics == null) {
-      return Center(child: Text('لا توجد بيانات'));
+      return const Center(child: Text('لا توجد بيانات'));
     }
 
     return RefreshIndicator(
@@ -193,11 +193,11 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildFilters(),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               _buildStatsSummary(),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               _buildDailyOrdersChart(),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               _buildOrdersList(),
             ],
           ),
@@ -208,7 +208,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
 
   Widget _buildFilters() {
     if (_analytics == null || _analytics!.filters.isEmpty) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
     
     final List<String> statuses = List<String>.from(_analytics!.filters['statuses']);
@@ -224,11 +224,11 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'تصفية النتائج',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Wrap(
               spacing: 16,
               runSpacing: 16,
@@ -239,7 +239,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                   child: TextField(
                     decoration: InputDecoration(
                       hintText: 'بحث...',
-                      prefixIcon: Icon(Icons.search),
+                      prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -269,7 +269,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                       _fetchData();
                     },
                     items: [
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: null,
                         child: Text('جميع الحالات'),
                       ),
@@ -299,7 +299,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                       _fetchData();
                     },
                     items: [
-                      DropdownMenuItem(
+                      const DropdownMenuItem(
                         value: null,
                         child: Text('جميع المستودعات'),
                       ),
@@ -330,7 +330,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                         _fetchData();
                       }
                     },
-                    items: [
+                    items: const [
                       DropdownMenuItem(value: 7, child: Text('آخر 7 أيام')),
                       DropdownMenuItem(value: 30, child: Text('آخر 30 يوم')),
                       DropdownMenuItem(value: 90, child: Text('آخر 3 أشهر')),
@@ -348,7 +348,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
 
   Widget _buildStatsSummary() {
     if (_analytics == null) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
     
     final orderStats = _analytics!.stats['orders'];
@@ -357,15 +357,15 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'ملخص الإحصائيات',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         GridView.count(
           crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 1.5,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
@@ -396,12 +396,12 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
             ),
           ],
         ),
-        SizedBox(height: 24),
-        Text(
+        const SizedBox(height: 24),
+        const Text(
           'الطلبات حسب الحالة',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         _buildStatusBreakdown(),
       ],
     );
@@ -421,7 +421,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -429,7 +429,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                 Icon(icon, color: color),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               value,
               style: TextStyle(
@@ -446,7 +446,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
 
   Widget _buildStatusBreakdown() {
     if (_analytics == null) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
     
     final byStatus = _analytics!.stats['orders']['by_status'] as Map<String, dynamic>;
@@ -473,12 +473,12 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                     children: [
                       Text(
                         status,
-                        style: TextStyle(fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text('$count ($percentage%)'),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: total > 0 ? count / total : 0,
                     backgroundColor: Colors.grey[200],
@@ -514,13 +514,13 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
 
   Widget _buildDailyOrdersChart() {
     if (_analytics == null) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
     
     final dailyOrders = List<Map<String, dynamic>>.from(_analytics!.stats['daily_orders']);
     
     if (dailyOrders.isEmpty) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
     
     // تجهيز البيانات للرسم البياني
@@ -540,11 +540,11 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'الطلبات اليومية',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             AspectRatio(
               aspectRatio: 1.7,
               child: DashboardChart(
@@ -564,8 +564,8 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
       return Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
+        child: const Padding(
+          padding: EdgeInsets.all(32.0),
           child: Column(
             children: [
               Icon(
@@ -594,16 +594,16 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'أحدث الطلبات',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         ListView.separated(
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           itemCount: _analytics!.orders.length,
-          separatorBuilder: (context, index) => Divider(),
+          separatorBuilder: (context, index) => const Divider(),
           itemBuilder: (context, index) {
             final order = _analytics!.orders[index];
             return _buildOrderListItem(order);
@@ -626,17 +626,17 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
           backgroundColor: _getColorForStatus(order['status']),
           child: Text(
             '${order['progress']}%',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
           ),
         ),
         title: Text(
           '${order['order_number']} - ${order['customer_name']}',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text('الحالة: ${order['status']}'),
             Text('المستودع: ${order['warehouse_name']}'),
             Text('التاريخ: $formattedDate'),
@@ -661,7 +661,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return AlertDialog(
+          return const AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -682,29 +682,18 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
         Navigator.of(context).pop();
       }
       
-      if (orderDetail == null) {
-        // Show error if order details couldn't be loaded
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تعذر تحميل تفاصيل الطلب. يرجى المحاولة مرة أخرى.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-      
       // عرض تفاصيل الطلب
       if (mounted) {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          shape: RoundedRectangleBorder(
+          shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
           builder: (context) {
             final order = orderDetail.order;
             return Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               height: MediaQuery.of(context).size.height * 0.8,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,15 +703,15 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                     children: [
                       Text(
                         'تفاصيل الطلب #${order['order_number']}',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       IconButton(
-                        icon: Icon(Icons.close),
+                        icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
-                  Divider(),
+                  const Divider(),
                   Expanded(
                     child: ListView(
                       children: [
@@ -739,26 +728,26 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
                           _buildDetailItem('تاريخ الإكمال', _formatDate(order['completed_at'])),
                         _buildDetailItem('نسبة الإكمال', '${order['overall_progress']}%'),
                         
-                        SizedBox(height: 16),
-                        Text('العناصر', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Divider(),
+                        const SizedBox(height: 16),
+                        const Text('العناصر', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Divider(),
                         
                         ...List.generate(
                           order['items'].length,
                           (index) {
                             final item = order['items'][index];
                             return Card(
-                              margin: EdgeInsets.symmetric(vertical: 8),
+                              margin: const EdgeInsets.symmetric(vertical: 8),
                               child: Padding(
-                                padding: EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(12),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       item['name'],
-                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
                                     ),
-                                    SizedBox(height: 8),
+                                    const SizedBox(height: 8),
                                     Text('الكمية: ${item['quantity_completed']}/${item['quantity_requested']}'),
                                     Text('التقدم: ${item['progress']}%'),
                                     if (item['worker_name'] != null)
@@ -787,7 +776,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
         SnackBar(
           content: Text('خطأ في تحميل تفاصيل الطلب: ${e.toString()}'),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 5),
+          duration: const Duration(seconds: 5),
           action: SnackBarAction(
             label: 'إعادة المحاولة',
             onPressed: () => _showOrderDetails(orderId),
@@ -800,7 +789,9 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
   
   String _formatDate(String dateStr) {
     final date = DateTime.parse(dateStr);
-    return intl.DateFormat('dd/MM/yyyy HH:mm').format(date);
+    // Convert to local time if UTC to ensure proper timezone handling
+    final localDate = date.isUtc ? date.toLocal() : date;
+    return intl.DateFormat('dd/MM/yyyy HH:mm').format(localDate);
   }
   
   Widget _buildDetailItem(String label, String value) {
@@ -813,7 +804,7 @@ class _OrdersDashboardScreenState extends State<OrdersDashboardScreen> {
             width: 140,
             child: Text(
               '$label:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           Expanded(

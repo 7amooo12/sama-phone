@@ -1,13 +1,6 @@
-import 'package:flutter/foundation.dart';
+
 
 class FlaskUserModel {
-  final int id;
-  final String username;
-  final String email;
-  final bool isAdmin;
-  final String status;
-  final String role;
-  final DateTime? createdAt;
 
   const FlaskUserModel({
     required this.id,
@@ -27,9 +20,16 @@ class FlaskUserModel {
       isAdmin: json['is_admin'] as bool,
       status: json['status'] as String? ?? 'pending',
       role: json['role'] as String? ?? 'user',
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
     );
   }
+  final int id;
+  final String username;
+  final String email;
+  final bool isAdmin;
+  final String status;
+  final String role;
+  final DateTime? createdAt;
 
   Map<String, dynamic> toJson() {
     return {
@@ -45,7 +45,7 @@ class FlaskUserModel {
 
   // Check if user is approved
   bool get isApproved => status == 'active';
-  
+
   // Check if user is pending approval
   bool get isPending => status == 'pending';
 
@@ -60,4 +60,4 @@ class FlaskUserModel {
 
   @override
   int get hashCode => id.hashCode;
-} 
+}

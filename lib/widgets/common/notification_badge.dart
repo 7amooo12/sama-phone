@@ -3,14 +3,6 @@ import 'package:smartbiztracker_new/widgets/common/animated_widgets.dart';
 
 /// A widget that displays a notification badge
 class NotificationBadge extends StatelessWidget {
-  final int count;
-  final Color? color;
-  final Color? textColor;
-  final double size;
-  final double fontSize;
-  final Widget? child;
-  final VoidCallback? onTap;
-  final bool animate;
   
   const NotificationBadge({
     super.key,
@@ -23,6 +15,14 @@ class NotificationBadge extends StatelessWidget {
     this.onTap,
     this.animate = true,
   });
+  final int count;
+  final Color? color;
+  final Color? textColor;
+  final double size;
+  final double fontSize;
+  final Widget? child;
+  final VoidCallback? onTap;
+  final bool animate;
   
   @override
   Widget build(BuildContext context) {
@@ -90,14 +90,6 @@ class NotificationBadge extends StatelessWidget {
 
 /// A widget that displays a notification icon with a badge
 class NotificationIconWithBadge extends StatelessWidget {
-  final int count;
-  final IconData icon;
-  final double iconSize;
-  final Color? iconColor;
-  final Color? badgeColor;
-  final Color? badgeTextColor;
-  final VoidCallback? onTap;
-  final bool animate;
   
   const NotificationIconWithBadge({
     super.key,
@@ -110,6 +102,14 @@ class NotificationIconWithBadge extends StatelessWidget {
     this.onTap,
     this.animate = true,
   });
+  final int count;
+  final IconData icon;
+  final double iconSize;
+  final Color? iconColor;
+  final Color? badgeColor;
+  final Color? badgeTextColor;
+  final VoidCallback? onTap;
+  final bool animate;
   
   @override
   Widget build(BuildContext context) {
@@ -133,13 +133,6 @@ class NotificationIconWithBadge extends StatelessWidget {
 
 /// A widget that displays a notification bell with a badge
 class NotificationBell extends StatelessWidget {
-  final int count;
-  final double size;
-  final Color? color;
-  final Color? badgeColor;
-  final Color? badgeTextColor;
-  final VoidCallback? onTap;
-  final bool animate;
   
   const NotificationBell({
     super.key,
@@ -151,6 +144,13 @@ class NotificationBell extends StatelessWidget {
     this.onTap,
     this.animate = true,
   });
+  final int count;
+  final double size;
+  final Color? color;
+  final Color? badgeColor;
+  final Color? badgeTextColor;
+  final VoidCallback? onTap;
+  final bool animate;
   
   @override
   Widget build(BuildContext context) {

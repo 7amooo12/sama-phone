@@ -4,9 +4,20 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/product.dart';
 import '../providers/favorites_provider.dart';
 import '../utils/style_system.dart';
-import '../utils/animation_system.dart';
+
 
 class ProductCard extends StatelessWidget {
+
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.onTap,
+    this.onAddToCart,
+    this.onToggleFavorite,
+    this.isFavorite = false,
+    this.showFavoriteButton = true,
+    this.showCartButton = true,
+  });
   final Product product;
   final Function()? onTap;
   final Function(Product)? onAddToCart;
@@ -15,21 +26,10 @@ class ProductCard extends StatelessWidget {
   final bool showFavoriteButton;
   final bool showCartButton;
 
-  const ProductCard({
-    Key? key,
-    required this.product,
-    this.onTap,
-    this.onAddToCart,
-    this.onToggleFavorite,
-    this.isFavorite = false,
-    this.showFavoriteButton = true,
-    this.showCartButton = true,
-  }) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -49,7 +49,10 @@ class ProductCard extends StatelessWidget {
                   topLeft: Radius.circular(StyleSystem.radiusLarge),
                   topRight: Radius.circular(StyleSystem.radiusLarge),
                 ),
-                child: (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                child: (product.imageUrl != null &&
+                       product.imageUrl!.isNotEmpty &&
+                       product.imageUrl != 'null' &&
+                       Uri.tryParse(product.imageUrl!) != null)
                     ? CachedNetworkImage(
                         imageUrl: product.imageUrl!,
                         fit: BoxFit.cover,
@@ -85,7 +88,7 @@ class ProductCard extends StatelessWidget {
                       ),
               ),
             ),
-            
+
             // Product Details
             Expanded(
               child: Padding(
@@ -103,7 +106,7 @@ class ProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
+
                     // Category
                     if (product.category != null && product.category!.isNotEmpty)
                       Padding(
@@ -118,9 +121,9 @@ class ProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    
+
                     const Spacer(),
-                    
+
                     // Price and Actions
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -134,7 +137,7 @@ class ProductCard extends StatelessWidget {
                             color: theme.colorScheme.primary,
                           ),
                         ),
-                        
+
                         // Favorite Button
                         if (showFavoriteButton)
                           IconButton(
@@ -150,7 +153,7 @@ class ProductCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    
+
                     // Add to Cart Button
                     if (showCartButton)
                       Padding(
@@ -184,12 +187,12 @@ class ProductCard extends StatelessWidget {
 }
 
 class ProductDetailDialog extends StatelessWidget {
-  final Product product;
 
   const ProductDetailDialog({
-    Key? key,
+    super.key,
     required this.product,
-  }) : super(key: key);
+  });
+  final Product product;
 
   @override
   Widget build(BuildContext context) {
@@ -342,22 +345,22 @@ class ProductDetailDialog extends StatelessWidget {
 }
 
 class ProductGridView extends StatelessWidget {
-  final List<Product> products;
-  final Function(Product) onProductTap;
-  final Future<void> Function() onRefresh;
-  final Function(Product)? onAddToCart;
-  final Function(Product)? onToggleFavorite;
-  final Function(int) isFavorite;
 
   const ProductGridView({
-    Key? key,
+    super.key,
     required this.products,
     required this.onProductTap,
     required this.onRefresh,
     this.onAddToCart,
     this.onToggleFavorite,
     required this.isFavorite,
-  }) : super(key: key);
+  });
+  final List<Product> products;
+  final Function(Product) onProductTap;
+  final Future<void> Function() onRefresh;
+  final Function(Product)? onAddToCart;
+  final Function(Product)? onToggleFavorite;
+  final Function(int) isFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -381,7 +384,7 @@ class ProductGridView extends StatelessWidget {
             showCartButton: onAddToCart != null && product.stock > 0,
             onAddToCart: onAddToCart,
             onToggleFavorite: onToggleFavorite,
-            isFavorite: isFavorite(product.id),
+            isFavorite: isFavorite != null ? (isFavorite(product.id) as bool?) ?? false : false,
           );
         },
       ),
@@ -390,16 +393,16 @@ class ProductGridView extends StatelessWidget {
 }
 
 class CategoryFilterBar extends StatelessWidget {
-  final List<String> categories;
-  final String? selectedCategory;
-  final Function(String?) onCategorySelected;
 
   const CategoryFilterBar({
-    Key? key,
+    super.key,
     required this.categories,
     required this.selectedCategory,
     required this.onCategorySelected,
-  }) : super(key: key);
+  });
+  final List<String> categories;
+  final String? selectedCategory;
+  final Function(String?) onCategorySelected;
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +423,7 @@ class CategoryFilterBar extends StatelessWidget {
               selectedCategory == null,
             );
           }
-          
+
           final category = categories[index - 1];
           return _buildCategoryChip(
             context,
@@ -460,18 +463,18 @@ class CategoryFilterBar extends StatelessWidget {
 
 /// عرض المنتج على شكل بطاقة قائمة
 class ProductListCard extends StatelessWidget {
-  final Product product;
-  final Function()? onTap;
-  final Function(Product)? onAddToCart;
-  final Function(Product)? onToggleFavorite;
 
   const ProductListCard({
-    Key? key,
+    super.key,
     required this.product,
     this.onTap,
     this.onAddToCart,
     this.onToggleFavorite,
-  }) : super(key: key);
+  });
+  final Product product;
+  final Function()? onTap;
+  final Function(Product)? onAddToCart;
+  final Function(Product)? onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -532,7 +535,7 @@ class ProductListCard extends StatelessWidget {
                         ),
                 ),
               ),
-              
+
               // معلومات المنتج
               Expanded(
                 child: Padding(
@@ -557,7 +560,7 @@ class ProductListCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          
+
                           // السعر
                           Container(
                             margin: const EdgeInsets.only(right: 8),
@@ -579,9 +582,9 @@ class ProductListCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // الوصف المختصر
                       if (product.description != null && product.description!.isNotEmpty)
                         Text(
@@ -592,9 +595,9 @@ class ProductListCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        
+
                       const SizedBox(height: 8),
-                      
+
                       // الأزرار
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -621,7 +624,7 @@ class ProductListCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          
+
                           // زر الإضافة للسلة
                           if (product.availableQuantity == null || product.availableQuantity! > 0)
                             Row(
@@ -641,7 +644,7 @@ class ProductListCard extends StatelessWidget {
                                   splashRadius: 20,
                                   tooltip: isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة',
                                 ),
-                                
+
                                 // زر الإضافة للسلة
                                 IconButton(
                                   icon: Icon(
@@ -673,16 +676,16 @@ class ProductListCard extends StatelessWidget {
 
 /// Widget para mostrar una tarjeta de producto para el modelo Product
 class ProductCardWidget extends StatelessWidget {
-  final Product product;
-  final VoidCallback? onTap;
-  final bool showActions;
 
   const ProductCardWidget({
-    Key? key,
+    super.key,
     required this.product,
     this.onTap,
     this.showActions = false,
-  }) : super(key: key);
+  });
+  final Product product;
+  final VoidCallback? onTap;
+  final bool showActions;
 
   @override
   Widget build(BuildContext context) {
@@ -708,7 +711,10 @@ class ProductCardWidget extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withOpacity(0.1),
                 ),
-                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                child: (product.imageUrl != null &&
+                       product.imageUrl!.isNotEmpty &&
+                       product.imageUrl != 'null' &&
+                       Uri.tryParse(product.imageUrl!) != null)
                     ? CachedNetworkImage(
                         imageUrl: product.imageUrl!,
                         fit: BoxFit.cover,
@@ -737,7 +743,7 @@ class ProductCardWidget extends StatelessWidget {
                       ),
               ),
             ),
-            
+
             // Product Details
             Expanded(
               child: Padding(
@@ -755,7 +761,7 @@ class ProductCardWidget extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    
+
                     if (product.description != null && product.description!.isNotEmpty) ...[
                       Text(
                         product.description!,
@@ -767,7 +773,7 @@ class ProductCardWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                     ],
-                    
+
                     // Category Tag
                     if (product.category != null && product.category!.isNotEmpty) ...[
                       Container(
@@ -789,9 +795,9 @@ class ProductCardWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                     ],
-                    
+
                     const Spacer(),
-                    
+
                     // Price and Stock
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -822,7 +828,7 @@ class ProductCardWidget extends StatelessWidget {
                         ),
                       ],
                     ),
-                    
+
                     // Actions (Edit, Delete buttons)
                     if (showActions) ...[
                       const SizedBox(height: 8),
@@ -863,21 +869,21 @@ class ProductCardWidget extends StatelessWidget {
 }
 
 class LuxuryProductCard extends StatelessWidget {
-  final Product product;
-  final Function()? onTap;
 
   const LuxuryProductCard({
-    Key? key,
+    super.key,
     required this.product,
     this.onTap,
-  }) : super(key: key);
+  });
+  final Product product;
+  final Function()? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasPrice = product.price > 0;
     final hasStock = product.stock > 0;
-    
+
     return Card(
       elevation: 5,
       shadowColor: theme.colorScheme.primary.withOpacity(0.25),
@@ -901,7 +907,10 @@ class LuxuryProductCard extends StatelessWidget {
                       topLeft: Radius.circular(StyleSystem.radiusLarge),
                       topRight: Radius.circular(StyleSystem.radiusLarge),
                     ),
-                    child: (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                    child: (product.imageUrl != null &&
+                           product.imageUrl!.isNotEmpty &&
+                           product.imageUrl != 'null' &&
+                           Uri.tryParse(product.imageUrl!) != null)
                         ? CachedNetworkImage(
                             imageUrl: product.imageUrl!,
                             fit: BoxFit.cover,
@@ -936,7 +945,7 @@ class LuxuryProductCard extends StatelessWidget {
                             ),
                           ),
                   ),
-                  
+
                   // Subtle gradient overlay for better text visibility
                   ClipRRect(
                     borderRadius: const BorderRadius.only(
@@ -964,7 +973,7 @@ class LuxuryProductCard extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Product Details
             Expanded(
               child: Padding(
@@ -981,7 +990,7 @@ class LuxuryProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    
+
                     // Category
                     if (product.category != null && product.category!.isNotEmpty)
                       Padding(
@@ -1004,9 +1013,9 @@ class LuxuryProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    
+
                     const Spacer(),
-                    
+
                     // Only show price and stock if both are available
                     if (hasPrice && hasStock) ...[
                       // Price

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smartbiztracker_new/utils/animation_system.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/widgets/common/animated_button.dart';
 
@@ -89,7 +88,7 @@ class AnimatedDialogs {
                             if (onCancel != null) onCancel();
                           },
                           style: StyleSystem.outlinedButtonStyle.copyWith(
-                            foregroundColor: MaterialStateProperty.all(
+                            foregroundColor: WidgetStateProperty.all(
                               cancelColor ?? StyleSystem.neutralMedium,
                             ),
                           ),
@@ -132,8 +131,8 @@ class AnimatedDialogs {
     Color? backgroundColor,
     Color? titleColor,
     Color? messageColor,
-    Color confirmColor = StyleSystem.primaryColor,
-    Color cancelColor = StyleSystem.neutralMedium,
+    Color? confirmColor,
+    Color? cancelColor,
     Widget? icon,
   }) {
     return showSimpleDialog<bool>(
@@ -149,8 +148,8 @@ class AnimatedDialogs {
       backgroundColor: backgroundColor,
       titleColor: titleColor,
       messageColor: messageColor,
-      confirmColor: confirmColor,
-      cancelColor: cancelColor,
+      confirmColor: confirmColor ?? StyleSystem.primaryColor,
+      cancelColor: cancelColor ?? StyleSystem.neutralMedium,
       icon: icon,
     );
   }
@@ -185,7 +184,7 @@ class AnimatedDialogs {
           color: StyleSystem.successColor.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.check_circle,
           color: StyleSystem.successColor,
           size: 40,
@@ -224,7 +223,7 @@ class AnimatedDialogs {
           color: StyleSystem.errorColor.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.error,
           color: StyleSystem.errorColor,
           size: 40,
@@ -267,7 +266,7 @@ class AnimatedDialogs {
           color: StyleSystem.warningColor.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(
+        child: const Icon(
           Icons.warning,
           color: StyleSystem.warningColor,
           size: 40,

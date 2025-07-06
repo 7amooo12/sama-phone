@@ -7,7 +7,7 @@ import '../../services/auth_service.dart';
 import '../../utils/logger.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
-  const AnalyticsDashboardScreen({Key? key}) : super(key: key);
+  const AnalyticsDashboardScreen({super.key});
 
   @override
   State<AnalyticsDashboardScreen> createState() => _AnalyticsDashboardScreenState();
@@ -86,19 +86,19 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 60, color: Colors.red),
+                    const Icon(Icons.error_outline, size: 60, color: Colors.red),
                     const SizedBox(height: 16),
                     Text(
                       'حدث خطأ أثناء تحميل البيانات\n${snapshot.error}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
                         _loadAnalytics();
                       },
-                      child: Text('إعادة المحاولة'),
+                      child: const Text('إعادة المحاولة'),
                     ),
                   ],
                 ),
@@ -390,7 +390,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     dailyData.sort((a, b) => a.date.compareTo(b.date));
     
     // التحقق من وجود مبيعات
-    bool hasSales = dailyData.any((day) => day.sales > 0);
+    final bool hasSales = dailyData.any((day) => day.sales > 0);
     
     if (!hasSales) {
       return Column(
@@ -472,7 +472,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
           ),
           child: LineChart(
             LineChartData(
-              gridData: FlGridData(
+              gridData: const FlGridData(
                 show: true,
                 drawVerticalLine: true,
                 horizontalInterval: 100,
@@ -518,10 +518,10 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                     reservedSize: 45,
                   ),
                 ),
-                topTitles: AxisTitles(
+                topTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                rightTitles: AxisTitles(
+                rightTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
               ),
@@ -539,7 +539,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                   color: Theme.of(context).primaryColor,
                   barWidth: 3,
                   isStrokeCapRound: true,
-                  dotData: FlDotData(
+                  dotData: const FlDotData(
                     show: true,
                   ),
                   belowBarData: BarAreaData(
@@ -560,7 +560,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     final categorySales = salesStats.byCategory.toList();
     
     // التحقق من وجود مبيعات للفئات
-    bool hasCategorySales = categorySales.any((category) => category.sales > 0);
+    final bool hasCategorySales = categorySales.any((category) => category.sales > 0);
     
     if (!hasCategorySales) {
       return Column(

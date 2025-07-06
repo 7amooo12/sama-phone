@@ -5,10 +5,11 @@ import 'package:smartbiztracker_new/services/task_service.dart';
 import 'package:smartbiztracker_new/models/task_model.dart';
 import 'package:smartbiztracker_new/widgets/common/custom_loader.dart';
 import 'package:smartbiztracker_new/utils/show_snackbar.dart';
+import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:intl/intl.dart';
 
 class WorkerTasksScreen extends StatefulWidget {
-  const WorkerTasksScreen({Key? key}) : super(key: key);
+  const WorkerTasksScreen({super.key});
 
   @override
   _WorkerTasksScreenState createState() => _WorkerTasksScreenState();
@@ -17,51 +18,51 @@ class WorkerTasksScreen extends StatefulWidget {
 class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTickerProviderStateMixin {
   final TaskService _taskService = TaskService();
   late TabController _tabController;
-  
+
   bool _isLoading = true;
   bool _isUpdating = false;
   List<TaskModel> _tasks = [];
   List<TaskModel> _pendingTasks = [];
   List<TaskModel> _inProgressTasks = [];
   List<TaskModel> _completedTasks = [];
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadTasks();
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadTasks() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final user = Provider.of<SupabaseProvider>(context, listen: false).user;
-      
+
       if (user == null) {
         throw Exception('لم يتم العثور على بيانات المستخدم');
       }
-      
+
       final tasks = await _taskService.getWorkerTasks(user.id);
-      
+
       // Sort tasks by different statuses
       final pendingTasks = tasks.where((task) => task.status == 'pending').toList();
       final inProgressTasks = tasks.where((task) => task.status == 'in_progress').toList();
       final completedTasks = tasks.where((task) => task.status == 'completed').toList();
-      
+
       // Sort tasks by deadline (closer deadlines first)
       pendingTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
       inProgressTasks.sort((a, b) => a.deadline.compareTo(b.deadline));
       completedTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Most recently completed first
-      
+
       setState(() {
         _tasks = tasks;
         _pendingTasks = pendingTasks;
@@ -73,32 +74,32 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
       setState(() {
         _isLoading = false;
       });
-      
+
       if (mounted) {
         ShowSnackbar.show(context, 'حدث خطأ أثناء تحميل المهام: $e', isError: true);
       }
     }
   }
-  
+
   Future<void> _updateTaskStatus(TaskModel task, String newStatus, double progress, int completedQuantity) async {
     setState(() {
       _isUpdating = true;
     });
-    
+
     try {
       final success = await _taskService.updateTaskStatus(
-        task.id, 
-        newStatus, 
-        progress, 
+        task.id,
+        newStatus,
+        progress,
         completedQuantity,
       );
-      
+
       if (!success) {
         throw Exception('فشل في تحديث حالة المهمة');
       }
-      
+
       await _loadTasks();
-      
+
       if (mounted) {
         ShowSnackbar.show(context, 'تم تحديث حالة المهمة بنجاح', isError: false);
       }
@@ -112,7 +113,7 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
       });
     }
   }
-  
+
   void _showTaskDetailsDialog(TaskModel task) {
     showModalBottomSheet(
       context: context,
@@ -144,9 +145,9 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                 ),
               ],
             ),
-            
+
             const Divider(),
-            
+
             // Task details
             Text('الوصف: ${task.description}'),
             const SizedBox(height: 8),
@@ -167,9 +168,9 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
             Text('الكمية المكتملة: ${task.completedQuantity}'),
             const SizedBox(height: 8),
             Text('النوع: ${task.category == 'product' ? 'منتج' : 'طلب'}'),
-            
+
             const SizedBox(height: 16),
-            
+
             // Action buttons based on task status
             if (task.status == 'pending') ...[
               ElevatedButton.icon(
@@ -193,12 +194,12 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               StatefulBuilder(
                 builder: (context, setModalState) {
                   // Local state for the bottom sheet
                   int localCompletedQuantity = task.completedQuantity;
-                  
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -242,7 +243,7 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       Row(
                         children: [
                           Expanded(
@@ -291,13 +292,18 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
+      backgroundColor: StyleSystem.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('مهامي'),
+        title: Text('مهامي', style: StyleSystem.titleLarge.copyWith(color: StyleSystem.textPrimary)),
+        backgroundColor: StyleSystem.surfaceDark,
+        iconTheme: const IconThemeData(color: StyleSystem.textPrimary),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: theme.primaryColor,
+          labelColor: StyleSystem.primaryColor,
+          unselectedLabelColor: StyleSystem.textSecondary,
+          indicatorColor: StyleSystem.primaryColor,
           tabs: const [
             Tab(text: 'قيد الانتظار'),
             Tab(text: 'قيد التنفيذ'),
@@ -314,10 +320,10 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                   children: [
                     // Pending tasks
                     _buildTasksList(_pendingTasks),
-                    
+
                     // In progress tasks
                     _buildTasksList(_inProgressTasks),
-                    
+
                     // Completed tasks
                     _buildTasksList(_completedTasks),
                   ],
@@ -327,29 +333,33 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _loadTasks,
-        child: const Icon(Icons.refresh),
+        backgroundColor: StyleSystem.primaryColor,
+        child: const Icon(Icons.refresh, color: StyleSystem.textPrimary),
       ),
     );
   }
-  
+
   Widget _buildTasksList(List<TaskModel> tasks) {
     if (tasks.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.task_alt,
               size: 64,
-              color: Colors.grey.shade400,
+              color: StyleSystem.textSecondary,
             ),
             const SizedBox(height: 16),
-            const Text('لا توجد مهام متاحة'),
+            Text(
+              'لا توجد مهام متاحة',
+              style: StyleSystem.bodyLarge.copyWith(color: StyleSystem.textSecondary),
+            ),
           ],
         ),
       );
     }
-    
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: tasks.length,
@@ -359,17 +369,18 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
       },
     );
   }
-  
+
   Widget _buildTaskCard(TaskModel task) {
     final isProductTask = task.category == 'product';
     final bool isOverdue = task.deadline.isBefore(DateTime.now()) && task.status != 'completed';
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      color: StyleSystem.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isOverdue
-            ? const BorderSide(color: Colors.red, width: 1)
+            ? const BorderSide(color: StyleSystem.errorColor, width: 1)
             : BorderSide.none,
       ),
       child: InkWell(
@@ -401,16 +412,15 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                       children: [
                         Text(
                           task.title,
-                          style: const TextStyle(
+                          style: StyleSystem.titleMedium.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            color: StyleSystem.textPrimary,
                           ),
                         ),
                         Text(
                           task.productName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade700,
+                          style: StyleSystem.bodyMedium.copyWith(
+                            color: StyleSystem.textSecondary,
                           ),
                         ),
                       ],
@@ -433,9 +443,9 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Progress bar if in progress
               if (task.status == 'in_progress') ...[
                 LinearProgressIndicator(
@@ -450,7 +460,7 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                 ),
                 const SizedBox(height: 4),
               ],
-              
+
               // Task info
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -491,7 +501,7 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
                   ),
                 ],
               ),
-              
+
               // Action buttons based on status
               if (task.status == 'pending') ...[
                 const SizedBox(height: 12),
@@ -544,7 +554,7 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
       ),
     );
   }
-  
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'pending':
@@ -557,7 +567,7 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
         return Colors.grey;
     }
   }
-  
+
   String _getStatusText(String status) {
     switch (status) {
       case 'pending':
@@ -570,4 +580,4 @@ class _WorkerTasksScreenState extends State<WorkerTasksScreen> with SingleTicker
         return status;
     }
   }
-} 
+}

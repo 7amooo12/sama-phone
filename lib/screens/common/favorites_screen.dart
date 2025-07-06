@@ -10,7 +10,7 @@ import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/product_widgets.dart';
 
 class FavoritesScreen extends StatefulWidget {
-  const FavoritesScreen({Key? key}) : super(key: key);
+  const FavoritesScreen({super.key});
 
   @override
   _FavoritesScreenState createState() => _FavoritesScreenState();
@@ -100,7 +100,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               itemCount: favoritesProvider.favorites.length,
               itemBuilder: (context, index) {
                 final product = favoritesProvider.favorites[index];
-                
+
                 return AnimationConfiguration.staggeredGrid(
                   position: index,
                   duration: AnimationSystem.medium,
@@ -123,7 +123,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final favoritesProvider = Provider.of<FavoritesProvider>(context, listen: false);
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final productProvider = Provider.of<ProductProvider>(context, listen: false);
-    
+
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(
@@ -141,19 +141,19 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   child: CircularProgressIndicator(),
                 ),
               );
-              
+
               try {
                 // Get detailed product information
-                final detailedProduct = await productProvider.getSamaProductDetails(product.id);
-                
+                final detailedProduct = await productProvider.getSamaProductDetails(product.id.toString());
+
                 // Close loading dialog
                 Navigator.pop(context);
-                
+
                 if (detailedProduct != null && context.mounted) {
                   // Show product details dialog
                   showDialog(
                     context: context,
-                    builder: (context) => ProductDetailDialog(product: detailedProduct),
+                    builder: (context) => ProductDetailDialog(product: Product.fromProductModel(detailedProduct)),
                   );
                 }
               } catch (e) {
@@ -180,7 +180,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ],
             ),
           ),
-          
+
           // Favorite button
           Positioned(
             top: 8,
@@ -203,7 +203,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ),
           ),
-          
+
           // Add to cart button
           Positioned(
             bottom: 8,

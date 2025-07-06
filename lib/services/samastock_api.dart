@@ -2,19 +2,19 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:smartbiztracker_new/utils/app_logger.dart';
-import 'package:html/parser.dart' as htmlParser;
+import 'package:html/parser.dart' as html_parser;
 import 'package:smartbiztracker_new/models/product_model.dart';
 
 class SamaStockApiService {
+
+  SamaStockApiService({
+    http.Client? client,
+  }) : client = client ?? http.Client();
   final String baseUrl = 'https://samastock.pythonanywhere.com';
   final http.Client client;
   final Map<String, String> _storage = {};
   String? _authToken;
   String? _cookies;
-
-  SamaStockApiService({
-    http.Client? client,
-  }) : client = client ?? http.Client();
 
   // Initialize the API service and load saved credentials
   Future<void> initialize() async {
@@ -39,19 +39,19 @@ class SamaStockApiService {
 
   // Helper method to get headers with authentication
   Map<String, String> _getHeaders() {
-    Map<String, String> headers = {
+    final Map<String, String> headers = {
       'Accept': 'application/json, text/html',
       'Content-Type': 'application/json',
     };
-    
+
     if (_cookies != null) {
       headers['Cookie'] = _cookies!;
     }
-    
+
     if (_authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';
     }
-    
+
     return headers;
   }
 
@@ -59,30 +59,30 @@ class SamaStockApiService {
   Future<bool> login(String username, String password) async {
     try {
       AppLogger.info('محاولة تسجيل الدخول إلى SamaStock API');
-      
+
       // استخدام بيانات اعتماد ثابتة لتسجيل الدخول
-      final adminUsername = 'admin';
-      final adminPassword = 'mn402729'; // تعديل كلمة المرور الصحيحة
+      const adminUsername = 'admin';
+      const adminPassword = 'mn402729'; // تعديل كلمة المرور الصحيحة
 
       // استخدام بيانات الاعتماد المقدمة أو البيانات الافتراضية
       final useUsername = username.isEmpty ? adminUsername : username;
       final usePassword = password.isEmpty ? adminPassword : password;
-      
+
       // First, get the CSRF token and cookies
       final initialResponse = await client.get(
         Uri.parse('$baseUrl/admin/login/'),
         headers: {'Accept': 'text/html'},
       ).timeout(const Duration(seconds: 10));
-      
+
       String? csrfToken;
       if (initialResponse.statusCode == 200) {
         // Extract CSRF token from the HTML response
-        final document = htmlParser.parse(initialResponse.body);
-        
+        final document = html_parser.parse(initialResponse.body);
+
         // طباعة العنوان للتصحيح
         final title = document.querySelector('title')?.text ?? '';
         AppLogger.info('عنوان صفحة تسجيل الدخول: $title');
-        
+
         // البحث عن عنصر CSRF token بعدة طرق
         final csrfElements = [
           document.querySelector('input[name="csrfmiddlewaretoken"]'),
@@ -90,7 +90,7 @@ class SamaStockApiService {
           document.querySelector('meta[name="csrf-token"]'),
           document.querySelector('[name*="csrf"]'),
         ];
-        
+
         for (var element in csrfElements) {
           if (element != null) {
             if (element.attributes.containsKey('value')) {
@@ -104,7 +104,7 @@ class SamaStockApiService {
             }
           }
         }
-        
+
         // إذا لم نجد CSRF token، نبحث في JavaScript
         if (csrfToken == null) {
           final scriptElements = document.querySelectorAll('script');
@@ -120,7 +120,7 @@ class SamaStockApiService {
             }
           }
         }
-        
+
         // Extract cookies from the response
         final cookies = initialResponse.headers['set-cookie'];
         if (cookies != null) {
@@ -131,35 +131,35 @@ class SamaStockApiService {
       } else {
         AppLogger.warning('فشل في الوصول إلى صفحة تسجيل الدخول: ${initialResponse.statusCode}');
       }
-      
+
       // محاولة تسجيل الدخول بنموذج HTML
-      Map<String, String> loginData = {
+      final Map<String, String> loginData = {
         'username': useUsername,
         'password': usePassword,
         'remember': 'on',
       };
-      
+
       if (csrfToken != null) {
         loginData['csrfmiddlewaretoken'] = csrfToken;
       }
-      
-      Map<String, String> headers = {
+
+      final Map<String, String> headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'text/html,application/json',
         'Referer': '$baseUrl/admin/login/',
       };
-      
+
       if (_cookies != null) {
         headers['Cookie'] = _cookies!;
       }
-      
+
       AppLogger.info('محاولة تسجيل الدخول باستخدام نموذج HTML');
       final formResponse = await client.post(
         Uri.parse('$baseUrl/admin/login/'),
         headers: headers,
         body: loginData,
       ).timeout(const Duration(seconds: 15));
-      
+
       // فحص نتيجة محاولة تسجيل الدخول
       if (formResponse.statusCode == 200 || formResponse.statusCode == 302) {
         // Extract and save cookies
@@ -168,21 +168,21 @@ class SamaStockApiService {
           await _saveToStorage('sama_stock_cookies', _cookies!);
           AppLogger.info('تم حفظ الـ cookies بعد تسجيل الدخول');
         }
-        
+
         // محاولة التحقق من نجاح تسجيل الدخول من خلال فحص محتوى الصفحة المُرجعة
         if (!formResponse.body.contains('تسجيل الدخول') && !formResponse.body.contains('login')) {
           AppLogger.info('تم تسجيل الدخول بنجاح (تم التحقق من المحتوى)');
           return true;
         }
-        
+
         // فحص الـ headers للتحقق من وجود redirect يدل على النجاح
-        if (formResponse.headers.containsKey('location') && 
+        if (formResponse.headers.containsKey('location') &&
             (formResponse.headers['location']?.contains('dashboard') ?? false)) {
           AppLogger.info('تم تسجيل الدخول بنجاح (تم التحقق من عنوان التوجيه)');
           return true;
         }
       }
-      
+
       // محاولة التحقق من نجاح تسجيل الدخول عن طريق زيارة صفحة محمية
       AppLogger.info('محاولة التحقق من تسجيل الدخول من خلال زيارة صفحة محمية');
       final checkResponse = await client.get(
@@ -193,7 +193,7 @@ class SamaStockApiService {
           if (_authToken != null) 'Authorization': 'Bearer $_authToken',
         },
       ).timeout(const Duration(seconds: 10));
-      
+
       if (checkResponse.statusCode == 200) {
         // فحص ما إذا كانت الصفحة المُرجعة هي صفحة تسجيل الدخول أم صفحة محمية
         if (!checkResponse.body.contains('تسجيل الدخول') && !checkResponse.body.contains('login')) {
@@ -202,7 +202,7 @@ class SamaStockApiService {
           return true;
         }
       }
-      
+
       // إذا وصلنا إلى هنا، فقد فشلت جميع محاولات تسجيل الدخول
       AppLogger.warning('فشلت جميع محاولات تسجيل الدخول');
       return false;
@@ -218,19 +218,19 @@ class SamaStockApiService {
     // استخدام نفس الطريقة المركزية للحصول على المنتجات
     return getProductsWithApiKey();
   }
-  
+
   // Get admin products with toJSON - now uses the standardized API endpoint with API key
   Future<List<ProductModel>> getAdminProducts() async {
     AppLogger.info('استدعاء getAdminProducts() - استخدام getProductsWithApiKey()');
     // استخدام نفس الطريقة المركزية للحصول على المنتجات
     return getProductsWithApiKey();
   }
-  
+
   // Get dashboard analytics data
   Future<Map<String, dynamic>> getDashboardAnalytics() async {
     try {
       AppLogger.info('جلب بيانات تحليلات لوحة التحكم');
-      
+
       // Check if we have auth credentials and try to login if not
       if (_cookies == null) {
         AppLogger.warning('لا توجد بيانات جلسة مخزنة، محاولة تسجيل الدخول');
@@ -240,22 +240,22 @@ class SamaStockApiService {
           return {};
         }
       }
-      
+
       // استخدام نقطة نهاية API الجديدة لبيانات لوحة التحكم
       final response = await client.get(
         Uri.parse('$baseUrl/admin/api/dashboard-data'),
         headers: _getHeaders(),
       ).timeout(const Duration(seconds: 15));
-      
+
       AppLogger.info('استجابة API لوحة التحكم: ${response.statusCode}');
       if (response.body.isNotEmpty) {
         AppLogger.info('عينة من محتوى الاستجابة: ${response.body.substring(0, min(100, response.body.length))}...');
       }
-      
+
       if (response.statusCode == 200) {
         try {
           final jsonData = json.decode(response.body);
-          
+
           if (jsonData is Map) {
             AppLogger.info('تم جلب بيانات لوحة التحكم بنجاح');
             // Convert to Map<String, dynamic> explicitly
@@ -289,7 +289,7 @@ class SamaStockApiService {
       }
     } catch (e) {
       AppLogger.error('خطأ في جلب بيانات لوحة التحكم', e);
-      
+
       // إرجاع هيكل بيانات فارغ في حالة الفشل
       return {
         'total_sales': 0,
@@ -302,36 +302,36 @@ class SamaStockApiService {
       };
     }
   }
-  
+
   // Check if the API is available
   Future<bool> checkApiAvailability() async {
     try {
       final response = await client.get(
         Uri.parse(baseUrl),
       ).timeout(const Duration(seconds: 5));
-      
+
       return response.statusCode >= 200 && response.statusCode < 500;
     } catch (e) {
       AppLogger.error('خطأ في التحقق من توفر API', e);
       return false;
     }
   }
-  
+
   // Extract products from HTML response
   List<ProductModel> _extractProductsFromHtml(String html) {
     AppLogger.info('استخراج المنتجات من HTML');
-    List<ProductModel> products = [];
-    
+    final List<ProductModel> products = [];
+
     try {
       // طباعة حجم HTML للتصحيح
       AppLogger.info('حجم HTML المستلم: ${html.length} حرف');
-      
-      final document = htmlParser.parse(html);
-      
+
+      final document = html_parser.parse(html);
+
       // محاولة العثور على العنوان أولاً للتحقق من صحة الصفحة
       final title = document.querySelector('title')?.text ?? '';
       AppLogger.info('عنوان الصفحة: $title');
-      
+
       // البحث عن عناصر المنتجات باستخدام محددات مختلفة
       final productElements = [
         ...document.querySelectorAll('table tbody tr'),              // منتجات في جدول
@@ -340,16 +340,16 @@ class SamaStockApiService {
         ...document.querySelectorAll('[data-product-id]'),           // أي عنصر له معرف منتج
         ...document.querySelectorAll('.inventory-item'),             // عناصر المخزون
       ];
-      
+
       AppLogger.info('تم العثور على ${productElements.length} عنصر محتمل للمنتجات');
-      
+
       // البحث عن المنتجات في جدول
       if (productElements.isNotEmpty) {
         for (var element in productElements) {
           try {
             // طباعة نص العنصر للتحليل
             AppLogger.debug('بيانات عنصر المنتج: ${element.text.trim().substring(0, min(50, element.text.trim().length))}...');
-            
+
             // استخراج معرف المنتج
             String? id;
             if (element.attributes.containsKey('data-product-id')) {
@@ -359,9 +359,9 @@ class SamaStockApiService {
             } else if (element.attributes.containsKey('id')) {
               id = element.attributes['id']?.replaceAll(RegExp(r'[^0-9]'), '');
             }
-            
+
             final idValue = int.tryParse(id ?? '') ?? products.length + 1; // استخدام الفهرس كمعرف بديل
-            
+
             // استخراج اسم المنتج
             String? name;
             final nameElement = element.querySelector('.product-name, .name, h2, h3, .title, .product-title, td:first-child');
@@ -371,10 +371,10 @@ class SamaStockApiService {
               // محاولة استخراج الاسم من نص العنصر الأول بحد أقصى 50 حرف
               name = element.text.trim().split('\n').first;
               if (name.length > 50) {
-                name = name.substring(0, 50) + '...';
+                name = '${name.substring(0, 50)}...';
               }
             }
-            
+
             // استخراج السعر
             double price = 0.0;
             final priceElement = element.querySelector('.price, .product-price, [data-price], td:nth-child(3), td:nth-child(4)');
@@ -384,7 +384,7 @@ class SamaStockApiService {
               priceText = priceText.replaceAll(RegExp(r'[^\d.]'), '');
               price = double.tryParse(priceText) ?? 0.0;
             }
-            
+
             // استخراج الكمية
             int stock = 0;
             final stockElement = element.querySelector('.stock, .quantity, .product-quantity, [data-quantity], td:nth-child(5), td:nth-child(6)');
@@ -394,7 +394,7 @@ class SamaStockApiService {
               stockText = stockText.replaceAll(RegExp(r'\D'), '');
               stock = int.tryParse(stockText) ?? 0;
             }
-            
+
             // استخراج الصورة
             String? imageUrl;
             final imgElement = element.querySelector('img');
@@ -409,25 +409,25 @@ class SamaStockApiService {
                 }
               }
             }
-            
+
             // استخراج الوصف
             String description = '';
             final descElement = element.querySelector('.description, .product-description, [data-description], td:nth-child(2)');
             if (descElement != null) {
               description = descElement.text.trim();
             }
-            
+
             // استخراج الفئة
             String category = '';
             final catElement = element.querySelector('.category, .product-category, [data-category]');
             if (catElement != null) {
               category = catElement.text.trim();
             }
-            
+
             // إنشاء كائن المنتج
             final product = ProductModel(
               id: idValue.toString(),
-              name: name ?? 'منتج غير معروف',
+              name: name.isNotEmpty ? name : 'منتج غير معروف',
               price: price,
               quantity: stock,
               imageUrl: imageUrl,
@@ -439,7 +439,7 @@ class SamaStockApiService {
               createdAt: DateTime.now(),
               reorderPoint: 5,
             );
-            
+
             products.add(product);
             AppLogger.debug('تم استخراج منتج: ${product.name} (${product.id})');
           } catch (e) {
@@ -449,10 +449,10 @@ class SamaStockApiService {
       } else {
         // محاولة استخراج معلومات المنتج من النص
         AppLogger.warning('لم يتم العثور على عناصر منتج صريحة، محاولة تحليل النص');
-        
+
         final text = document.body?.text ?? '';
         final lines = text.split('\n').where((line) => line.trim().isNotEmpty).toList();
-        
+
         // محاولة إنشاء منتجات بناءً على الأسطر
         for (int i = 0; i < lines.length; i += 3) {
           if (i + 1 < lines.length) {
@@ -460,7 +460,7 @@ class SamaStockApiService {
               final name = lines[i].trim();
               final priceText = lines[i+1].trim().replaceAll(RegExp(r'[^\d.]'), '');
               final price = double.tryParse(priceText) ?? 0.0;
-              
+
               final product = ProductModel(
                 id: i.toString(),
                 name: name,
@@ -474,7 +474,7 @@ class SamaStockApiService {
                 createdAt: DateTime.now(),
                 reorderPoint: 5,
               );
-              
+
               products.add(product);
             } catch (e) {
               AppLogger.error('خطأ في استخراج منتج من النص', e);
@@ -482,12 +482,12 @@ class SamaStockApiService {
           }
         }
       }
-      
+
       AppLogger.info('تم استخراج ${products.length} منتج من HTML');
     } catch (e) {
       AppLogger.error('خطأ عام في استخراج المنتجات من HTML', e);
     }
-    
+
     return products;
   }
 
@@ -496,7 +496,7 @@ class SamaStockApiService {
     try {
       // قائمة لتخزين المنتجات المستخرجة
       List<dynamic> productsList = [];
-      
+
       if (jsonData is List) {
         // إذا كان JSON على شكل مصفوفة مباشرة
         productsList = jsonData;
@@ -514,39 +514,39 @@ class SamaStockApiService {
           // محاولة استخراج أول قائمة في الكائن
           for (var key in jsonData.keys) {
             if (jsonData[key] is List && (jsonData[key] as List).isNotEmpty) {
-              productsList = jsonData[key];
+              productsList = jsonData[key] as List<dynamic>;
               break;
             }
           }
         }
       }
-      
+
       if (productsList.isEmpty) {
         return [];
       }
-      
+
       // تحويل بيانات JSON إلى كائنات ProductModel
       final products = productsList.map((item) {
         try {
-          return ProductModel.fromJson(item);
+          return ProductModel.fromJson(item as Map<String, dynamic>);
         } catch (e) {
           AppLogger.error('خطأ في تحويل بيانات المنتج: $e');
           return null;
         }
       }).where((product) => product != null).cast<ProductModel>().toList();
-      
+
       return products;
     } catch (e) {
       AppLogger.error('خطأ في استخراج المنتجات من JSON', e);
       return [];
     }
   }
-  
+
   // إنشاء منتجات وهمية للاختبار
   List<ProductModel> _createDummyProducts() {
     AppLogger.info('إنشاء قائمة منتجات وهمية للاختبار');
     final dummyProducts = <ProductModel>[];
-    
+
     // إضافة بعض المنتجات الوهمية
     final productNames = [
       'جهاز آيفون 15 برو ماكس',
@@ -569,7 +569,7 @@ class SamaStockApiService {
       'ابليك 1004/760',
       'ابليك 1004/960',
     ];
-    
+
     final categories = ['إلكترونيات', 'صوتيات', 'حواسيب', 'هواتف', 'ألعاب', 'ابليك'];
     final imageUrls = [
       'https://samastock.pythonanywhere.com/static/uploads/20250408150623_1002.png',
@@ -579,12 +579,12 @@ class SamaStockApiService {
       'https://samastock.pythonanywhere.com/static/uploads/20250407223317_1003.png',
       'https://samastock.pythonanywhere.com/static/uploads/20250408155057_1004.png',
     ];
-    
+
     for (int i = 0; i < productNames.length; i++) {
       final category = i < 10 ? categories[i % 5] : categories[5];
       final price = 100.0 + (i * 100);
-      final discount = i % 3 == 0 ? 100.0 : 0.0;
-      
+
+
       final product = ProductModel(
         id: (i + 1).toString(),
         name: productNames[i],
@@ -599,15 +599,15 @@ class SamaStockApiService {
         createdAt: DateTime.now().subtract(Duration(days: i)),
         reorderPoint: 5,
       );
-      
+
       dummyProducts.add(product);
     }
-    
+
     // حفظ المنتجات الوهمية في التخزين المؤقت أيضًا
     _saveToStorage('product_count', dummyProducts.length.toString());
     _saveToStorage('cached_products', json.encode(dummyProducts.map((p) => p.toJson()).toList()));
     _saveToStorage('last_product_fetch', DateTime.now().toIso8601String());
-    
+
     return dummyProducts;
   }
 
@@ -615,10 +615,10 @@ class SamaStockApiService {
   Future<List<ProductModel>> getProductsWithApiKey() async {
     try {
       AppLogger.info('جاري تحميل المنتجات باستخدام مفتاح API');
-      
+
       // استخدام نقطة نهاية API واحدة فقط للمنتجات
       final apiEndpoint = '$baseUrl/flutter/api/api/products';
-      
+
       try {
         AppLogger.info('محاولة جلب المنتجات من: $apiEndpoint');
         final response = await client.get(
@@ -629,25 +629,25 @@ class SamaStockApiService {
             'x-api-key': 'lux2025FlutterAccess',
           },
         ).timeout(const Duration(seconds: 30)); // Increased timeout for larger responses
-          
+
         if (response.statusCode == 200) {
           try {
             AppLogger.info('تم استلام استجابة من API - حجم الاستجابة: ${response.body.length} بايت');
             final data = json.decode(response.body);
-            
+
             if (data is Map && data.containsKey('products')) {
               final productsList = data['products'] as List<dynamic>;
               AppLogger.info('تم العثور على ${productsList.length} منتج في API response');
-              
+
               final products = productsList.map((item) {
                 try {
-                  return ProductModel.fromJson(item);
+                  return ProductModel.fromJson(item as Map<String, dynamic>);
                 } catch (e) {
                   AppLogger.error('خطأ في تحويل عنصر المنتج: $e');
                   return null;
                 }
               }).where((product) => product != null).cast<ProductModel>().toList();
-              
+
               AppLogger.info('تم تحويل ${products.length} منتج بنجاح');
               return products;
             } else {
@@ -656,30 +656,46 @@ class SamaStockApiService {
             }
           } catch (e) {
             AppLogger.error('خطأ في تحليل استجابة API: ${e.toString()}');
-            return [];
+            throw Exception('خطأ في تحليل البيانات من الخادم: ${e.toString()}');
           }
         } else {
           AppLogger.warning('فشل في تحميل المنتجات. رمز الحالة: ${response.statusCode}');
-          return [];
+
+          if (response.statusCode == 401) {
+            throw Exception('غير مصرح بالوصول - تحقق من مفتاح API');
+          } else if (response.statusCode == 404) {
+            throw Exception('نقطة النهاية غير موجودة - تحقق من عنوان API');
+          } else if (response.statusCode >= 500) {
+            throw Exception('خطأ في الخادم - حاول مرة أخرى لاحقاً');
+          } else {
+            throw Exception('فشل في تحميل المنتجات - رمز الخطأ: ${response.statusCode}');
+          }
         }
       } catch (e) {
         AppLogger.error('خطأ في الاتصال بالخادم: ${e.toString()}');
-        return [];
+
+        if (e.toString().contains('TimeoutException')) {
+          throw Exception('انتهت مهلة الاتصال - تحقق من اتصال الإنترنت');
+        } else if (e.toString().contains('SocketException')) {
+          throw Exception('لا يمكن الاتصال بالخادم - تحقق من اتصال الإنترنت');
+        } else {
+          rethrow;
+        }
       }
     } catch (e) {
       AppLogger.error('خطأ في تحميل المنتجات', e);
-      return [];
+      rethrow;
     }
   }
-  
+
   // تحويل البيانات إلى كائنات ProductModel
   List<ProductModel> _convertToProductModels(dynamic data) {
     try {
       if (data is List) {
-        return data.map((item) => ProductModel.fromJson(item)).toList();
+        return data.map((item) => ProductModel.fromJson(item as Map<String, dynamic>)).toList();
       } else if (data is Map && data['products'] != null) {
         final products = data['products'] as List<dynamic>;
-        return products.map((item) => ProductModel.fromJson(item)).toList();
+        return products.map((item) => ProductModel.fromJson(item as Map<String, dynamic>)).toList();
       } else {
         AppLogger.error('بنية JSON غير متوقعة من API: ${data.toString().substring(0, min(50, data.toString().length))}...');
         return [];
@@ -705,7 +721,7 @@ class SamaStockApiService {
         try {
           final data = json.decode(response.body);
           List<ProductModel> products;
-          
+
           if (data is List) {
             products = _convertToProductModels(data);
           } else if (data is Map && data['products'] != null) {
@@ -714,7 +730,7 @@ class SamaStockApiService {
           } else {
             return;
           }
-          
+
           if (products.isNotEmpty) {
             _saveToStorage('product_count', products.length.toString());
             _saveToStorage('cached_products', json.encode(products.map((p) => p.toJson()).toList()));
@@ -729,4 +745,4 @@ class SamaStockApiService {
       AppLogger.error('خطأ في طلب تحديث المنتجات في الخلفية', e);
     });
   }
-} 
+}

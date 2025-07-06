@@ -5,7 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 class UIOptimizations {
 
   /// Configures optimized [TabController] options
-  /// 
+  ///
   /// This method sets up TabController with optimized performance settings
   static TabController createOptimizedTabController({
     required int length,
@@ -19,7 +19,7 @@ class UIOptimizations {
       // Use shorter animation duration for faster tab switching
       animationDuration: const Duration(milliseconds: 150),
     );
-    
+
     return controller;
   }
 
@@ -64,12 +64,12 @@ class UIOptimizations {
     final wrappedChildren = keepAlive
         ? children.map((child) => KeepAliveTabItem(child: child)).toList()
         : children;
-        
+
     return TabBarView(
       controller: controller,
-      children: wrappedChildren,
       // Use ClampingScrollPhysics for better performance
       physics: const ClampingScrollPhysics(),
+      children: wrappedChildren,
     );
   }
 
@@ -80,12 +80,23 @@ class UIOptimizations {
   }) {
     // Wrap children in LazyTabItem widgets
     final lazyChildren = children.map((child) => LazyTabItem(child: child)).toList();
-        
+
     return TabBarView(
       controller: controller,
-      children: lazyChildren,
       physics: const ClampingScrollPhysics(),
+      children: lazyChildren,
     );
+  }
+
+  /// Safely converts a double to int, handling infinity and NaN values
+  static int? _safeToInt(double? value) {
+    if (value == null) return null;
+    if (!value.isFinite || value <= 0) return null;
+
+    // Ensure the result is within reasonable bounds (max 4K resolution)
+    const maxDimension = 4096;
+    final result = value.toInt();
+    return result > maxDimension ? maxDimension : result;
   }
 
   /// Optimized network image with caching
@@ -97,7 +108,7 @@ class UIOptimizations {
     Widget? placeholder,
     Widget? errorWidget,
   }) {
-    if (imageUrl.isEmpty) {
+    if (imageUrl.isEmpty || imageUrl == 'null' || !_isValidImageUrl(imageUrl)) {
       return errorWidget ?? Container(
         width: width,
         height: height,
@@ -105,7 +116,7 @@ class UIOptimizations {
         child: const Icon(Icons.broken_image, color: Colors.grey),
       );
     }
-    
+
     return CachedNetworkImage(
       imageUrl: imageUrl,
       width: width,
@@ -125,20 +136,43 @@ class UIOptimizations {
           child: Icon(Icons.broken_image, color: Colors.grey),
         ),
       ),
-      // Optimize memory usage
-      memCacheWidth: width?.toInt(),
-      memCacheHeight: height?.toInt(),
-      maxWidthDiskCache: (width != null) ? (width * 2).toInt() : null,
-      maxHeightDiskCache: (height != null) ? (height * 2).toInt() : null,
+      // Optimize memory usage with safe conversion
+      memCacheWidth: _safeToInt(width),
+      memCacheHeight: _safeToInt(height),
+      maxWidthDiskCache: _safeToInt(width != null ? width * 2 : null),
+      maxHeightDiskCache: _safeToInt(height != null ? height * 2 : null),
     );
+  }
+
+  /// Validate image URL to prevent data URI and other invalid URL errors
+  static bool _isValidImageUrl(String url) {
+    if (url.isEmpty || url == 'null') return false;
+
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri == null) return false;
+
+      // Reject data URIs as they can cause parsing issues
+      if (uri.scheme == 'data') return false;
+
+      // Only allow http/https URLs
+      if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+
+      // Must have a host
+      if (uri.host.isEmpty) return false;
+
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }
 
 /// Widget that keeps a tab alive when it's not visible
 class KeepAliveTabItem extends StatefulWidget {
-  final Widget child;
 
   const KeepAliveTabItem({super.key, required this.child});
+  final Widget child;
 
   @override
   State<KeepAliveTabItem> createState() => _KeepAliveTabItemState();
@@ -157,9 +191,9 @@ class _KeepAliveTabItemState extends State<KeepAliveTabItem> with AutomaticKeepA
 
 /// Widget that lazily loads tab content when it becomes visible
 class LazyTabItem extends StatefulWidget {
-  final Widget child;
 
   const LazyTabItem({super.key, required this.child});
+  final Widget child;
 
   @override
   State<LazyTabItem> createState() => _LazyTabItemState();
@@ -168,7 +202,7 @@ class LazyTabItem extends StatefulWidget {
 class _LazyTabItemState extends State<LazyTabItem> {
   bool _loaded = false;
   bool _error = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -180,11 +214,11 @@ class _LazyTabItemState extends State<LazyTabItem> {
 
   Future<void> _initializeTab() async {
     if (!mounted) return;
-    
+
     try {
       // Add small delay to improve UI responsiveness
       await Future.delayed(const Duration(milliseconds: 50));
-      
+
       if (mounted) {
         setState(() {
           _loaded = true;
@@ -198,7 +232,7 @@ class _LazyTabItemState extends State<LazyTabItem> {
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     if (_error) {
@@ -218,13 +252,13 @@ class _LazyTabItemState extends State<LazyTabItem> {
         ),
       );
     }
-    
+
     if (!_loaded) {
       // Show placeholder while loading
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text('جاري تحميل المحتوى...'),
@@ -232,7 +266,7 @@ class _LazyTabItemState extends State<LazyTabItem> {
         ),
       );
     }
-    
+
     return widget.child;
   }
-} 
+}

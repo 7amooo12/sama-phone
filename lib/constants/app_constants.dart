@@ -20,7 +20,7 @@ class AppConstants {
 
   // Other constants
   static const int defaultPageSize = 20;
-  static const String defaultCurrency = 'USD';
+  static const String defaultCurrency = 'EGP';
   static const String defaultLanguage = 'en';
   static const String defaultTimeZone = 'UTC';
 } 

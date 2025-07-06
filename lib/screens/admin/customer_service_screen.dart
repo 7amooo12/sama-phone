@@ -7,7 +7,6 @@ import 'package:smartbiztracker_new/widgets/chat_bubble.dart';
 import 'package:smartbiztracker_new/widgets/custom_loader.dart';
 import 'package:smartbiztracker_new/widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
-import 'package:smartbiztracker_new/utils/color_extension.dart';
 
 class CustomerServiceScreen extends StatefulWidget {
   const CustomerServiceScreen({super.key});
@@ -77,10 +76,10 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
 
-    if (authProvider.user != null) {
+    if (authProvider.user?.id != null) {
       chatProvider.sendMessage(
-        senderId: authProvider.user!.id,
-        receiverId: _selectedClient!.id,
+        senderId: authProvider.user!.id.toString(),
+        receiverId: _selectedClient!.id.toString(),
         content: _messageController.text.trim(),
       );
 
@@ -122,7 +121,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                       color: Theme.of(context).cardColor,
                       border: Border(
                         right: BorderSide(
-                          color: Colors.grey.safeOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                           width: 1,
                         ),
                       ),
@@ -134,10 +133,10 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color:
-                                Theme.of(context).primaryColor.safeOpacity(0.1),
+                                Theme.of(context).primaryColor.withValues(alpha: 0.1),
                             border: Border(
                               bottom: BorderSide(
-                                color: Colors.grey.safeOpacity(0.3),
+                                color: Colors.grey.withValues(alpha: 0.3),
                                 width: 1,
                               ),
                             ),
@@ -167,7 +166,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                                       Icon(
                                         Icons.chat_bubble_outline,
                                         size: 48,
-                                        color: Colors.grey.safeOpacity(0.5),
+                                        color: Colors.grey.withValues(alpha: 0.5),
                                       ),
                                       const SizedBox(height: 16),
                                       const Text(
@@ -190,11 +189,11 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                                       selected: isSelected,
                                       selectedTileColor: Theme.of(context)
                                           .primaryColor
-                                          .safeOpacity(0.1),
+                                          .withValues(alpha: 0.1),
                                       leading: CircleAvatar(
                                         backgroundColor: isSelected
                                             ? Theme.of(context).primaryColor
-                                            : Colors.grey.safeOpacity(0.4),
+                                            : Colors.grey.withValues(alpha: 0.4),
                                         child: Text(
                                           client.name.isNotEmpty
                                               ? client.name[0].toUpperCase()
@@ -230,7 +229,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                               Icon(
                                 Icons.chat,
                                 size: 64,
-                                color: Colors.grey.safeOpacity(0.5),
+                                color: Colors.grey.withValues(alpha: 0.5),
                               ),
                               const SizedBox(height: 16),
                               const Text(
@@ -254,7 +253,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                                     Theme.of(context).scaffoldBackgroundColor,
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: Colors.grey.safeOpacity(0.3),
+                                    color: Colors.grey.withValues(alpha: 0.3),
                                     width: 1,
                                   ),
                                 ),
@@ -291,7 +290,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                                       Text(
                                         _selectedClient!.email,
                                         style: TextStyle(
-                                          color: Colors.grey.safeOpacity(0.7),
+                                          color: Colors.grey.withValues(alpha: 0.7),
                                           fontSize: 12,
                                         ),
                                       ),
@@ -315,7 +314,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                                                 Icons.chat_bubble_outline,
                                                 size: 48,
                                                 color: Colors.grey
-                                                    .safeOpacity(0.5),
+                                                    .withValues(alpha: 0.5),
                                               ),
                                               const SizedBox(height: 16),
                                               const Text(
@@ -362,7 +361,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
                                     Theme.of(context).scaffoldBackgroundColor,
                                 border: Border(
                                   top: BorderSide(
-                                    color: Colors.grey.safeOpacity(0.3),
+                                    color: Colors.grey.withValues(alpha: 0.3),
                                     width: 1,
                                   ),
                                 ),
@@ -395,7 +394,7 @@ class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
             // Loading overlay
             if (chatProvider.isLoading)
               Container(
-                color: Colors.black.safeOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 child: const Center(
                   child: CustomLoader(),
                 ),

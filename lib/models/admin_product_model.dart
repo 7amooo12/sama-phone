@@ -1,19 +1,6 @@
-import 'package:flutter/foundation.dart';
+
 
 class AdminProductModel {
-  final int id;
-  final String name;
-  final String description;
-  final String? imageUrl;
-  final double purchasePrice;
-  final double sellingPrice;
-  final double finalPrice;
-  final int stockQuantity;
-  final double discountPercent;
-  final double discountFixed;
-  final String? categoryName;
-  final bool featured;
-  final bool isVisible;
 
   const AdminProductModel({
     required this.id,
@@ -33,8 +20,8 @@ class AdminProductModel {
 
   factory AdminProductModel.fromJson(Map<String, dynamic> json) {
     // Handle the image URL - API returns "image_url" but our model has "imageUrl"
-    String? imageUrl = json['image_url'] as String?;
-    
+    final String? imageUrl = json['image_url'] as String?;
+
     return AdminProductModel(
       id: json['id'] as int,
       name: json['name'] as String,
@@ -51,6 +38,19 @@ class AdminProductModel {
       isVisible: json['is_visible'] as bool? ?? false,
     );
   }
+  final int id;
+  final String name;
+  final String description;
+  final String? imageUrl;
+  final double purchasePrice;
+  final double sellingPrice;
+  final double finalPrice;
+  final int stockQuantity;
+  final double discountPercent;
+  final double discountFixed;
+  final String? categoryName;
+  final bool featured;
+  final bool isVisible;
 
   Map<String, dynamic> toJson() {
     return {
@@ -60,7 +60,7 @@ class AdminProductModel {
       'image_url': imageUrl,
       'purchase_price': purchasePrice,
       'selling_price': sellingPrice,
-      'final_price': finalPrice, 
+      'final_price': finalPrice,
       'stock_quantity': stockQuantity,
       'discount_percent': discountPercent,
       'discount_fixed': discountFixed,
@@ -76,7 +76,7 @@ class AdminProductModel {
   String get displayPurchasePrice => purchasePrice.toStringAsFixed(2);
   String get displaySellingPrice => sellingPrice.toStringAsFixed(2);
   String get displayFinalPrice => finalPrice.toStringAsFixed(2);
-  
+
   @override
   String toString() => 'AdminProductModel(id: $id, name: $name, price: $finalPrice)';
 
@@ -88,4 +88,4 @@ class AdminProductModel {
 
   @override
   int get hashCode => id.hashCode;
-} 
+}

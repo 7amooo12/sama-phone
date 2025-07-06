@@ -11,7 +11,7 @@ class OrderService {
           .from('orders')
           .select()
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((order) => OrderModel.fromJson(order)).toList();
     } catch (e) {
       AppLogger.error('Error getting orders: $e');
@@ -51,4 +51,19 @@ class OrderService {
       rethrow;
     }
   }
-} 
+
+  Future<List<OrderModel>> getOrdersByUserId(String userId) async {
+    try {
+      final response = await _supabase
+          .from('orders')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List).map((order) => OrderModel.fromJson(order)).toList();
+    } catch (e) {
+      AppLogger.error('Error getting orders by user ID: $e');
+      rethrow;
+    }
+  }
+}

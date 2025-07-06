@@ -1,17 +1,7 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../models/product_model.dart';
 import '../utils/logger.dart';
 
 class SamaAdminService {
-  static const String _baseUrl = 'https://samastock.pythonanywhere.com';
-  static final SamaAdminService _instance = SamaAdminService._internal();
-  
-  final http.Client _client = http.Client();
-  String? _csrfToken;
-  bool _isLoggedIn = false;
-  Map<String, dynamic> _dashboardData = {};
   
   // Singleton constructor
   factory SamaAdminService() {
@@ -19,6 +9,13 @@ class SamaAdminService {
   }
   
   SamaAdminService._internal();
+  static const String _baseUrl = 'https://samastock.pythonanywhere.com';
+  static final SamaAdminService _instance = SamaAdminService._internal();
+  
+  final http.Client _client = http.Client();
+  String? _csrfToken;
+  bool _isLoggedIn = false;
+  Map<String, dynamic> _dashboardData = {};
   
   // Status getters
   bool get isLoggedIn => _isLoggedIn;
@@ -30,7 +27,7 @@ class SamaAdminService {
       // Get CSRF token
       await _getCsrfToken();
     } catch (e) {
-      AppLogger().e('Error initializing SAMA Admin Service: $e');
+      AppLogger.error('Error initializing SAMA Admin Service: $e');
       rethrow;
     }
   }
@@ -68,10 +65,10 @@ class SamaAdminService {
         }
       }
       
-      AppLogger().w('Login failed with status code: ${response.statusCode}');
+      AppLogger.warning('Login failed with status code: ${response.statusCode}');
       return false;
     } catch (e) {
-      AppLogger().e('Error logging in to SAMA Admin: $e');
+      AppLogger.error('Error logging in to SAMA Admin: $e');
       return false;
     }
   }
@@ -96,11 +93,11 @@ class SamaAdminService {
         _dashboardData = _parseDashboardData(response.body);
         return _dashboardData;
       } else {
-        AppLogger().w('Failed to fetch dashboard data: ${response.statusCode}');
+        AppLogger.warning('Failed to fetch dashboard data: ${response.statusCode}');
         return {};
       }
     } catch (e) {
-      AppLogger().e('Error fetching dashboard data: $e');
+      AppLogger.error('Error fetching dashboard data: $e');
       return {};
     }
   }
@@ -125,10 +122,10 @@ class SamaAdminService {
         }
       }
       
-      AppLogger().w('Failed to get CSRF token: ${response.statusCode}');
+      AppLogger.warning('Failed to get CSRF token: ${response.statusCode}');
       return null;
     } catch (e) {
-      AppLogger().e('Error getting CSRF token: $e');
+      AppLogger.error('Error getting CSRF token: $e');
       return null;
     }
   }
@@ -203,11 +200,11 @@ class SamaAdminService {
       }
       
       // If we couldn't parse real data, provide sample data
-      if (data['recentProducts'].isEmpty) {
+      if ((data['recentProducts'] as List<dynamic>? ?? []).isEmpty) {
         data['recentProducts'] = _getSampleProducts();
       }
-      
-      if (data['recentOrders'].isEmpty) {
+
+      if ((data['recentOrders'] as List<dynamic>? ?? []).isEmpty) {
         // Don't use mock data, leave empty to trigger API fetch
         data['recentOrders'] = [];
       }
@@ -221,7 +218,7 @@ class SamaAdminService {
       
       return data;
     } catch (e) {
-      AppLogger().e('Error parsing dashboard data: $e');
+      AppLogger.error('Error parsing dashboard data: $e');
       // Return sample data if parsing fails, but don't include mock orders
       return {
         'recentProducts': _getSampleProducts(),

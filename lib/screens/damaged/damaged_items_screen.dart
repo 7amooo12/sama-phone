@@ -5,10 +5,10 @@ import 'package:smartbiztracker_new/services/stockwarehouse_api.dart';
 import 'package:smartbiztracker_new/utils/app_localizations.dart';
 import 'package:smartbiztracker_new/widgets/error_widget.dart';
 import 'package:smartbiztracker_new/widgets/loading_widget.dart';
-import 'package:smartbiztracker_new/utils/logger.dart';
+import 'package:smartbiztracker_new/utils/app_logger.dart';
 
 class DamagedItemsScreen extends StatefulWidget {
-  const DamagedItemsScreen({Key? key}) : super(key: key);
+  const DamagedItemsScreen({super.key});
 
   @override
   _DamagedItemsScreenState createState() => _DamagedItemsScreenState();
@@ -16,7 +16,6 @@ class DamagedItemsScreen extends StatefulWidget {
 
 class _DamagedItemsScreenState extends State<DamagedItemsScreen> {
   late Future<List<DamagedItemModel>> _damagedItemsFuture;
-  final AppLogger logger = AppLogger();
   String? _searchQuery;
   int? _selectedWarehouseId;
   int _days = 90;
@@ -61,7 +60,7 @@ class _DamagedItemsScreenState extends State<DamagedItemsScreen> {
         setState(() {
           _isLoading = false;
           _errorMessage = 'خطأ في جلب العناصر التالفة: ${error.toString()}';
-          logger.e("خطأ أثناء جلب العناصر التالفة: $error");
+          AppLogger.e('خطأ أثناء جلب العناصر التالفة: $error');
         });
       }
     });
@@ -95,7 +94,7 @@ class _DamagedItemsScreenState extends State<DamagedItemsScreen> {
                 ? const LoadingWidget()
                 : _errorMessage != null
                     ? AppErrorWidget(
-                        error: _errorMessage!,
+                        message: _errorMessage!,
                         onRetry: () {
                           _loadDamagedItems();
                         },
@@ -295,8 +294,8 @@ class _DamagedItemsScreenState extends State<DamagedItemsScreen> {
             ),
           );
         },
-        child: const Icon(Icons.add),
         tooltip: appLocalizations.translate('report_damaged_item') ?? 'تسجيل عنصر تالف',
+        child: const Icon(Icons.add),
       ),
     );
   }

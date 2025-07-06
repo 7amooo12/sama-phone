@@ -11,7 +11,7 @@ void main() {
 }
 
 class FlaskAppIntegration extends StatelessWidget {
-  const FlaskAppIntegration({Key? key}) : super(key: key);
+  const FlaskAppIntegration({super.key});
 
   @override
   Widget build(BuildContext context) {

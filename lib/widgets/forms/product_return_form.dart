@@ -7,14 +7,14 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart' as intl;
 
 class ProductReturnForm extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSubmit;
-  final bool isLoading;
 
   const ProductReturnForm({
-    Key? key,
+    super.key,
     required this.onSubmit,
     this.isLoading = false,
-  }) : super(key: key);
+  });
+  final Function(Map<String, dynamic>) onSubmit;
+  final bool isLoading;
 
   @override
   State<ProductReturnForm> createState() => _ProductReturnFormState();
@@ -113,55 +113,75 @@ class _ProductReturnFormState extends State<ProductReturnForm> {
     
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? StyleSystem.backgroundDark : Colors.white,
+        gradient: LinearGradient(
+          colors: [
+            Colors.black.withOpacity(0.8),
+            Colors.black.withOpacity(0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(StyleSystem.radiusLarge),
-        boxShadow: isDark
-          ? []
-          : [
-              BoxShadow(
-                color: Colors.grey[200]!,
-                blurRadius: 12,
-                spreadRadius: 1,
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: const Color(0xFF10B981).withOpacity(0.3),
+          width: 1.5,
+        ),
       ),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-            // Header
+            // Header - تحسين الاستايل
             Container(
               decoration: BoxDecoration(
-                color: theme.primaryColor,
-                borderRadius: BorderRadius.only(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF10B981),
+                    const Color(0xFF10B981).withOpacity(0.8),
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(StyleSystem.radiusLarge),
                   topRight: Radius.circular(StyleSystem.radiusLarge),
                 ),
-                gradient: LinearGradient(
-                  colors: [
-                    theme.primaryColor,
-                    theme.colorScheme.secondary,
-                  ],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.all(16),
-              child: Row(
+              padding: const EdgeInsets.all(20),
+              child: const Row(
                 children: [
                   Icon(
-                    Icons.assignment_return,
+                    Icons.assignment_return_rounded,
                     color: Colors.white,
-                    size: 24,
+                    size: 28,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'نموذج إرجاع المنتج',
-                      style: theme.textTheme.titleLarge?.copyWith(
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        fontFamily: 'Cairo',
                       ),
                     ),
                   ),
@@ -191,16 +211,14 @@ class _ProductReturnFormState extends State<ProductReturnForm> {
                   
                   const SizedBox(height: 16),
                   
-                  // رقم الطلب
+                  // رقم الطلب (اختياري)
                   CustomTextField(
                     controller: _orderNumberController,
-                    labelText: 'رقم الطلب',
-                    hintText: 'أدخل رقم الطلب الخاص بك',
+                    labelText: 'رقم الطلب (اختياري)',
+                    hintText: 'أدخل رقم الطلب الخاص بك إن وجد',
                     prefixIcon: Icons.confirmation_number_outlined,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'يرجى إدخال رقم الطلب';
-                      }
+                      // Order number is now optional - no validation required
                       return null;
                     },
                   ).animate().fadeIn(duration: 300.ms, delay: 100.ms).moveX(begin: 20, end: 0),
@@ -267,20 +285,29 @@ class _ProductReturnFormState extends State<ProductReturnForm> {
                   Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                      Text(
+                      const Text(
                         'صور المنتج',
-                        style: theme.textTheme.titleSmall,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          fontFamily: 'Cairo',
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Container(
                         height: 120,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.1),
+                              Colors.white.withOpacity(0.05),
+                            ],
+                          ),
                           border: Border.all(
-                            color: isDark 
-                              ? StyleSystem.textTertiaryDark.withOpacity(0.3)
-                              : Colors.grey[300]!,
-                            style: BorderStyle.solid,
+                            color: const Color(0xFF10B981).withOpacity(0.3),
+                            width: 1.5,
                           ),
                         ),
                         child: ListView.builder(
@@ -297,23 +324,24 @@ class _ProductReturnFormState extends State<ProductReturnForm> {
                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(StyleSystem.radiusSmall),
                                       border: Border.all(
-                                        color: isDark 
-                                          ? StyleSystem.textTertiaryDark.withOpacity(0.3)
-                                          : Colors.grey[300]!,
+                                        color: const Color(0xFF10B981).withOpacity(0.3),
+                                        width: 1.5,
                                       ),
                     ),
-                    child: Column(
+                    child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                                          Icons.add_a_photo,
-                                          color: theme.primaryColor,
+                                          Icons.add_a_photo_rounded,
+                                          color: Colors.white,
                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: 4),
                         Text(
                                           'إضافة صورة',
-                                          style: theme.textTheme.bodySmall?.copyWith(
-                                            color: theme.primaryColor,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontFamily: 'Cairo',
+                                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -366,7 +394,7 @@ class _ProductReturnFormState extends State<ProductReturnForm> {
                 
                   const SizedBox(height: 24),
                 
-                  // الإيصال
+                  // الإيصال - تحسين الاستايل
                   SwitchListTile(
                     value: _hasReceipt,
                     onChanged: (value) {
@@ -374,17 +402,21 @@ class _ProductReturnFormState extends State<ProductReturnForm> {
                         _hasReceipt = value;
                       });
                     },
-                    title: Text(
+                    title: const Text(
                       'لدي إيصال الشراء',
-                      style: theme.textTheme.bodyMedium,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Cairo',
+                        fontSize: 16,
+                      ),
                     ),
-                    activeColor: theme.primaryColor,
+                    activeColor: const Color(0xFF10B981),
                     contentPadding: EdgeInsets.zero,
                   ).animate().fadeIn(duration: 300.ms, delay: 800.ms),
 
                       const SizedBox(height: 16),
                       
-                  // الموافقة على الشروط
+                  // الموافقة على الشروط - تحسين الاستايل
                       CheckboxListTile(
                         value: _termsAccepted,
                         onChanged: (value) {
@@ -392,38 +424,70 @@ class _ProductReturnFormState extends State<ProductReturnForm> {
                         _termsAccepted = value ?? false;
                           });
                         },
-                    title: Text(
+                    title: const Text(
                       'أوافق على سياسة الإرجاع والاستبدال',
-                      style: theme.textTheme.bodySmall,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Cairo',
+                        fontSize: 14,
+                      ),
                     ),
-                    activeColor: theme.primaryColor,
+                    activeColor: const Color(0xFF10B981),
+                    checkColor: Colors.white,
                     contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
                   ).animate().fadeIn(duration: 300.ms, delay: 900.ms),
 
                   const SizedBox(height: 24),
 
-                  // زر الإرسال
-                  ElevatedButton(
-                    onPressed: widget.isLoading ? null : _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                  // زر الإرسال - تحسين الاستايل
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981),
+                          const Color(0xFF10B981).withOpacity(0.8),
+                        ],
                       ),
+                      borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: widget.isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    child: ElevatedButton(
+                      onPressed: widget.isLoading ? null : _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                        ),
+                      ),
+                      child: widget.isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'إرسال طلب الإرجاع',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              fontFamily: 'Cairo',
+                            ),
                           ),
-                        )
-                      : const Text('إرسال طلب الإرجاع'),
+                    ),
                   ).animate().fadeIn(duration: 300.ms, delay: 1000.ms).moveY(begin: 10, end: 0),
               ],
             ),

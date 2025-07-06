@@ -1,14 +1,13 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/admin_product_model.dart';
 
 class AdminProductService {
-  // Singleton pattern
-  static final AdminProductService _instance = AdminProductService._internal();
   factory AdminProductService() => _instance;
   AdminProductService._internal();
+  // Singleton pattern
+  static final AdminProductService _instance = AdminProductService._internal();
 
   // Constants
   static const String _baseUrl = 'https://samastock.pythonanywhere.com'; // Change this to your actual API base URL
@@ -27,9 +26,9 @@ class AdminProductService {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
+        final Map<String, dynamic> data = (json.decode(response.body) as Map<String, dynamic>?) ?? {};
         if (data['success'] == true && data['products'] != null) {
-          final List<dynamic> productList = data['products'];
+          final List<dynamic> productList = (data['products'] as List?) ?? [];
           
           // Process the products to ensure image URLs are properly formatted
           final processedProducts = productList.map((item) {
@@ -45,7 +44,7 @@ class AdminProductService {
           }).toList();
           
           return processedProducts
-              .map((json) => AdminProductModel.fromJson(json))
+              .map((json) => AdminProductModel.fromJson((json as Map<String, dynamic>?) ?? {}))
               .toList();
         }
         throw Exception('API returned success false or no products');
@@ -60,9 +59,5 @@ class AdminProductService {
     }
   }
 
-  // Helper method to handle API response
-  bool _isValidResponse(http.Response response) {
-    return response.statusCode == 200 && 
-           json.decode(response.body)['success'] == true;
-  }
+
 } 

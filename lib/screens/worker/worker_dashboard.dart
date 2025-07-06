@@ -12,6 +12,7 @@ import '../../utils/ui_optimizations.dart';
 import 'package:smartbiztracker_new/models/task_model.dart';
 import 'package:smartbiztracker_new/services/database_service.dart';
 import 'package:smartbiztracker_new/screens/worker/worker_tasks_screen.dart';
+import 'package:smartbiztracker_new/utils/style_system.dart';
 
 class WorkerDashboard extends StatefulWidget {
   const WorkerDashboard({super.key});
@@ -25,7 +26,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late TabController _tabController;
   DateTime? _lastBackPressTime; // لتتبع آخر ضغطة على زر العودة
-  
+
   // Track which tabs have been loaded
   final List<bool> _tabsLoaded = [true, false, false];
 
@@ -40,7 +41,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       length: 3,
       vsync: this,
     );
-    
+
     // Listen for tab changes to optimize lazy loading
     _tabController.addListener(_handleTabChange);
 
@@ -51,7 +52,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       _loadTasks();
     });
   }
-  
+
   void _handleTabChange() {
     if (!_tabController.indexIsChanging) {
       final tabIndex = _tabController.index;
@@ -65,7 +66,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       }
     }
   }
-  
+
   void _loadTabData(int tabIndex) {
     // Implement specific data loading for each tab
     switch (tabIndex) {
@@ -85,7 +86,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
   Future<void> _loadTasks() async {
     final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
     final user = supabaseProvider.user;
-    
+
     if (user != null) {
       _databaseService.getWorkerTasks(user.id).listen((tasks) {
         if (mounted) {
@@ -97,7 +98,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       });
     }
   }
-  
+
   // Update task progress
   Future<void> _updateTaskProgress(TaskModel task, double progress) async {
     try {
@@ -105,9 +106,9 @@ class _WorkerDashboardState extends State<WorkerDashboard>
         progress: progress,
         status: progress >= 1.0 ? 'مكتملة' : 'قيد التنفيذ',
       );
-      
+
       await _databaseService.updateTask(updatedTask);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم تحديث حالة المهمة بنجاح')),
@@ -141,7 +142,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
     final supabaseProvider = Provider.of<SupabaseProvider>(context);
     super.didChangeDependencies();
   }
-  
+
   // منطق التعامل مع زر العودة
   Future<bool> _onWillPop() async {
     // إذا كان مفتوح الدرج الجانبي، أغلقه عند الضغط على العودة بدلاً من إغلاق التطبيق
@@ -149,16 +150,16 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       Navigator.of(context).pop();
       return false;
     }
-    
+
     // إذا كنا في شاشة غير الشاشة الرئيسية، عد إلى الشاشة الرئيسية بدلاً من إغلاق التطبيق
     if (_tabController.index != 0) {
       _tabController.animateTo(0);
       return false;
     }
-    
+
     // في الشاشة الرئيسية، يتطلب ضغطتين متتاليتين خلال ثانيتين للخروج من التطبيق
     final now = DateTime.now();
-    if (_lastBackPressTime == null || 
+    if (_lastBackPressTime == null ||
         now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
       _lastBackPressTime = now;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -194,12 +195,14 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       onWillPop: _onWillPop,
       child: Scaffold(
         key: _scaffoldKey,
+        backgroundColor: StyleSystem.scaffoldBackgroundColor,
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: CustomAppBar(
             title: 'لوحة تحكم العامل',
+            backgroundColor: StyleSystem.surfaceDark,
             leading: IconButton(
-              icon: const Icon(Icons.menu),
+              icon: const Icon(Icons.menu, color: StyleSystem.textPrimary),
               onPressed: () {
                 _scaffoldKey.currentState?.openDrawer();
               },
@@ -212,18 +215,40 @@ class _WorkerDashboardState extends State<WorkerDashboard>
         ),
         body: Column(
           children: [
-            // شريط التبويب
+            // شريط التبويب المحسن
             Container(
-              color: Colors.white,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: StyleSystem.headerGradient,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: StyleSystem.primaryColor.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+              ),
               child: UIOptimizations.createOptimizedTabBar(
                 controller: _tabController,
-                labelColor: theme.colorScheme.primary,
-                unselectedLabelColor: Colors.grey[600],
-                indicatorColor: theme.colorScheme.primary,
+                labelColor: StyleSystem.textPrimary,
+                unselectedLabelColor: StyleSystem.textSecondary,
+                indicatorColor: StyleSystem.primaryColor,
+                indicatorWeight: 3,
                 tabs: const [
-                  Tab(text: 'الرئيسية'),
-                  Tab(text: 'مهامي'),
-                  Tab(text: 'التقارير'),
+                  Tab(
+                    icon: Icon(Icons.dashboard_outlined),
+                    text: 'الرئيسية',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.task_alt),
+                    text: 'مهامي',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.analytics_outlined),
+                    text: 'التقارير',
+                  ),
                 ],
               ),
             ),
@@ -235,14 +260,14 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                 children: [
                   // الشاشة الرئيسية
                   _buildOverviewTab(theme, userModel.name),
-                  
+
                   // شاشة المهام - using the dedicated tasks screen
-                  _tabsLoaded[1] 
+                  _tabsLoaded[1]
                       ? const WorkerTasksScreen()
                       : const Center(child: CircularProgressIndicator()),
-                  
+
                   // شاشة التقارير - only build it when tab is selected
-                  _tabsLoaded[2] 
+                  _tabsLoaded[2]
                       ? _buildReportsTab(theme)
                       : const Center(child: CircularProgressIndicator()),
                 ],
@@ -256,157 +281,205 @@ class _WorkerDashboardState extends State<WorkerDashboard>
 
   Widget _buildOverviewTab(ThemeData theme, String workerName) {
     // Implementation of the overview tab with worker's name
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: AnimationLimiter(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: AnimationConfiguration.toStaggeredList(
-            duration: const Duration(milliseconds: 600),
-            childAnimationBuilder: (widget) => SlideAnimation(
-              horizontalOffset: 50.0,
-              child: FadeInAnimation(
-                child: widget,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: StyleSystem.backgroundGradient,
+        ),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: AnimationLimiter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: AnimationConfiguration.toStaggeredList(
+              duration: const Duration(milliseconds: 600),
+              childAnimationBuilder: (widget) => SlideAnimation(
+                horizontalOffset: 50.0,
+                child: FadeInAnimation(
+                  child: widget,
+                ),
               ),
-            ),
-            children: [
-              // Welcome card
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
-                            child: Icon(
-                              Icons.person,
-                              color: theme.colorScheme.primary,
+              children: [
+                // Welcome card محسن
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: StyleSystem.headerGradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: StyleSystem.elevatedCardShadow,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-              Text(
-                                  'مرحباً، $workerName',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                                ),
-                                Text(
-                                  'نتمنى لك يوم عمل رائع!',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'مرحباً، $workerName',
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'نتمنى لك يوم عمل رائع!',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-              ),
-              const SizedBox(height: 16),
-                      const Text(
-                        'ملخص اليوم:',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          ],
                         ),
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'ملخص اليوم',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'التاريخ: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              LinearPercentIndicator(
+                                lineHeight: 12,
+                                percent: 0.65,
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                progressColor: Colors.white,
+                                animation: true,
+                                animationDuration: 1000,
+                                barRadius: const Radius.circular(10),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'إنتاجية اليوم: 65%',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Today's tasks
+                Text(
+                  'مهام اليوم',
+                  style: StyleSystem.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: StyleSystem.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildTasksList(true),
+
+                const SizedBox(height: 24),
+
+                // Statistics
+                Text(
+                  'إحصائيات',
+                  style: StyleSystem.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: StyleSystem.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'الإنتاجية الأسبوعية',
+                        '78%',
+                        Icons.trending_up,
+                        Colors.blue,
                       ),
-                      const SizedBox(height: 8),
-                      Text('التاريخ: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}'),
-                      const SizedBox(height: 8),
-                      LinearPercentIndicator(
-                        lineHeight: 10,
-                        percent: 0.65,
-                        backgroundColor: Colors.grey[300],
-                        progressColor: theme.colorScheme.primary,
-                        animation: true,
-                        animationDuration: 1000,
-                        barRadius: const Radius.circular(10),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'نسبة الأخطاء',
+                        '5%',
+                        Icons.error_outline,
+                        Colors.orange,
                       ),
-                      const SizedBox(height: 8),
-                      const Text('إنتاجية اليوم: 65%'),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Today's tasks
-              const Text(
-                'مهام اليوم',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'المهام المكتملة',
+                        '23',
+                        Icons.task_alt,
+                        Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'العناصر المنتجة',
+                        '156',
+                        Icons.inventory_2,
+                        Colors.purple,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              _buildTasksList(true),
-              
-              const SizedBox(height: 24),
-              
-              // Statistics
-              const Text(
-                'إحصائيات',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'الإنتاجية الأسبوعية',
-                      '78%',
-                      Icons.trending_up,
-                      Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'نسبة الأخطاء',
-                      '5%',
-                      Icons.error_outline,
-                      Colors.orange,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'المهام المكتملة',
-                      '23',
-                      Icons.task_alt,
-                      Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatCard(
-                      'العناصر المنتجة',
-                      '156',
-                      Icons.inventory_2,
-                      Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -457,7 +530,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Tasks list heading
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -477,7 +550,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Tasks list
                 _tasks.isEmpty
                     ? _buildEmptyTasksPlaceholder()
@@ -516,7 +589,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       ),
     );
   }
-  
+
   Widget _buildProductTasksList() {
     return AnimationLimiter(
       child: ListView.builder(
@@ -525,7 +598,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
         itemCount: _tasks.length,
         itemBuilder: (context, index) {
           final task = _tasks[index];
-          
+
           return AnimationConfiguration.staggeredList(
             position: index,
             duration: const Duration(milliseconds: 500),
@@ -540,16 +613,16 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       ),
     );
   }
-  
+
   Widget _buildProductTaskCard(TaskModel task) {
     final theme = Theme.of(context);
     final progress = task.progress;
     final isCompleted = progress >= 1.0;
-    
+
     // Format deadline to show day and time
     final deadlineDay = '${task.deadline.day}/${task.deadline.month}';
     final deadlineTime = '${task.deadline.hour}:${task.deadline.minute.toString().padLeft(2, '0')}';
-    
+
     return Material(
       color: Colors.transparent,
       child: Card(
@@ -557,8 +630,8 @@ class _WorkerDashboardState extends State<WorkerDashboard>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: isCompleted 
-                ? Colors.green.withOpacity(0.5) 
+            color: isCompleted
+                ? Colors.green.withOpacity(0.5)
                 : theme.primaryColor.withOpacity(0.2),
             width: 1.5,
           ),
@@ -611,7 +684,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                       color: theme.primaryColor.withOpacity(0.5),
                     ),
                   ),
-                
+
                 // Status indicator overlay
                 Positioned(
                   top: 10,
@@ -643,7 +716,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                     ),
                   ),
                 ),
-                
+
                 // Quantity badge
                 Positioned(
                   top: 10,
@@ -683,7 +756,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                 ),
               ],
             ),
-            
+
             // Task details
             Padding(
               padding: const EdgeInsets.all(16),
@@ -698,9 +771,9 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   // Product name and deadline
                   Row(
                     children: [
@@ -736,9 +809,9 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   // Description
                   Text(
                     task.description,
@@ -747,9 +820,9 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                       fontSize: 14,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Progress bar
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -785,7 +858,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                       ),
                     ],
                   ),
-                  
+
                   // Button to update progress (only if not completed)
                   if (!isCompleted) ...[
                     const SizedBox(height: 16),
@@ -805,7 +878,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                               ),
                             ),
                           ),
-                          
+
                         // Progress update buttons (if in progress)
                         if (task.status == 'قيد التنفيذ') ...[
                           Expanded(
@@ -864,25 +937,25 @@ class _WorkerDashboardState extends State<WorkerDashboard>
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
+              ),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
+                children: [
                   _buildPeriodButton('اليوم', true),
                   _buildPeriodButton('الأسبوع', false),
                   _buildPeriodButton('الشهر', false),
                 ],
               ),
             ),
-                      ),
+          ),
           const SizedBox(height: 24),
-          
+
           // Productivity chart
           const Text(
             'تقرير الإنتاجية',
-                        style: TextStyle(
+            style: TextStyle(
               fontSize: 18,
-                          fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
@@ -895,7 +968,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                      ),
+              ),
               child: Center(
                 child: Text(
                   'مخطط الإنتاجية',
@@ -905,7 +978,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                 ),
               ),
             ),
-            ),
+          ),
           const SizedBox(height: 24),
 
           // Errors report
@@ -926,7 +999,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
-                  child: Column(
+              child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -967,23 +1040,23 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                   ),
                 ],
               ),
-                  ),
-                ),
-              ],
             ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildTasksList(bool isOverviewTab) {
     // If on overview tab, just show first 2 tasks from real data
-    final tasksToShow = isOverviewTab 
+    final tasksToShow = isOverviewTab
         ? _tasks.take(2).toList()
         : _tasks;
-    
+
     if (_isTasksLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (tasksToShow.isEmpty) {
       return Center(
         child: Column(
@@ -1005,7 +1078,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
         ),
       );
     }
-    
+
     return AnimationLimiter(
       child: ListView.builder(
         shrinkWrap: true,
@@ -1013,7 +1086,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
         itemCount: tasksToShow.length,
         itemBuilder: (context, index) {
           final task = tasksToShow[index];
-          
+
           return AnimationConfiguration.staggeredList(
             position: index,
             duration: const Duration(milliseconds: 500),
@@ -1030,16 +1103,28 @@ class _WorkerDashboardState extends State<WorkerDashboard>
       ),
     );
   }
-  
+
   // Simple card for overview tab
   Widget _buildSimpleTaskCard(TaskModel task) {
     final progress = task.progress;
     final isCompleted = progress >= 1.0;
-    
-    return Card(
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: StyleSystem.cardGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isCompleted
+              ? StyleSystem.completedColor.withOpacity(0.3)
+              : StyleSystem.primaryColor.withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: StyleSystem.cardShadow,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1053,10 +1138,10 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                   height: 16,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isCompleted 
-                        ? Colors.green 
-                        : progress > 0 
-                            ? Theme.of(context).primaryColor 
+                    color: isCompleted
+                        ? Colors.green
+                        : progress > 0
+                            ? Theme.of(context).primaryColor
                             : Colors.grey,
                   ),
                 ),
@@ -1064,9 +1149,10 @@ class _WorkerDashboardState extends State<WorkerDashboard>
                 Expanded(
                   child: Text(
                     task.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
+                      color: Colors.grey.shade800,
                     ),
                   ),
                 ),
@@ -1170,53 +1256,70 @@ class _WorkerDashboardState extends State<WorkerDashboard>
   }
 
   Widget _buildStatCard(
-    String title, 
-    String value, 
+    String title,
+    String value,
     IconData icon,
     Color color,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: StyleSystem.cardGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            color: color.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Row(
-              children: [
-              Icon(
-                icon,
-                color: color,
-                size: 18,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 8),
-                Expanded(
+              Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: Colors.grey.shade700,
                     fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
@@ -1266,7 +1369,7 @@ class _WorkerDashboardState extends State<WorkerDashboard>
           decoration: BoxDecoration(
             color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
-                ),
+          ),
           child: Text(
             label,
             style: TextStyle(

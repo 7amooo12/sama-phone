@@ -3,17 +3,9 @@ import 'package:smartbiztracker_new/widgets/common/elegant_search_bar.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 
 class SearchFilterBar extends StatelessWidget {
-  final TextEditingController searchController;
-  final List<String> categories;
-  final String selectedCategory;
-  final List<String> sortOptions;
-  final String selectedSortOption;
-  final Function(String) onSearchChanged;
-  final Function(String) onCategorySelected;
-  final Function(String) onSortOptionSelected;
 
   const SearchFilterBar({
-    Key? key,
+    super.key,
     required this.searchController,
     required this.categories,
     required this.selectedCategory,
@@ -22,7 +14,15 @@ class SearchFilterBar extends StatelessWidget {
     required this.onSearchChanged,
     required this.onCategorySelected,
     required this.onSortOptionSelected,
-  }) : super(key: key);
+  });
+  final TextEditingController searchController;
+  final List<String> categories;
+  final String selectedCategory;
+  final List<String> sortOptions;
+  final String selectedSortOption;
+  final Function(String) onSearchChanged;
+  final Function(String) onCategorySelected;
+  final Function(String) onSortOptionSelected;
 
   @override
   Widget build(BuildContext context) {

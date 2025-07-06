@@ -151,9 +151,20 @@ class SupabaseSchema {
   static const String productivity = 'productivity';
   static const String returns = 'returns';
   static const String tasks = 'tasks';
-  
+  static const String wallets = 'wallets';
+  static const String walletTransactions = 'wallet_transactions';
+  static const String vouchers = 'vouchers';
+  static const String clientVouchers = 'client_vouchers';
+
+  // Warehouse system tables
+  static const String warehouses = 'warehouses';
+  static const String warehouseInventory = 'warehouse_inventory';
+  static const String warehouseRequests = 'warehouse_requests';
+  static const String warehouseRequestItems = 'warehouse_request_items';
+  static const String warehouseTransactions = 'warehouse_transactions';
+
   // Storage bucket names
   static const String profileImages = 'profile_images';
   static const String productImages = 'product_images';
   static const String attachments = 'attachments';
-} 
+}

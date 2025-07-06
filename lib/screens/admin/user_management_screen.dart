@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/config/routes.dart';
-import 'package:smartbiztracker_new/models/user_model.dart';
-import 'package:smartbiztracker_new/providers/auth_provider.dart';
 import 'package:smartbiztracker_new/widgets/common/custom_app_bar.dart';
 import 'package:smartbiztracker_new/widgets/common/main_drawer.dart';
 import 'package:provider/provider.dart';
@@ -12,9 +10,7 @@ import 'package:smartbiztracker_new/widgets/common/elegant_search_bar.dart';
 import 'package:smartbiztracker_new/models/models.dart';
 import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:smartbiztracker_new/utils/app_logger.dart';
-import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/widgets/common/loading_overlay.dart';
-import 'package:smartbiztracker_new/models/user_role.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -41,34 +37,56 @@ class _UserManagementScreenState extends State<UserManagementScreen>
     _tabController = TabController(length: 4, vsync: this);
 
     // استدعاء المستخدمين من Firestore
-    _loadUsers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadUsers();
+      }
+    });
   }
 
   // استدعاء المستخدمين من Firestore
   Future<void> _loadUsers() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final authProvider = Provider.of<SupabaseProvider>(context, listen: false);
-      
-      // استدعاء جميع المستخدمين من AuthProvider
-      await authProvider.getAllUsers();
-      
-      setState(() {
-        _users = authProvider.allUsers;
-      });
+      AppLogger.info('Loading users in UserManagementScreen');
+      final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+
+      // استدعاء جميع المستخدمين من SupabaseProvider
+      final users = await supabaseProvider.getAllUsers();
+
+      if (mounted) {
+        setState(() {
+          _users = users;
+        });
+        AppLogger.info('Successfully loaded ${_users.length} users');
+
+        // Log user roles for debugging
+        final roleCount = <String, int>{};
+        for (final user in _users) {
+          final role = user.role.value;
+          roleCount[role] = (roleCount[role] ?? 0) + 1;
+        }
+        AppLogger.info('User roles: ${roleCount.entries.map((e) => '${e.key}: ${e.value}').join(', ')}');
+      }
     } catch (e) {
       AppLogger.error('Error loading users: $e');
-      setState(() {
-        _errorMessage = 'حدث خطأ أثناء تحميل المستخدمين';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'حدث خطأ أثناء تحميل المستخدمين: $e';
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -82,13 +100,37 @@ class _UserManagementScreenState extends State<UserManagementScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userModel = authProvider.user;
+    final supabaseProvider = Provider.of<SupabaseProvider>(context);
+    final userModel = supabaseProvider.user;
 
     if (userModel == null) {
       // Handle case where user is not logged in
+      AppLogger.warning('User not logged in, redirecting to login');
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+        }
+      });
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // التحقق من صلاحيات المستخدم
+    if (!userModel.isAdmin()) {
+      AppLogger.warning('User ${userModel.email} is not admin, redirecting to dashboard');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed(AppRoutes.adminDashboard);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ليس لديك صلاحية للوصول إلى هذه الصفحة'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       });
       return const Scaffold(
         body: Center(
@@ -233,17 +275,28 @@ class _UserManagementScreenState extends State<UserManagementScreen>
     // Filter users based on role, approval status, and search query
     final List<UserModel> filteredUsers = _users.where((user) {
       // Filter by approval status if needed
-      if (pendingOnly && user.status != 'active') return false;
+      if (pendingOnly) {
+        // Show only pending users (not approved yet)
+        if (user.isApproved) return false;
+      }
 
       // Filter by role if specified
-      if (filterRole != null && user.role != filterRole) {
-        // Include workers and owners if needed
-        if (includeWorkers && user.role == UserRole.worker) {
-          // Include
-        } else if (includeOwners && user.role == UserRole.owner) {
-          // Include
-        } else {
-          return false;
+      if (filterRole != null) {
+        if (user.role != filterRole) {
+          // Include workers and owners if needed
+          if (includeWorkers && user.role == UserRole.worker) {
+            // Include workers - allow them to pass
+          } else if (includeOwners && user.role == UserRole.owner) {
+            // Include owners - allow them to pass
+          } else if (includeWorkers && user.role == UserRole.accountant) {
+            // Include accountants in users tab - allow them to pass
+          } else if (includeWorkers && user.role == UserRole.employee) {
+            // Include employees in users tab - allow them to pass
+          } else if (includeWorkers && user.role == UserRole.manager) {
+            // Include managers in users tab - allow them to pass
+          } else {
+            return false; // Exclude this user
+          }
         }
       }
 
@@ -252,7 +305,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         final query = _searchQuery.toLowerCase();
         return user.name.toLowerCase().contains(query) ||
             user.email.toLowerCase().contains(query) ||
-            (user.phone != null && user.phone!.contains(query));
+            (user.phone.contains(query));
       }
 
       return true;
@@ -327,7 +380,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                                       ),
                                       const SizedBox(width: 8),
                                       _buildRoleBadge(user.role, theme),
-                                      if (user.status != 'active')
+                                      if (!user.isApproved)
                                         Container(
                                           margin:
                                               const EdgeInsets.only(right: 8),
@@ -336,14 +389,14 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.red.safeOpacity(0.1),
+                                            color: Colors.orange.safeOpacity(0.1),
                                             borderRadius:
                                                 BorderRadius.circular(12),
                                           ),
                                           child: const Text(
-                                            'غير نشط',
+                                            'بانتظار الموافقة',
                                             style: TextStyle(
-                                              color: Colors.red,
+                                              color: Colors.orange,
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -385,7 +438,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                               ),
                             ),
                             const Spacer(),
-                            if (user.status != 'active')
+                            if (!user.isApproved)
                               TextButton.icon(
                                 onPressed: () {
                                   // Handle approve user
@@ -475,6 +528,10 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         color = Colors.green;
         text = 'عامل';
         break;
+      case UserRole.employee:
+        color = Colors.indigo;
+        text = 'موظف';
+        break;
       case UserRole.accountant:
         color = Colors.orange;
         text = 'محاسب';
@@ -487,9 +544,17 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         color = Colors.teal;
         text = 'مدير';
         break;
+      case UserRole.warehouseManager:
+        color = Colors.brown;
+        text = 'مدير المخزن';
+        break;
       case UserRole.user:
         color = Colors.grey;
         text = 'مستخدم';
+        break;
+      case UserRole.guest:
+        color = Colors.blueGrey;
+        text = 'زائر';
         break;
       case UserRole.pending:
         color = Colors.brown;
@@ -529,14 +594,20 @@ class _UserManagementScreenState extends State<UserManagementScreen>
         return Colors.blue;
       case UserRole.worker:
         return Colors.green;
+      case UserRole.employee:
+        return Colors.indigo;
       case UserRole.accountant:
         return Colors.orange;
       case UserRole.client:
         return Colors.purple;
       case UserRole.manager:
         return Colors.teal;
+      case UserRole.warehouseManager:
+        return Colors.brown;
       case UserRole.user:
         return Colors.grey;
+      case UserRole.guest:
+        return Colors.blueGrey;
       case UserRole.pending:
         return Colors.brown;
     }
@@ -546,24 +617,61 @@ class _UserManagementScreenState extends State<UserManagementScreen>
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _approveUser(String userId) {
-    // Find user by ID and update approval status
-    final index = _users.indexWhere((user) => user.id == userId);
-    if (index != -1) {
-      setState(() {
-        _users[index] = _users[index].copyWith(
-          status: 'active',
-          updatedAt: DateTime.now(),
-        );
-      });
+  Future<void> _approveUser(String userId) async {
+    try {
+      setState(() => _isLoading = true);
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تمت الموافقة على المستخدم بنجاح'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+
+      // Approve user in database
+      final success = await supabaseProvider.approveUser(userId);
+
+      if (success) {
+        // Update local list
+        final index = _users.indexWhere((user) => user.id == userId);
+        if (index != -1) {
+          setState(() {
+            _users[index] = _users[index].copyWith(
+              isApproved: true,
+              updatedAt: DateTime.now(),
+            );
+          });
+        }
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تمت الموافقة على المستخدم بنجاح'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(supabaseProvider.error ?? 'فشل في الموافقة على المستخدم'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      AppLogger.error('Error approving user: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('حدث خطأ أثناء الموافقة على المستخدم'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -625,6 +733,9 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                     case UserRole.worker:
                       label = 'عامل';
                       break;
+                    case UserRole.employee:
+                      label = 'موظف';
+                      break;
                     case UserRole.owner:
                       label = 'صاحب عمل';
                       break;
@@ -634,8 +745,14 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                     case UserRole.manager:
                       label = 'مدير';
                       break;
+                    case UserRole.warehouseManager:
+                      label = 'مدير المخزن';
+                      break;
                     case UserRole.user:
                       label = 'مستخدم';
+                      break;
+                    case UserRole.guest:
+                      label = 'زائر';
                       break;
                     case UserRole.pending:
                       label = 'معلق';
@@ -663,7 +780,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
             child: const Text('إلغاء'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               // Validate input
               if (nameController.text.trim().isEmpty ||
                   emailController.text.trim().isEmpty) {
@@ -676,30 +793,71 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                 return;
               }
 
-              // Add new user
-              final newUser = UserModel(
-                id: '',
-                email: emailController.text.trim(),
-                name: nameController.text.trim(),
-                phone: phoneController.text.trim(),
-                role: selectedRole,
-                createdAt: DateTime.now(),
-                status: 'pending',
-              );
+              // Validate email format
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim())) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('البريد الإلكتروني غير صحيح'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
 
-              setState(() {
-                _users.add(newUser);
-              });
+              try {
+                setState(() => _isLoading = true);
 
-              Navigator.of(context).pop();
+                final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
 
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('تمت إضافة المستخدم بنجاح'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+                // Create user in database
+                final success = await supabaseProvider.createUser(
+                  email: emailController.text.trim(),
+                  name: nameController.text.trim(),
+                  phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                  role: selectedRole,
+                );
+
+                if (success) {
+                  // Reload users list
+                  await _loadUsers();
+
+                  Navigator.of(context).pop();
+
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تمت إضافة المستخدم بنجاح'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  // Show error message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(supabaseProvider.error ?? 'فشل في إضافة المستخدم'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                AppLogger.error('Error adding user: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('حدث خطأ أثناء إضافة المستخدم'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
+              }
             },
             child: const Text('إضافة'),
           ),
@@ -713,7 +871,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
     final emailController = TextEditingController(text: user.email);
     final phoneController = TextEditingController(text: user.phone ?? '');
     UserRole selectedRole = user.role;
-    bool isActive = user.status == 'active';
+    bool isActive = user.isApproved;
 
     showDialog(
       context: context,
@@ -767,6 +925,9 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                     case UserRole.worker:
                       label = 'عامل';
                       break;
+                    case UserRole.employee:
+                      label = 'موظف';
+                      break;
                     case UserRole.owner:
                       label = 'صاحب عمل';
                       break;
@@ -776,8 +937,14 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                     case UserRole.manager:
                       label = 'مدير';
                       break;
+                    case UserRole.warehouseManager:
+                      label = 'مدير المخزن';
+                      break;
                     case UserRole.user:
                       label = 'مستخدم';
+                      break;
+                    case UserRole.guest:
+                      label = 'زائر';
                       break;
                     case UserRole.pending:
                       label = 'معلق';
@@ -813,7 +980,7 @@ class _UserManagementScreenState extends State<UserManagementScreen>
             child: const Text('إلغاء'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               // Validate input
               if (nameController.text.trim().isEmpty ||
                   emailController.text.trim().isEmpty) {
@@ -826,26 +993,84 @@ class _UserManagementScreenState extends State<UserManagementScreen>
                 return;
               }
 
-              // Update user
-              final index = _users.indexWhere((u) => u.id == user.id);
-              if (index != -1) {
-                setState(() {
-                  final updatedUser = user.copyWith(
-                    status: isActive ? 'active' : 'pending',
-                    updatedAt: DateTime.now(),
-                  );
-                  _users[index] = updatedUser;
-                });
-
-                Navigator.of(context).pop();
-
-                // Show success message
+              // Validate email format
+              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(emailController.text.trim())) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('تم تحديث بيانات المستخدم بنجاح'),
-                    backgroundColor: Colors.green,
+                    content: Text('البريد الإلكتروني غير صحيح'),
+                    backgroundColor: Colors.red,
                   ),
                 );
+                return;
+              }
+
+              try {
+                setState(() => _isLoading = true);
+
+                final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+
+                // Update user in database
+                final success = await supabaseProvider.updateUser(
+                  userId: user.id,
+                  name: nameController.text.trim(),
+                  email: emailController.text.trim(),
+                  phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                  role: selectedRole,
+                  isApproved: isActive,
+                );
+
+                if (success) {
+                  // Update local list
+                  final index = _users.indexWhere((u) => u.id == user.id);
+                  if (index != -1) {
+                    setState(() {
+                      _users[index] = user.copyWith(
+                        name: nameController.text.trim(),
+                        email: emailController.text.trim(),
+                        phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                        role: selectedRole,
+                        isApproved: isActive,
+                        updatedAt: DateTime.now(),
+                      );
+                    });
+                  }
+
+                  Navigator.of(context).pop();
+
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تم تحديث بيانات المستخدم بنجاح'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  // Show error message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(supabaseProvider.error ?? 'فشل في تحديث المستخدم'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                AppLogger.error('Error updating user: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('حدث خطأ أثناء تحديث المستخدم'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
               }
             },
             child: const Text('حفظ'),
@@ -869,21 +1094,62 @@ class _UserManagementScreenState extends State<UserManagementScreen>
             child: const Text('إلغاء'),
           ),
           TextButton(
-            onPressed: () {
-              // Delete user
-              setState(() {
-                _users.removeWhere((user) => user.id == userId);
-              });
+            onPressed: () async {
+              try {
+                setState(() => _isLoading = true);
 
-              Navigator.of(context).pop();
+                final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
 
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('تم حذف المستخدم بنجاح'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+                // Delete user from database
+                final success = await supabaseProvider.deleteUser(userId);
+
+                if (success) {
+                  // Remove from local list
+                  setState(() {
+                    _users.removeWhere((user) => user.id == userId);
+                  });
+
+                  Navigator.of(context).pop();
+
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تم حذف المستخدم بنجاح'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } else {
+                  Navigator.of(context).pop();
+
+                  // Show error message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(supabaseProvider.error ?? 'فشل في حذف المستخدم'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                AppLogger.error('Error deleting user: $e');
+                Navigator.of(context).pop();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('حدث خطأ أثناء حذف المستخدم'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                }
+              }
             },
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,

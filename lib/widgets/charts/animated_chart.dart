@@ -1,35 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:smartbiztracker_new/utils/animation_system.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/widgets/common/animated_card.dart';
 
 /// ويدجت للرسوم البيانية المتحركة
 /// يوفر هذا الملف مجموعة من الرسوم البيانية المتحركة التي يمكن استخدامها في التطبيق
 class AnimatedLineChart extends StatefulWidget {
-  final List<LineChartData> chartData;
-  final String title;
-  final String? subtitle;
-  final double height;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final bool showLegend;
-  final List<String>? legendLabels;
-  final List<Color>? legendColors;
-  final bool showGridLines;
-  final bool showBorder;
-  final bool showDots;
-  final bool showAreaGradient;
-  final bool showTooltip;
-  final bool showAxisTitles;
-  final String? bottomAxisTitle;
-  final String? leftAxisTitle;
-  final bool showAxisValues;
-  final List<String>? bottomAxisValues;
-  final double minY;
-  final double maxY;
-  final int currentIndex;
-  final Function(int)? onIndexChanged;
 
   const AnimatedLineChart({
     super.key,
@@ -60,6 +36,29 @@ class AnimatedLineChart extends StatefulWidget {
           legendLabels == null || legendColors == null || legendLabels.length == legendColors.length,
           'Legend labels and colors must have the same length',
         );
+  final List<LineChartData> chartData;
+  final String title;
+  final String? subtitle;
+  final double height;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final bool showLegend;
+  final List<String>? legendLabels;
+  final List<Color>? legendColors;
+  final bool showGridLines;
+  final bool showBorder;
+  final bool showDots;
+  final bool showAreaGradient;
+  final bool showTooltip;
+  final bool showAxisTitles;
+  final String? bottomAxisTitle;
+  final String? leftAxisTitle;
+  final bool showAxisValues;
+  final List<String>? bottomAxisValues;
+  final double minY;
+  final double maxY;
+  final int currentIndex;
+  final Function(int)? onIndexChanged;
 
   @override
   State<AnimatedLineChart> createState() => _AnimatedLineChartState();
@@ -281,20 +280,6 @@ class _AnimatedLineChartState extends State<AnimatedLineChart> with SingleTicker
 
 /// ويدجت للرسوم البيانية الدائرية المتحركة
 class AnimatedPieChart extends StatefulWidget {
-  final List<PieChartSectionData> sections;
-  final String title;
-  final String? subtitle;
-  final double height;
-  final Duration animationDuration;
-  final Curve animationCurve;
-  final bool showLegend;
-  final List<String>? legendLabels;
-  final List<Color>? legendColors;
-  final bool showValues;
-  final bool showValuesInPercentage;
-  final bool showTitles;
-  final double centerSpaceRadius;
-  final double sectionsSpace;
 
   const AnimatedPieChart({
     super.key,
@@ -316,6 +301,20 @@ class AnimatedPieChart extends StatefulWidget {
           legendLabels == null || legendColors == null || legendLabels.length == legendColors.length,
           'Legend labels and colors must have the same length',
         );
+  final List<PieChartSectionData> sections;
+  final String title;
+  final String? subtitle;
+  final double height;
+  final Duration animationDuration;
+  final Curve animationCurve;
+  final bool showLegend;
+  final List<String>? legendLabels;
+  final List<Color>? legendColors;
+  final bool showValues;
+  final bool showValuesInPercentage;
+  final bool showTitles;
+  final double centerSpaceRadius;
+  final double sectionsSpace;
 
   @override
   State<AnimatedPieChart> createState() => _AnimatedPieChartState();

@@ -12,7 +12,7 @@ class CodeCleaner {
     'test',
     'temp',
   ];
-  
+
   /// List of common unused imports to remove
   static const List<String> _commonUnusedImports = [
     "import 'package:smartbiztracker_new/screens/transition_screen.dart';",
@@ -76,21 +76,22 @@ class CodeCleaner {
       }
 
       String content = file.readAsStringSync();
-      bool hasDuplicateProviders = content.contains('MultiProvider(\n      providers: [') && 
-                                   content.contains('MultiProvider(\n      providers: [', content.indexOf('MultiProvider(\n      providers: [') + 20));
+      final firstIndex = content.indexOf('MultiProvider(\n      providers: [');
+      final bool hasDuplicateProviders = firstIndex >= 0 &&
+                                   content.indexOf('MultiProvider(\n      providers: [', firstIndex + 20) >= 0;
 
       if (hasDuplicateProviders) {
         // Extract the second MultiProvider section and remove it
-        int firstProviderIndex = content.indexOf('MultiProvider(\n      providers: [');
-        int secondProviderIndex = content.indexOf('MultiProvider(\n      providers: [', firstProviderIndex + 20);
-        
+        final int firstProviderIndex = content.indexOf('MultiProvider(\n      providers: [');
+        final int secondProviderIndex = content.indexOf('MultiProvider(\n      providers: [', firstProviderIndex + 20);
+
         if (secondProviderIndex > 0) {
-          int secondProviderEnd = _findClosingBracket(content, secondProviderIndex);
+          final int secondProviderEnd = _findClosingBracket(content, secondProviderIndex);
           if (secondProviderEnd > 0) {
-            String beforeSecondProvider = content.substring(0, secondProviderIndex);
-            String afterSecondProvider = content.substring(secondProviderEnd + 1);
+            final String beforeSecondProvider = content.substring(0, secondProviderIndex);
+            final String afterSecondProvider = content.substring(secondProviderEnd + 1);
             content = beforeSecondProvider + afterSecondProvider;
-            
+
             file.writeAsStringSync(content);
             if (kDebugMode) {
               print('Removed duplicate providers in $filePath');
@@ -108,13 +109,13 @@ class CodeCleaner {
       return false;
     }
   }
-  
+
   /// Finds the position of the closing bracket that matches the opening bracket at the given position
   static int _findClosingBracket(String text, int openingPosition) {
     // Find the first opening bracket starting from the given position
-    int openingBracket = text.indexOf('(', openingPosition);
+    final int openingBracket = text.indexOf('(', openingPosition);
     if (openingBracket < 0) return -1;
-    
+
     int count = 1;
     for (int i = openingBracket + 1; i < text.length; i++) {
       if (text[i] == '(') {
@@ -126,7 +127,7 @@ class CodeCleaner {
         }
       }
     }
-    
+
     return -1;
   }
 
@@ -136,40 +137,40 @@ class CodeCleaner {
     if (!filePath.endsWith('.dart')) {
       return false;
     }
-    
+
     // Check if it's in the ignore list
     for (final ignore in _ignoreList) {
       if (filePath.contains(ignore)) {
         return false;
       }
     }
-    
+
     return true;
   }
-  
+
   /// Clean all Dart files in a directory and its subdirectories
   static void cleanDirectory(String directoryPath) {
     if (!kDebugMode) return;
-    
+
     try {
       final directory = Directory(directoryPath);
       if (!directory.existsSync()) {
         return;
       }
-      
+
       final files = directory.listSync(recursive: true);
       int cleanedFiles = 0;
-      
+
       for (final fileEntity in files) {
         if (fileEntity is File && fileEntity.path.endsWith('.dart')) {
-          bool cleaned = cleanImports(fileEntity.path) || 
+          final bool cleaned = cleanImports(fileEntity.path) ||
                         cleanDuplicateProviders(fileEntity.path);
           if (cleaned) {
             cleanedFiles++;
           }
         }
       }
-      
+
       if (kDebugMode) {
         print('Cleaned $cleanedFiles files in $directoryPath');
       }
@@ -179,4 +180,4 @@ class CodeCleaner {
       }
     }
   }
-} 
+}

@@ -62,7 +62,7 @@ class _TrackingLinksScreenState extends State<TrackingLinksScreen> {
         for (final user in _clientUsers!) {
           if (!_controllers.containsKey(user.id)) {
             _controllers[user.id] =
-                TextEditingController(text: user.trackingLink);
+                TextEditingController(text: user.trackingLink ?? '');
           }
         }
       });
@@ -87,10 +87,23 @@ class _TrackingLinksScreenState extends State<TrackingLinksScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final controller = _controllers[userId];
 
-    if (controller != null && controller.text.isNotEmpty) {
+    if (controller != null && controller.text.trim().isNotEmpty) {
+      final trackingLink = controller.text.trim();
+
+      // Validate URL format
+      if (!_isValidUrl(trackingLink)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('الرجاء إدخال رابط صالح (يجب أن يبدأ بـ http:// أو https://)'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       await authProvider.updateUserTrackingLink(
         userId,
-        controller.text.trim(),
+        trackingLink,
       );
 
       if (context.mounted) {
@@ -108,6 +121,18 @@ class _TrackingLinksScreenState extends State<TrackingLinksScreen> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // Validate URL format
+  bool _isValidUrl(String url) {
+    if (url.isEmpty || url == 'null') return false;
+
+    try {
+      final uri = Uri.parse(url);
+      return uri.hasScheme && (uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty;
+    } catch (e) {
+      return false;
     }
   }
 

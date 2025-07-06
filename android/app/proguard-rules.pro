@@ -8,11 +8,18 @@
 
 # Play Core library
 -keep class com.google.android.play.core.** { *; }
+-dontwarn com.google.android.play.core.**
 
 # Firebase rules
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }
 -keep class com.google.firebase.firestore.** { *; }
+
+# Stripe rules
+-keep class com.stripe.** { *; }
+-dontwarn com.stripe.**
+-keep class com.reactnativestripesdk.** { *; }
+-dontwarn com.reactnativestripesdk.**
 
 # Kotlin serialization
 -keepattributes *Annotation*, InnerClasses

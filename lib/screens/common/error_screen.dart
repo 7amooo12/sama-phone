@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smartbiztracker_new/config/routes.dart';
 import 'package:lottie/lottie.dart';
 import 'package:smartbiztracker_new/utils/app_constants.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';

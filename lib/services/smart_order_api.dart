@@ -3,9 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class OrdersAnalyticsModel {
-  final List<Map<String, dynamic>> orders;
-  final Map<String, dynamic> stats;
-  final Map<String, dynamic> filters;
 
   OrdersAnalyticsModel({
     required this.orders,
@@ -14,9 +11,9 @@ class OrdersAnalyticsModel {
   });
 
   factory OrdersAnalyticsModel.fromJson(Map<String, dynamic> json) {
-    final orders = List<Map<String, dynamic>>.from(json['orders'].map((x) => Map<String, dynamic>.from(x)));
-    final stats = Map<String, dynamic>.from(json['stats']);
-    final filters = Map<String, dynamic>.from(json['filters']);
+    final orders = List<Map<String, dynamic>>.from((json['orders'] as Iterable<dynamic>? ?? []).map((x) => (x as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>()));
+    final stats = (json['stats'] as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>();
+    final filters = (json['filters'] as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>();
     
     return OrdersAnalyticsModel(
       orders: orders,
@@ -24,24 +21,24 @@ class OrdersAnalyticsModel {
       filters: filters,
     );
   }
+  final List<Map<String, dynamic>> orders;
+  final Map<String, dynamic> stats;
+  final Map<String, dynamic> filters;
 }
 
 class OrderDetailModel {
-  final Map<String, dynamic> order;
 
   OrderDetailModel({required this.order});
 
   factory OrderDetailModel.fromJson(Map<String, dynamic> json) {
     return OrderDetailModel(
-      order: Map<String, dynamic>.from(json['order']),
+      order: (json['order'] as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>(),
     );
   }
+  final Map<String, dynamic> order;
 }
 
 class DamagedItemsModel {
-  final List<Map<String, dynamic>> damagedItems;
-  final Map<String, dynamic> stats;
-  final Map<String, dynamic> filters;
 
   DamagedItemsModel({
     required this.damagedItems,
@@ -51,9 +48,9 @@ class DamagedItemsModel {
 
   factory DamagedItemsModel.fromJson(Map<String, dynamic> json) {
     final damagedItems = List<Map<String, dynamic>>.from(
-        json['damaged_items'].map((x) => Map<String, dynamic>.from(x)));
-    final stats = Map<String, dynamic>.from(json['stats']);
-    final filters = Map<String, dynamic>.from(json['filters']);
+        (json['damaged_items'] as Iterable<dynamic>? ?? []).map((x) => (x as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>()));
+    final stats = (json['stats'] as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>();
+    final filters = (json['filters'] as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>();
     
     return DamagedItemsModel(
       damagedItems: damagedItems,
@@ -61,25 +58,28 @@ class DamagedItemsModel {
       filters: filters,
     );
   }
+  final List<Map<String, dynamic>> damagedItems;
+  final Map<String, dynamic> stats;
+  final Map<String, dynamic> filters;
 }
 
 class DamagedItemDetailModel {
-  final Map<String, dynamic> damagedItem;
 
   DamagedItemDetailModel({required this.damagedItem});
 
   factory DamagedItemDetailModel.fromJson(Map<String, dynamic> json) {
     return DamagedItemDetailModel(
-      damagedItem: Map<String, dynamic>.from(json['damaged_item']),
+      damagedItem: (json['damaged_item'] as Map<dynamic, dynamic>? ?? {}).cast<String, dynamic>(),
     );
   }
+  final Map<String, dynamic> damagedItem;
 }
 
 class SmartOrderApiService {
-  // نمط Singleton
-  static final SmartOrderApiService _instance = SmartOrderApiService._internal();
   factory SmartOrderApiService() => _instance;
   SmartOrderApiService._internal();
+  // نمط Singleton
+  static final SmartOrderApiService _instance = SmartOrderApiService._internal();
 
   // الثوابت
   // تحديث عناوين API مع وجود عناوين بديلة للاختبار
@@ -142,16 +142,17 @@ class SmartOrderApiService {
       debugPrint('📡 Response status code: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        debugPrint('✅ Response success: ${data['success']}');
-        
-        if (data['success'] == true) {
-          return OrdersAnalyticsModel.fromJson(data);
+        final data = json.decode(response.body);
+        final Map<String, dynamic> dataMap = (data as Map<String, dynamic>? ?? {});
+        debugPrint('✅ Response success: ${dataMap['success']}');
+
+        if (dataMap['success'] == true) {
+          return OrdersAnalyticsModel.fromJson(dataMap);
         }
-        
+
         // تسجيل رسالة الخطأ
-        debugPrint('❌ API error: ${data['message'] ?? 'Unknown error'}');
-        throw Exception('API returned success false: ${data['message'] ?? 'Unknown error'}');
+        debugPrint('❌ API error: ${dataMap['message'] ?? 'Unknown error'}');
+        throw Exception('API returned success false: ${dataMap['message'] ?? 'Unknown error'}');
       } else if (response.statusCode == 401) {
         debugPrint('🔒 Unauthorized: Invalid API key');
         throw Exception('Unauthorized: Invalid API key');
@@ -161,7 +162,7 @@ class SmartOrderApiService {
         try {
           final errorData = json.decode(response.body);
           if (errorData['message'] != null) {
-            errorMessage = errorData['message'];
+            errorMessage = errorData['message'] as String? ?? '';
           }
         } catch (e) {
           // تجاهل أخطاء تحليل JSON
@@ -216,15 +217,16 @@ class SmartOrderApiService {
       debugPrint('📡 Response status code: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        debugPrint('✅ Response success: ${data['success']}');
-        
-        if (data['success'] == true) {
-          return OrderDetailModel.fromJson(data);
+        final data = json.decode(response.body);
+        final Map<String, dynamic> dataMap = (data as Map<String, dynamic>? ?? {});
+        debugPrint('✅ Response success: ${dataMap['success']}');
+
+        if (dataMap['success'] == true) {
+          return OrderDetailModel.fromJson(dataMap);
         }
-        
-        debugPrint('❌ API error: ${data['message'] ?? 'Unknown error'}');
-        throw Exception('API returned success false: ${data['message'] ?? 'Unknown error'}');
+
+        debugPrint('❌ API error: ${dataMap['message'] ?? 'Unknown error'}');
+        throw Exception('API returned success false: ${dataMap['message'] ?? 'Unknown error'}');
       } else if (response.statusCode == 401) {
         debugPrint('🔒 Unauthorized: Invalid API key');
         throw Exception('Unauthorized: Invalid API key');
@@ -236,7 +238,7 @@ class SmartOrderApiService {
         try {
           final errorData = json.decode(response.body);
           if (errorData['message'] != null) {
-            errorMessage = errorData['message'];
+            errorMessage = errorData['message'] as String? ?? '';
           }
         } catch (e) {
           // تجاهل أخطاء تحليل JSON
@@ -297,15 +299,16 @@ class SmartOrderApiService {
       debugPrint('📡 Response status code: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        debugPrint('✅ Response success: ${data['success']}');
-        
-        if (data['success'] == true) {
-          return DamagedItemsModel.fromJson(data);
+        final data = json.decode(response.body);
+        final Map<String, dynamic> dataMap = (data as Map<String, dynamic>? ?? {});
+        debugPrint('✅ Response success: ${dataMap['success']}');
+
+        if (dataMap['success'] == true) {
+          return DamagedItemsModel.fromJson(dataMap);
         }
-        
-        debugPrint('❌ API error: ${data['message'] ?? 'Unknown error'}');
-        throw Exception('API returned success false: ${data['message'] ?? 'Unknown error'}');
+
+        debugPrint('❌ API error: ${dataMap['message'] ?? 'Unknown error'}');
+        throw Exception('API returned success false: ${dataMap['message'] ?? 'Unknown error'}');
       } else if (response.statusCode == 401) {
         debugPrint('🔒 Unauthorized: Invalid API key');
         throw Exception('Unauthorized: Invalid API key');
@@ -314,7 +317,7 @@ class SmartOrderApiService {
         try {
           final errorData = json.decode(response.body);
           if (errorData['message'] != null) {
-            errorMessage = errorData['message'];
+            errorMessage = errorData['message'] as String? ?? '';
           }
         } catch (e) {
           // تجاهل أخطاء تحليل JSON
@@ -363,11 +366,12 @@ class SmartOrderApiService {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        if (data['success'] == true) {
-          return DamagedItemDetailModel.fromJson(data);
+        final data = json.decode(response.body);
+        final Map<String, dynamic> dataMap = (data as Map<String, dynamic>? ?? {});
+        if (dataMap['success'] == true) {
+          return DamagedItemDetailModel.fromJson(dataMap);
         }
-        throw Exception('API returned success false: ${data['message'] ?? 'Unknown error'}');
+        throw Exception('API returned success false: ${dataMap['message'] ?? 'Unknown error'}');
       } else if (response.statusCode == 401) {
         throw Exception('Unauthorized: Invalid API key');
       } else if (response.statusCode == 404) {

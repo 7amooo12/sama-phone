@@ -58,15 +58,14 @@ class ProductCard extends StatelessWidget {
                             Icons.broken_image,
                             color: theme.colorScheme.primary,
                           ),
-                          if (error != null)
-                            Text(
-                              'خطأ تحميل',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: theme.colorScheme.error,
-                              ),
-                              textAlign: TextAlign.center,
+                          Text(
+                            'خطأ تحميل',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.error,
                             ),
+                            textAlign: TextAlign.center,
+                          ),
                         ],
                       ),
                     );

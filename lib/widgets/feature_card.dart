@@ -2,16 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class FeatureCard extends StatelessWidget {
-  final String title;
-  final String description;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  final bool isNew;
-  final bool isComingSoon;
 
   const FeatureCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.description,
     required this.icon,
@@ -19,7 +12,14 @@ class FeatureCard extends StatelessWidget {
     required this.onTap,
     this.isNew = false,
     this.isComingSoon = false,
-  }) : super(key: key);
+  });
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isNew;
+  final bool isComingSoon;
 
   @override
   Widget build(BuildContext context) {

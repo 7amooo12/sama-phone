@@ -7,8 +7,10 @@ import 'package:smartbiztracker_new/utils/logger.dart';
 
 /// Service for managing app-wide performance optimizations
 class AppPerformanceService {
-  static final AppPerformanceService _instance = AppPerformanceService._internal();
   factory AppPerformanceService() => _instance;
+  
+  AppPerformanceService._internal();
+  static final AppPerformanceService _instance = AppPerformanceService._internal();
   
   static const MethodChannel _performanceChannel = MethodChannel('smartbiztracker/performance');
   
@@ -17,8 +19,6 @@ class AppPerformanceService {
   
   /// List of widgets that are excessively rebuilding
   final Set<String> _problematicWidgets = {};
-  
-  AppPerformanceService._internal();
   
   /// Initialize performance optimizations
   Future<void> initializePerformance() async {

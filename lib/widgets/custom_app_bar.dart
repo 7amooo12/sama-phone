@@ -14,6 +14,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.elevation,
     this.systemOverlayStyle,
     this.onMenuPressed,
+    this.bottom,
   });
   final String title;
   final List<Widget>? actions;
@@ -25,6 +26,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double? elevation;
   final SystemUiOverlayStyle? systemOverlayStyle;
   final VoidCallback? onMenuPressed;
+  final PreferredSizeWidget? bottom;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +51,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: backgroundColor ?? theme.colorScheme.primary,
       foregroundColor: foregroundColor ?? theme.colorScheme.onPrimary,
       elevation: elevation,
+      bottom: bottom,
       systemOverlayStyle: systemOverlayStyle ??
           SystemUiOverlayStyle(
             statusBarColor: backgroundColor ?? theme.colorScheme.primary,
@@ -61,7 +64,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+    kToolbarHeight + (bottom?.preferredSize.height ?? 0.0),
+  );
 
   Brightness _getIconBrightness(Color backgroundColor) {
     final luminance = backgroundColor.computeLuminance();

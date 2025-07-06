@@ -4,42 +4,68 @@ import '../models/order_model.dart';
 import '../utils/app_logger.dart';
 import '../models/productivity_model.dart';
 import '../models/return_model.dart';
-import '../config/constants.dart';
 import '../models/user_model.dart';
 import '../models/user_role.dart';
 import '../models/notification_model.dart';
 import '../models/product_model.dart';
 import '../models/waste_model.dart' as waste_models;
 import '../models/message_model.dart';
-import '../constants/app_constants.dart';
 import '../models/fault_model.dart';
 
 class DatabaseService {
-  final _supabase = Supabase.instance.client;
+  // Lazy initialization to avoid accessing Supabase.instance before initialization
+  SupabaseClient get _supabase {
+    try {
+      return Supabase.instance.client;
+    } catch (e) {
+      AppLogger.error('❌ Supabase not initialized yet in DatabaseService: $e');
+      throw Exception('Supabase must be initialized before using DatabaseService');
+    }
+  }
 
-  // Collection references
-  SupabaseQueryBuilder get _usersCollection => _supabase.from('users');
-  SupabaseQueryBuilder get _notificationsCollection => _supabase.from('notifications');
-  SupabaseQueryBuilder get _productsCollection => _supabase.from('products');
-  SupabaseQueryBuilder get _ordersCollection => _supabase.from('orders');
-  SupabaseQueryBuilder get _tasksCollection => _supabase.from('tasks');
-  SupabaseQueryBuilder get _messagesCollection => _supabase.from('messages');
-  SupabaseQueryBuilder get _faultsCollection => _supabase.from('faults');
-  SupabaseQueryBuilder get _productivityCollection => _supabase.from('productivity');
-  SupabaseQueryBuilder get _wasteCollection => _supabase.from('waste');
-  SupabaseQueryBuilder get _returnsCollection => _supabase.from('returns');
+  // Collection references with lazy initialization
+  get _usersCollection => _supabase.from('user_profiles');
+  get _notificationsCollection => _supabase.from('notifications');
+  get _productsCollection => _supabase.from('products');
+  get _ordersCollection => _supabase.from('orders');
+  get _tasksCollection => _supabase.from('tasks');
+  get _messagesCollection => _supabase.from('messages');
+  get _faultsCollection => _supabase.from('faults');
+  get _productivityCollection => _supabase.from('productivity');
+  get _wasteCollection => _supabase.from('waste');
+  get _returnsCollection => _supabase.from('returns');
 
   // Users
 
   Future<UserModel?> getUser(String userId) async {
     try {
-      final response = await _usersCollection
-          .select()
-          .eq('id', userId)
-          .single();
-      return response != null ? UserModel.fromJson(response) : null;
+      // Use SECURITY DEFINER function to bypass RLS and avoid infinite recursion
+      final response = await _supabase.rpc('get_user_by_id_safe', params: {
+        'user_id': userId,
+      });
+
+      if (response != null && response.isNotEmpty) {
+        final userData = response is List ? response.first : response;
+        return UserModel.fromJson(userData);
+      }
+      return null;
     } catch (e) {
       AppLogger.error('Error getting user: $e');
+
+      // Fallback to direct query if function doesn't exist
+      if (e.toString().contains('function') && e.toString().contains('does not exist')) {
+        try {
+          final fallbackResponse = await _usersCollection
+              .select()
+              .eq('id', userId)
+              .single();
+          return fallbackResponse != null ? UserModel.fromJson(fallbackResponse) : null;
+        } catch (fallbackError) {
+          AppLogger.error('Fallback query also failed: $fallbackError');
+          return null;
+        }
+      }
+
       return null;
     }
   }
@@ -56,16 +82,44 @@ class DatabaseService {
 
   Future<bool> updateUserRoleAndStatus(String userId, String role, String status) async {
     try {
-      await _usersCollection
-          .update({
-            'role': role,
-            'status': status,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId);
-      return true;
+      // Use SECURITY DEFINER function to bypass RLS and avoid infinite recursion
+      final updateData = {
+        'role': role,
+        'status': status,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      final response = await _supabase.rpc('update_user_profile_safe', params: {
+        'user_id': userId,
+        'update_data': updateData,
+      });
+
+      if (response != null && response.isNotEmpty) {
+        return true;
+      } else {
+        AppLogger.warning('Update function returned empty result for user $userId');
+        return false;
+      }
     } catch (e) {
       AppLogger.error('Error updating user role and status: $e');
+
+      // Fallback to direct query if function doesn't exist
+      if (e.toString().contains('function') && e.toString().contains('does not exist')) {
+        try {
+          await _usersCollection
+              .update({
+                'role': role,
+                'status': status,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('id', userId);
+          return true;
+        } catch (fallbackError) {
+          AppLogger.error('Fallback update also failed: $fallbackError');
+          return false;
+        }
+      }
+
       return false;
     }
   }
@@ -75,7 +129,7 @@ class DatabaseService {
       final response = await _usersCollection
           .select()
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => UserModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting users: $e');
@@ -98,12 +152,68 @@ class DatabaseService {
 
   Future<bool> updateUser(UserModel user) async {
     try {
-      await _usersCollection
-          .update(user.toJson())
-          .eq('id', user.id);
-      return true;
+      // Create update data with proper null handling
+      final updateData = user.toJson();
+
+      // Remove null values to prevent database errors
+      updateData.removeWhere((key, value) => value == null);
+
+      // Remove tracking_link if it exists (not in database schema)
+      updateData.remove('tracking_link');
+
+      AppLogger.info('Updating user ${user.id} with fields: ${updateData.keys.join(', ')}');
+
+      // Use SECURITY DEFINER function to bypass RLS and avoid infinite recursion
+      try {
+        final response = await _supabase.rpc('update_user_profile_safe', params: {
+          'user_id': user.id,
+          'update_data': updateData,
+        });
+
+        if (response != null && response.isNotEmpty) {
+          AppLogger.info('✅ Successfully updated user ${user.id}');
+          return true;
+        } else {
+          AppLogger.warning('⚠️ Update function returned empty result for user ${user.id}');
+          return false;
+        }
+      } catch (functionError) {
+        // If function doesn't exist, fall back to direct query
+        if (functionError.toString().contains('function') &&
+            functionError.toString().contains('does not exist')) {
+          AppLogger.warning('🔧 Database function missing - falling back to direct query');
+
+          try {
+            await _usersCollection
+                .update(updateData)
+                .eq('id', user.id);
+
+            AppLogger.info('✅ Successfully updated user ${user.id} (fallback method)');
+            return true;
+          } catch (fallbackError) {
+            AppLogger.error('❌ Fallback update also failed: $fallbackError');
+            throw fallbackError;
+          }
+        } else {
+          rethrow;
+        }
+      }
     } catch (e) {
-      AppLogger.error('Error updating user: $e');
+      AppLogger.error('❌ Error updating user ${user.id}: $e');
+
+      // Enhanced error diagnostics
+      final errorString = e.toString();
+      if (errorString.contains('infinite recursion') || errorString.contains('42P17')) {
+        AppLogger.error('🔄 DIAGNOSIS: RLS infinite recursion detected');
+        AppLogger.error('💡 SOLUTION: Run sql/fix_infinite_recursion_final.sql to fix RLS policies');
+      } else if (errorString.contains('permission denied') || errorString.contains('42501')) {
+        AppLogger.error('🔒 DIAGNOSIS: Permission denied - RLS policy issue');
+        AppLogger.error('💡 SOLUTION: Run sql/fix_infinite_recursion_final.sql to fix RLS policies');
+      } else if (errorString.contains('relation') && errorString.contains('does not exist')) {
+        AppLogger.error('🗄️ DIAGNOSIS: Table does not exist');
+        AppLogger.error('💡 SOLUTION: Verify user_profiles table exists in Supabase');
+      }
+
       return false;
     }
   }
@@ -126,7 +236,7 @@ class DatabaseService {
           .select()
           .eq('status', 'pending')
           .order('created_at');
-      
+
       return response.map((json) => UserModel.fromJson(json)).toList();
     } catch (e) {
       return [];
@@ -139,7 +249,7 @@ class DatabaseService {
           .select()
           .eq('role', role)
           .order('created_at');
-      
+
       return response.map((json) => UserModel.fromJson(json)).toList();
     } catch (e) {
       return [];
@@ -148,16 +258,14 @@ class DatabaseService {
 
   Future<List<UserModel>> getUsersByRoleEnum(UserRole role) async {
     try {
-      final QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('role', isEqualTo: role.value)
-          .get();
+      final response = await _usersCollection
+          .select()
+          .eq('role', role.value)
+          .order('created_at');
 
-      return snapshot.docs
-          .map((doc) => UserModel.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
+      return response.map((json) => UserModel.fromJson(json)).toList();
     } catch (e) {
-      print('Error getting users by role: $e');
+      AppLogger.error('Error getting users by role: $e');
       return [];
     }
   }
@@ -180,7 +288,7 @@ class DatabaseService {
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => NotificationModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting notifications: $e');
@@ -195,7 +303,7 @@ class DatabaseService {
       final response = await _productsCollection
           .select()
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => ProductModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting products: $e');
@@ -209,7 +317,7 @@ class DatabaseService {
           .select()
           .eq('id', productId)
           .single();
-      
+
       return response != null ? ProductModel.fromJson(response) : null;
     } catch (e) {
       AppLogger.error('Error getting product by ID: $e');
@@ -245,35 +353,25 @@ class DatabaseService {
   Stream<List<ProductModel>> getAllProducts() {
     try {
       return _productsCollection
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) {
-        return snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id;
-          return ProductModel.fromJson(data);
-        }).toList();
-      });
+          .stream(primaryKey: ['id'])
+          .order('created_at', ascending: false)
+          .map((data) => data.map((json) => ProductModel.fromJson(json)).toList());
     } catch (e) {
-      rethrow;
+      AppLogger.error('Error getting all products stream: $e');
+      return Stream.value([]);
     }
   }
 
   Stream<List<ProductModel>> getProductsByOwner(String ownerId) {
     try {
       return _productsCollection
-          .where('ownerId', isEqualTo: ownerId)
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((snapshot) {
-        return snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id;
-          return ProductModel.fromJson(data);
-        }).toList();
-      });
+          .stream(primaryKey: ['id'])
+          .eq('owner_id', ownerId)
+          .order('created_at', ascending: false)
+          .map((data) => data.map((json) => ProductModel.fromJson(json)).toList());
     } catch (e) {
-      rethrow;
+      AppLogger.error('Error getting products by owner stream: $e');
+      return Stream.value([]);
     }
   }
 
@@ -285,7 +383,7 @@ class DatabaseService {
           .insert(fault.toJson())
           .select()
           .single();
-      
+
       await _faultsCollection
           .update({'id': response['id']})
           .eq('id', response['id']);
@@ -301,7 +399,7 @@ class DatabaseService {
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      
+
       return response.map((json) => FaultModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting faults: $e');
@@ -335,58 +433,57 @@ class DatabaseService {
   }
 
   Future<void> addFault(FaultModel fault) async {
-    await _supabase
-        .from(AppConstants.faultsCollection)
-        .add(fault.toMap());
+    try {
+      await _faultsCollection.insert(fault.toMap());
+    } catch (e) {
+      AppLogger.error('Error adding fault: $e');
+      rethrow;
+    }
   }
 
   Future<void> deleteFault(String faultId) async {
-    await _supabase
-        .from(AppConstants.faultsCollection)
-        .doc(faultId)
-        .delete();
+    try {
+      await _faultsCollection
+          .delete()
+          .eq('id', faultId);
+    } catch (e) {
+      AppLogger.error('Error deleting fault: $e');
+      rethrow;
+    }
   }
 
   Future<void> addFaultReport(FaultModel fault) async {
     try {
-      final docRef = await _supabase.from('faults').add(fault.toMap());
-      await _supabase.from('faults').doc(docRef.id).update({'id': docRef.id});
+      await _faultsCollection.insert(fault.toMap());
     } catch (e) {
+      AppLogger.error('Error adding fault report: $e');
       rethrow;
     }
   }
 
   Stream<List<FaultModel>> getAllFaultReports() {
-    return _supabase
-        .from('faults')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return FaultModel.fromJson(
-          doc.data() as Map<String, dynamic>,
-          doc.id,
-        );
-      }).toList();
-    });
+    try {
+      return _faultsCollection
+          .stream(primaryKey: ['id'])
+          .order('created_at', ascending: false)
+          .map((data) => data.map((json) => FaultModel.fromJson(json)).toList());
+    } catch (e) {
+      AppLogger.error('Error getting all fault reports stream: $e');
+      return Stream.value([]);
+    }
   }
 
   Future<List<FaultModel>> getFaultReportsByUser(String userId) async {
     try {
-      final querySnapshot = await _supabase
-          .from('faults')
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
+      final response = await _faultsCollection
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
 
-      return querySnapshot.docs
-          .map((doc) => FaultModel.fromJson(
-                doc.data() as Map<String, dynamic>,
-                doc.id,
-              ))
-          .toList();
+      return response.map((json) => FaultModel.fromJson(json)).toList();
     } catch (e) {
-      rethrow;
+      AppLogger.error('Error getting fault reports by user: $e');
+      return [];
     }
   }
 
@@ -395,13 +492,15 @@ class DatabaseService {
     required bool isResolved,
   }) async {
     try {
-      await _supabase.from('faults').doc(faultId).update({
-        'isResolved': isResolved,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      await _faultsCollection
+          .update({
+            'is_resolved': isResolved,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', faultId);
       AppLogger.info('Updated fault $faultId resolve status to $isResolved');
     } catch (e) {
-      AppLogger.error('Error updating fault resolve status', e);
+      AppLogger.error('Error updating fault resolve status: $e');
       throw Exception('Failed to update fault status');
     }
   }
@@ -424,7 +523,7 @@ class DatabaseService {
           .select()
           .eq('worker_id', workerId)
           .order('date', ascending: false);
-      
+
       return response.map((json) => ProductivityModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting productivity: $e');
@@ -433,104 +532,80 @@ class DatabaseService {
   }
 
   Stream<List<ProductivityModel>> getAllWorkersProductivity() {
-    return _productivityCollection
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return ProductivityModel.fromMap({
-          'id': doc.id,
-          ...doc.data(),
-        });
-      }).toList();
-    });
+    try {
+      return _supabase
+          .from('productivity')
+          .stream(primaryKey: ['id'])
+          .order('date', ascending: false)
+          .map((data) => data
+              .map((json) => ProductivityModel.fromJson(json))
+              .toList());
+    } catch (e) {
+      AppLogger.error('Error getting all workers productivity: $e');
+      return Stream.value([]);
+    }
   }
 
   Stream<List<ProductivityModel>> getWorkerProductivity(String workerId) {
-    return _productivityCollection
-        .where('workerId', isEqualTo: workerId)
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return ProductivityModel.fromMap({
-          'id': doc.id,
-          ...doc.data(),
-        });
-      }).toList();
-    });
+    try {
+      return _supabase
+          .from('productivity')
+          .stream(primaryKey: ['id'])
+          .eq('worker_id', workerId)
+          .order('date', ascending: false)
+          .map((data) => data
+              .map((json) => ProductivityModel.fromJson(json))
+              .toList());
+    } catch (e) {
+      AppLogger.error('Error getting worker productivity: $e');
+      return Stream.value([]);
+    }
   }
 
   Future<void> addProductivityRecord(ProductivityModel productivity) async {
-    await _productivityCollection
-        .add(productivity.toMap());
+    try {
+      await _supabase
+          .from('productivity')
+          .insert(productivity.toJson());
+    } catch (e) {
+      AppLogger.error('Error adding productivity record: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateProductivityRecord(ProductivityModel productivity) async {
-    await _productivityCollection
-        .doc(productivity.id)
-        .update(productivity.toMap());
+    try {
+      await _supabase
+          .from('productivity')
+          .update(productivity.toJson())
+          .eq('id', productivity.id);
+    } catch (e) {
+      AppLogger.error('Error updating productivity record: $e');
+      rethrow;
+    }
   }
 
   Future<void> deleteProductivityRecord(String productivityId) async {
-    await _productivityCollection
-        .doc(productivityId)
-        .delete();
-  }
-
-  Future<void> addWorkerProductivity(ProductivityModel productivity) async {
     try {
-      final CollectionReference productivityCollection =
-          _supabase.from(AppConstants.productivityCollection);
-      final docRef = await productivityCollection.add(productivity.toMap());
-      await productivityCollection.doc(docRef.id).update({'id': docRef.id});
+      await _supabase
+          .from('productivity')
+          .delete()
+          .eq('id', productivityId);
     } catch (e) {
+      AppLogger.error('Error deleting productivity record: $e');
       rethrow;
     }
   }
 
-  Stream<List<ProductivityModel>> getAllProductivityReports() {
-    final CollectionReference productivityCollection =
-        _supabase.from(AppConstants.productivityCollection);
-    return productivityCollection
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return ProductivityModel.fromJson(
-          doc.data() as Map<String, dynamic>,
-          doc.id,
-        );
-      }).toList();
-    });
-  }
-
-  Future<List<ProductivityModel>> getProductivityReportsByWorker(
-      String workerId) async {
-    try {
-      final CollectionReference productivityCollection =
-          _supabase.from(AppConstants.productivityCollection);
-      final querySnapshot = await productivityCollection
-          .where('workerId', isEqualTo: workerId)
-          .orderBy('date', descending: true)
-          .get();
-
-      return querySnapshot.docs
-          .map((doc) => ProductivityModel.fromJson(
-                doc.data() as Map<String, dynamic>,
-                doc.id,
-              ))
-          .toList();
-    } catch (e) {
-      rethrow;
-    }
-  }
+  // Removed duplicate productivity methods
 
   // Waste
 
   Future<void> createWaste(waste_models.WasteModel waste) async {
     try {
-      await _wasteCollection.doc(waste.id).set(waste.toMap());
+      await _supabase
+          .from('waste')
+          .insert(waste.toJson());
     } catch (e) {
       AppLogger.error('Error creating waste', e);
       throw Exception('Failed to create waste');
@@ -543,20 +618,22 @@ class DatabaseService {
     DateTime? endDate,
   }) async {
     try {
-      Query query = _wasteCollection;
+      // Build query with correct pattern: from().select() first, then filters
+      var query = _supabase.from('waste').select();
+
       if (workerId != null) {
-        query = query.where('workerId', isEqualTo: workerId);
+        query = query.eq('worker_id', workerId);
       }
       if (startDate != null) {
-        query = query.where('createdAt', isGreaterThanOrEqualTo: startDate);
+        query = query.gte('created_at', startDate.toIso8601String());
       }
       if (endDate != null) {
-        query = query.where('createdAt', isLessThanOrEqualTo: endDate);
+        query = query.lte('created_at', endDate.toIso8601String());
       }
-      final QuerySnapshot snapshot = await query.get();
-      return snapshot.docs
-          .map((doc) => waste_models.WasteModel.fromMap(
-              doc.data() as Map<String, dynamic>))
+
+      final response = await query;
+      return (response as List)
+          .map((json) => waste_models.WasteModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       AppLogger.error('Error getting waste', e);
@@ -565,17 +642,18 @@ class DatabaseService {
   }
 
   Stream<List<waste_models.WasteModel>> getAllWasteReports() {
-    return _wasteCollection
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return waste_models.WasteModel.fromMap({
-          'id': doc.id,
-          ...doc.data(),
-        });
-      }).toList();
-    });
+    try {
+      return _supabase
+          .from('waste')
+          .stream(primaryKey: ['id'])
+          .order('created_at', ascending: false)
+          .map((data) => data
+              .map((json) => waste_models.WasteModel.fromJson(json))
+              .toList());
+    } catch (e) {
+      AppLogger.error('Error getting all waste reports: $e');
+      return Stream.value([]);
+    }
   }
 
   Future<void> addWasteReport(
@@ -601,32 +679,42 @@ class DatabaseService {
       createdAt: DateTime.now(),
     );
 
-    final docRef = await _wasteCollection
-        .add(waste.toJson());
-    await _wasteCollection
-        .doc(docRef.id)
-        .update({'id': docRef.id});
+    await _supabase
+        .from('waste')
+        .insert(waste.toJson());
   }
 
   Future<void> updateWasteReport(waste_models.WasteModel waste) async {
-    await _wasteCollection
-        .doc(waste.id)
-        .update(waste.toMap());
+    try {
+      await _supabase
+          .from('waste')
+          .update(waste.toJson())
+          .eq('id', waste.id);
+    } catch (e) {
+      AppLogger.error('Error updating waste report: $e');
+      rethrow;
+    }
   }
 
   Future<void> deleteWasteReport(String wasteId) async {
-    await _wasteCollection
-        .doc(wasteId)
-        .delete();
+    try {
+      await _supabase
+          .from('waste')
+          .delete()
+          .eq('id', wasteId);
+    } catch (e) {
+      AppLogger.error('Error deleting waste report: $e');
+      rethrow;
+    }
   }
 
   // Returns
 
   Future<void> createReturn(ReturnModel returnModel) async {
     try {
-      await _returnsCollection
-          .doc(returnModel.id)
-          .set(returnModel.toMap());
+      await _supabase
+          .from('returns')
+          .insert(returnModel.toMap());
     } catch (e) {
       AppLogger.error('Error creating return', e);
       throw Exception('Failed to create return');
@@ -635,9 +723,10 @@ class DatabaseService {
 
   Future<void> updateReturn(ReturnModel returnModel) async {
     try {
-      await _returnsCollection
-          .doc(returnModel.id)
-          .update(returnModel.toMap());
+      await _supabase
+          .from('returns')
+          .update(returnModel.toMap())
+          .eq('id', returnModel.id);
     } catch (e) {
       AppLogger.error('Error updating return', e);
       throw Exception('Failed to update return');
@@ -646,13 +735,13 @@ class DatabaseService {
 
   Future<List<ReturnModel>> getReturns({String? status}) async {
     try {
-      Query query = _returnsCollection;
+      var query = _supabase.from('returns').select();
       if (status != null) {
-        query = query.where('status', isEqualTo: status);
+        query = query.eq('status', status);
       }
-      final QuerySnapshot snapshot = await query.get();
-      return snapshot.docs
-          .map((doc) => ReturnModel.fromMap(doc.data() as Map<String, dynamic>))
+      final response = await query;
+      return (response as List)
+          .map((json) => ReturnModel.fromMap(json))
           .toList();
     } catch (e) {
       AppLogger.error('Error getting returns', e);
@@ -662,48 +751,44 @@ class DatabaseService {
 
   Future<void> addReturnReport(ReturnModel returnReport) async {
     try {
-      final CollectionReference returnsCollection =
-          _returnsCollection;
-      final docRef = await returnsCollection.add(returnReport.toMap());
-      await returnsCollection.doc(docRef.id).update({'id': docRef.id});
+      await _supabase
+          .from('returns')
+          .insert(returnReport.toMap());
     } catch (e) {
+      AppLogger.error('Error adding return report: $e');
       rethrow;
     }
   }
 
   Stream<List<ReturnModel>> getAllReturnReports() {
-    final CollectionReference returnsCollection =
-        _returnsCollection;
-    return returnsCollection
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return ReturnModel.fromJson(
-          doc.data() as Map<String, dynamic>,
-          doc.id,
-        );
-      }).toList();
-    });
+    try {
+      return _supabase
+          .from('returns')
+          .stream(primaryKey: ['id'])
+          .order('created_at', ascending: false)
+          .map((data) => data
+              .map((json) => ReturnModel.fromMap(json))
+              .toList());
+    } catch (e) {
+      AppLogger.error('Error getting all return reports: $e');
+      return Stream.value([]);
+    }
   }
 
   Future<List<ReturnModel>> getReturnReportsByUser(String userId) async {
     try {
-      final CollectionReference returnsCollection =
-          _returnsCollection;
-      final querySnapshot = await returnsCollection
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
+      final response = await _supabase
+          .from('returns')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
 
-      return querySnapshot.docs
-          .map((doc) => ReturnModel.fromJson(
-                doc.data() as Map<String, dynamic>,
-                doc.id,
-              ))
+      return (response as List)
+          .map((json) => ReturnModel.fromMap(json))
           .toList();
     } catch (e) {
-      rethrow;
+      AppLogger.error('Error getting return reports by user: $e');
+      return [];
     }
   }
 
@@ -732,10 +817,8 @@ class DatabaseService {
           .select()
           .eq('id', id)
           .single();
-      if (response != null) {
-        return fromMap(response);
-      }
-      return null;
+      return fromMap(response);
+          return null;
     } catch (e) {
       AppLogger.error('Error getting document', e);
       return null;
@@ -745,7 +828,7 @@ class DatabaseService {
   Future<List<T>> getCollection<T>(
     String collection,
     T Function(Map<String, dynamic>) fromMap, {
-    Function(SupabaseQueryBuilder)? queryBuilder,
+    Function(PostgrestFilterBuilder)? queryBuilder,
   }) async {
     try {
       var query = _supabase.from(collection).select();
@@ -786,19 +869,19 @@ class DatabaseService {
     }
   }
 
-  Stream<List<MessageModel>> getMessagesBetweenUsers(String userId1, String userId2) {
+  Future<List<MessageModel>> getMessagesBetweenUsers(String userId1, String userId2) async {
     try {
-      return _messagesCollection
-          .stream(primaryKey: ['id'])
-          .eq('sender_id', userId1)
-          .eq('receiver_id', userId2)
-          .order('created_at')
-          .map((data) => data
-              .map((json) => MessageModel.fromJson(json))
-              .toList());
+      final response = await _messagesCollection
+          .select()
+          .or('and(sender_id.eq.$userId1,receiver_id.eq.$userId2),and(sender_id.eq.$userId2,receiver_id.eq.$userId1)')
+          .order('created_at');
+
+      return (response as List)
+          .map((json) => MessageModel.fromJson(json))
+          .toList();
     } catch (e) {
       AppLogger.error('Error getting messages: $e');
-      rethrow;
+      return [];
     }
   }
 
@@ -819,7 +902,7 @@ class DatabaseService {
       final response = await _ordersCollection
           .select()
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => OrderModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting all orders: $e');
@@ -833,7 +916,7 @@ class DatabaseService {
           .select()
           .eq('client_id', clientId)
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => OrderModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting client orders: $e');
@@ -847,7 +930,7 @@ class DatabaseService {
           .select()
           .eq('worker_id', workerId)
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => OrderModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting worker orders: $e');
@@ -859,9 +942,9 @@ class DatabaseService {
     try {
       final response = await _ordersCollection
           .select()
-          .is_('worker_id', null)
+          .isFilter('worker_id', null)
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => OrderModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting unassigned orders: $e');
@@ -945,7 +1028,7 @@ class DatabaseService {
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
-      
+
       return (response as List).map((json) => TaskModel.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Error getting tasks: $e');
@@ -955,15 +1038,10 @@ class DatabaseService {
 
   Future<void> saveTask(TaskModel task) async {
     try {
-      if (task.id != null) {
-        await _tasksCollection
-            .update(task.toJson())
-            .eq('id', task.id);
-      } else {
-        await _tasksCollection
-            .insert(task.toJson());
-      }
-    } catch (e) {
+      await _tasksCollection
+          .update(task.toJson())
+          .eq('id', task.id);
+        } catch (e) {
       AppLogger.error('Error saving task: $e');
       rethrow;
     }
@@ -975,7 +1053,7 @@ class DatabaseService {
           .select()
           .eq('id', taskId)
           .single();
-      
+
       return response != null ? TaskModel.fromJson(response) : null;
     } catch (e) {
       AppLogger.error('Error getting task: $e');
@@ -1119,8 +1197,9 @@ class DatabaseService {
               .map((json) => TaskModel.fromJson(json))
               .toList());
     } catch (e) {
-      AppLogger().e('Error getting all tasks: $e');
+      AppLogger.error('Error getting all tasks: $e');
       return Stream.value([]);
     }
   }
+
 }

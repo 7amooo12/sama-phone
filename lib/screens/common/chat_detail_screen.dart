@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/config/routes.dart';
-import 'package:smartbiztracker_new/models/user_model.dart';
 import 'package:smartbiztracker_new/providers/auth_provider.dart';
+import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:uuid/uuid.dart';
@@ -105,8 +105,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userModel = authProvider.user;
+
+    // استخدام مزود Supabase أولاً
+    final supabaseProvider = Provider.of<SupabaseProvider>(context);
+    final supabaseUser = supabaseProvider.user;
+
+    // استخدام مزود Auth كإجراء احتياطي
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userModel = supabaseUser ?? authProvider.user;
 
     if (userModel == null) {
       // Handle case where user is not logged in
@@ -300,10 +306,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       case UserRole.owner:
       case UserRole.client:
       case UserRole.worker:
+      case UserRole.employee:
       case UserRole.accountant:
       case UserRole.manager:
+      case UserRole.warehouseManager:
         return true;
       case UserRole.user:
+      case UserRole.guest:
       case UserRole.pending:
         return false;
     }
@@ -323,11 +332,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         return Colors.green;
       case UserRole.worker:
         return Colors.orange;
+      case UserRole.employee:
+        return Colors.indigo;
       case UserRole.accountant:
         return Colors.purple;
       case UserRole.manager:
         return Colors.teal;
+      case UserRole.warehouseManager:
+        return Colors.brown;
       case UserRole.user:
+      case UserRole.guest:
       case UserRole.pending:
         return Colors.grey;
     }

@@ -3,20 +3,20 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/product_model.dart';
 
 class UnifiedProductCard extends StatelessWidget {
-  final ProductModel product;
-  final VoidCallback? onTap;
-  final VoidCallback? onEdit;
-  final bool isAdmin;
-  final bool showActions;
   
   const UnifiedProductCard({
-    Key? key,
+    super.key,
     required this.product,
     this.onTap,
     this.onEdit,
     this.isAdmin = false,
     this.showActions = true,
-  }) : super(key: key);
+  });
+  final ProductModel product;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final bool isAdmin;
+  final bool showActions;
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +196,7 @@ class UnifiedProductCard extends StatelessWidget {
                                   Text(
                                     // Use purchasePrice if available, otherwise manufacturingCost, otherwise default to 0
                                     '${_getPurchasePrice().toStringAsFixed(2)} ج.م',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
                                       color: Colors.indigo,

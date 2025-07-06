@@ -5,21 +5,18 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/product.dart';
-import '../services/sama_store_service.dart';
 import '../providers/product_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../widgets/product_widgets.dart';
 import '../utils/logger.dart';
-import '../utils/animation_system.dart';
 import '../utils/style_system.dart';
 import '../widgets/common/custom_app_bar_with_widget.dart';
 import '../widgets/common/shimmer_loading.dart';
 import '../widgets/common/advanced_search_bar.dart';
-import '../widgets/common/empty_state.dart';
 
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({Key? key}) : super(key: key);
+  const ProductsScreen({super.key});
 
   @override
   _ProductsScreenState createState() => _ProductsScreenState();
@@ -40,15 +37,15 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
   // Search controller
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  bool _showFilters = false;
-  
+  final bool _showFilters = false;
+
   // انيميشن تبديل عرض المنتجات (جريد/قائمة)
   late AnimationController _animationController;
   bool _isGridView = true;
-  
+
   // الفرز
   String _sortBy = 'latest'; // latest, priceAsc, priceDesc, popular
-  
+
   // تحكم في التمرير
   final ScrollController _scrollController = ScrollController();
 
@@ -56,13 +53,13 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
   void initState() {
     super.initState();
     _productProvider = Provider.of<ProductProvider>(context, listen: false);
-    
+
     // إنشاء متحكم الانيميشن
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    
+
     // تأكد من استخدام SamaStoreService
     _productProvider.setUseSamaStore(true);
 
@@ -70,7 +67,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CartProvider>(context, listen: false).loadCart();
       Provider.of<FavoritesProvider>(context, listen: false).loadFavorites();
-      
+
       // تحديد سعر أقصى من المنتجات المتاحة
       _updateMaxPrice();
     });
@@ -109,7 +106,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       _isLoading = true;
       _errorMessage = '';
     });
-    
+
     try {
       // تحميل المنتجات
       await _productProvider.loadSamaProducts(
@@ -121,13 +118,13 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
 
       // تحميل التصنيفات
       final categories = await _productProvider.getSamaCategories();
-      
+
       if (mounted) {
         setState(() {
           _categories = ['All', ...categories];
           _isLoading = false;
         });
-        
+
         _updateMaxPrice();
       }
 
@@ -210,7 +207,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       }
     }
   }
-  
+
   // عرض مربع حوار الفلترة
   void _showFilterDialog() {
     showModalBottomSheet(
@@ -220,7 +217,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       builder: (context) => _buildFilterBottomSheet(),
     );
   }
-  
+
   // إنشاء مربع حوار الفلترة
   Widget _buildFilterBottomSheet() {
     final theme = Theme.of(context);
@@ -250,7 +247,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                   ),
                 ),
               ),
-              
+
               // العنوان
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -271,9 +268,9 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                   ],
                 ),
               ),
-              
+
               const Divider(),
-              
+
               // المحتوى
               Expanded(
                 child: ListView(
@@ -333,9 +330,9 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                         )),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // قسم نطاق السعر
                     Text(
                       'نطاق السعر',
@@ -372,9 +369,9 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                         });
                       },
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // قسم الفرز
                     Text(
                       'الفرز حسب',
@@ -428,7 +425,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                   ],
                 ),
               ),
-              
+
               // أزرار الإجراءات
               Container(
                 padding: const EdgeInsets.all(16),
@@ -488,7 +485,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: CustomAppBarWithWidget(
         title: 'متجر SAMA',
@@ -609,7 +606,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                       },
                     ),
             ),
-            
+
             // عرض المنتجات
             Expanded(
               child: _isLoading
@@ -617,14 +614,14 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                   : Consumer<ProductProvider>(
                       builder: (context, productProvider, _) {
                         final products = productProvider.samaProducts;
-                        
+
                         if (products.isEmpty) {
                           return _buildEmptyState();
                         }
-                        
+
                         return _isGridView
-                            ? _buildProductsGrid(products)
-                            : _buildProductsList(products);
+                            ? _buildProductsGrid(products.map((p) => Product.fromProductModel(p)).toList())
+                            : _buildProductsList(products.map((p) => Product.fromProductModel(p)).toList());
                       },
                     ),
             ),
@@ -633,11 +630,11 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   // عنصر تصنيف
   Widget _buildCategoryChip(String label, String? value, bool isSelected) {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: const EdgeInsets.only(right: 8),
       child: FilterChip(
@@ -664,11 +661,11 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   // حالة عدم وجود منتجات
   Widget _buildEmptyState() {
     final theme = Theme.of(context);
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -711,7 +708,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   // عرض التصنيفات أثناء التحميل
   Widget _buildCategoryShimmer() {
     return ListView.builder(
@@ -732,7 +729,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       },
     );
   }
-  
+
   // تحميل المنتجات
   Widget _buildLoadingShimmer() {
     return _isGridView
@@ -771,7 +768,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
             },
           );
   }
-  
+
   // عرض المنتجات كشبكة - استخدام LuxuryProductCard بدلاً من ProductCard
   Widget _buildProductsGrid(List<Product> products) {
     return AnimationLimiter(
@@ -801,7 +798,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   // عرض المنتجات كقائمة - قمنا بتعديل طريقة العرض باستخدام LuxuryProductCard
   Widget _buildProductsList(List<Product> products) {
     return AnimationLimiter(
@@ -813,7 +810,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
           final product = products[index];
           final hasPrice = product.price > 0;
           final hasStock = product.stock > 0;
-          
+
           return AnimationConfiguration.staggeredList(
             position: index,
             duration: const Duration(milliseconds: 500),
@@ -841,7 +838,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                         children: [
                           // Product Image
                           ClipRRect(
-                            borderRadius: BorderRadius.only(
+                            borderRadius: const BorderRadius.only(
                               topRight: Radius.circular(StyleSystem.radiusLarge),
                               bottomRight: Radius.circular(StyleSystem.radiusLarge),
                             ),
@@ -876,7 +873,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                                     ),
                             ),
                           ),
-                          
+
                           // Product Details
                           Expanded(
                             child: Padding(
@@ -894,7 +891,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  
+
                                   // Category if available
                                   if (product.category != null && product.category!.isNotEmpty)
                                     Container(
@@ -913,9 +910,9 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
                                         ),
                                       ),
                                     ),
-                                  
+
                                   const SizedBox(height: 8),
-                                  
+
                                   // Only show price and stock if both are available
                                   if (hasPrice && hasStock)
                                     Row(
@@ -969,7 +966,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
       ),
     );
   }
-  
+
   // عرض تفاصيل المنتج
   void _viewProductDetails(Product product) {
     Navigator.pushNamed(

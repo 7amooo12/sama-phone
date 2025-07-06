@@ -1,27 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TaskModel {
-  final String id;
-  final String title;
-  final String description;
-  final String status;
-  final String assignedTo;
-  final DateTime dueDate;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-  final String priority;
-  final List<String> attachments;
-  final String adminName;
-  final String category;
-  final int quantity;
-  final int completedQuantity;
-  final String productName;
-  final double progress;
-  final DateTime deadline;
-  final String? productImage;
-  final String? workerId;
-  final String? workerName;
 
   TaskModel({
     required this.id,
@@ -44,6 +23,9 @@ class TaskModel {
     this.productImage,
     this.workerId,
     this.workerName,
+    this.adminId,
+    this.productId,
+    this.orderId,
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
@@ -68,6 +50,9 @@ class TaskModel {
       productImage: json['product_image'] as String?,
       workerId: json['worker_id'] as String?,
       workerName: json['worker_name'] as String?,
+      adminId: json['admin_id'] as String?,
+      productId: json['product_id'] as String?,
+      orderId: json['order_id'] as String?,
     );
   }
 
@@ -96,10 +81,32 @@ class TaskModel {
       workerName: data['worker_name'] as String?,
     );
   }
+  final String id;
+  final String title;
+  final String description;
+  final String status;
+  final String assignedTo;
+  final DateTime dueDate;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final String priority;
+  final List<String> attachments;
+  final String adminName;
+  final String category;
+  final int quantity;
+  final int completedQuantity;
+  final String productName;
+  final double progress;
+  final DateTime deadline;
+  final String? productImage;
+  final String? workerId;
+  final String? workerName;
+  final String? adminId;
+  final String? productId;
+  final String? orderId;
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'title': title,
       'description': description,
       'status': status,
@@ -117,8 +124,11 @@ class TaskModel {
       'progress': progress,
       'deadline': deadline.toIso8601String(),
       'product_image': productImage,
-      'worker_id': workerId,
+      'worker_id': workerId ?? assignedTo, // Use assignedTo as fallback for worker_id
       'worker_name': workerName,
+      'admin_id': adminId,
+      'product_id': productId,
+      'order_id': orderId,
     };
   }
 
@@ -167,4 +177,4 @@ class TaskModel {
       workerName: workerName ?? this.workerName,
     );
   }
-} 
+}

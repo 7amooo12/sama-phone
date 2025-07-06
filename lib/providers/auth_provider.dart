@@ -2,20 +2,13 @@ import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../models/user_role.dart';
 import '../services/database_service.dart';
+import '../services/local_storage_service.dart';
 import '../utils/app_logger.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final AuthService _authService;
-  final DatabaseService _databaseService;
-  UserModel? _currentUser;
-  bool _isLoading = false;
-  String? _error;
-  List<UserModel> _pendingUsers = [];
-  List<UserModel> _allUsers = [];
 
   AuthProvider({
     required AuthService authService,
@@ -23,39 +16,32 @@ class AuthProvider extends ChangeNotifier {
   })  : _authService = authService,
         _databaseService = databaseService;
 
-  UserModel? get currentUser => _currentUser;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-  bool get isAuthenticated => _currentUser != null;
-  bool get isLoggedIn => _currentUser != null;
-  List<UserModel> get pendingUsers => _pendingUsers;
-  List<UserModel> get allUsers => _allUsers;
-  
-  String get userRole => _currentUser?.role.value ?? 'guest';
-
   factory AuthProvider.forTest() {
     return AuthProvider(
       authService: AuthService(),
       databaseService: DatabaseService(),
     );
   }
+  final AuthService _authService;
+  final DatabaseService _databaseService;
+  UserModel? _currentUser;
+  bool _isLoading = false;
+  String? _error;
+  List<UserModel> _pendingUsers = [];
+  final List<UserModel> _allUsers = [];
 
-  Future<void> _initAuthState() async {
-    _authService.onAuthStateChange.listen((AuthState data) async {
-      final Session? session = data.session;
-      if (session != null) {
-        try {
-          await getUserFromSupabase(session.user.id);
-        } catch (e) {
-          AppLogger.error('Error getting user data: $e');
-          _currentUser = null;
-        }
-      } else {
-        _currentUser = null;
-      }
-      notifyListeners();
-    });
-  }
+  UserModel? get currentUser => _currentUser;
+  UserModel? get user => _currentUser; // Alias for compatibility
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isAuthenticated => _currentUser != null;
+  bool get isLoggedIn => _currentUser != null;
+  List<UserModel> get pendingUsers => _pendingUsers;
+  List<UserModel> get allUsers => _allUsers;
+
+  String get userRole => _currentUser?.role.value ?? 'guest';
+
+
 
   Future<void> checkAuthState() async {
     try {
@@ -106,13 +92,28 @@ class AuthProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final user = await _authService.signIn(
-        email: email,
-        password: password,
-      );
+      // Try Supabase first
+      try {
+        final user = await _authService.signIn(
+          email: email,
+          password: password,
+        );
 
-      if (user != null) {
-        _currentUser = user;
+        if (user != null) {
+          _currentUser = user;
+          _error = null;
+          _isLoading = false;
+          notifyListeners();
+          return;
+        }
+      } catch (e) {
+        AppLogger.warning('Supabase login failed, trying local login: $e');
+      }
+
+      // If Supabase fails, try local login
+      final localUser = await _tryLocalLogin(email, password);
+      if (localUser != null) {
+        _currentUser = localUser;
         _error = null;
       } else {
         _error = 'Invalid email or password';
@@ -125,6 +126,30 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       AppLogger.error('Error signing in', e);
       notifyListeners();
+    }
+  }
+
+  Future<UserModel?> _tryLocalLogin(String email, String password) async {
+    try {
+      final localStorage = LocalStorageService();
+      final userData = localStorage.getData('local_users_$email');
+
+      if (userData != null && userData['password'] == password) {
+        return UserModel(
+          id: (userData['id'] as String?) ?? '',
+          email: (userData['email'] as String?) ?? '',
+          name: (userData['name'] as String?) ?? '',
+          role: UserRole.fromString((userData['role'] as String?) ?? ''),
+          status: (userData['status'] as String?) ?? '',
+          phone: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error('Error in local login: $e');
+      return null;
     }
   }
 
@@ -208,7 +233,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      AppLogger().e('Error fetching pending users: $e');
+      AppLogger.error('Error fetching pending users: $e');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -220,6 +245,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      // تحديث الحالة إلى 'active' لتتطابق مع النظام الجديد
       await _databaseService.updateUserRoleAndStatus(userId, role, 'active');
 
       await fetchPendingApprovalUsers();
@@ -227,7 +253,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      AppLogger().e('Error approving user: $e');
+      AppLogger.error('Error approving user: $e');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -246,7 +272,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      AppLogger().e('Error rejecting user: $e');
+      AppLogger.error('Error rejecting user: $e');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -265,7 +291,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger().e('Error resetting password: $e');
+      AppLogger.error('Error resetting password: $e');
       _error = _handleAuthError(e);
       _isLoading = false;
       notifyListeners();
@@ -278,16 +304,22 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      // Update in database using our SECURITY DEFINER functions
       await _databaseService.updateUser(user);
+
+      // Update local state
       _currentUser = user;
+
+      AppLogger.info('✅ AuthProvider: User profile updated successfully - Name: ${user.name}');
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      AppLogger().e('Error updating user profile: $e');
+      AppLogger.error('❌ AuthProvider: Error updating user profile: $e');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
+      rethrow; // Re-throw to let the UI handle the error
     }
   }
 
@@ -316,7 +348,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
 
       _currentUser = await _authService.login(email, password);
-      
+
       AppLogger.info('User logged in successfully: ${_currentUser?.email}');
       return true;
     } catch (e) {
@@ -336,7 +368,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
 
       _currentUser = await _authService.register(email, password, name);
-      
+
       AppLogger.info('User registered successfully: ${_currentUser?.email}');
       return true;
     } catch (e) {
@@ -361,4 +393,5 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
 }

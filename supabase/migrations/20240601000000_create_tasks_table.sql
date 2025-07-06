@@ -18,7 +18,13 @@ CREATE TABLE public.tasks (
     completed_quantity INTEGER DEFAULT 0,
     progress REAL DEFAULT 0.0,
     category TEXT DEFAULT 'product', -- product or order
-    metadata JSONB
+    metadata JSONB,
+    -- Additional fields to match TaskModel
+    assigned_to TEXT NOT NULL, -- This will store the worker_id as text for compatibility
+    due_date TIMESTAMP WITH TIME ZONE, -- Alternative to deadline
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    priority TEXT DEFAULT 'medium', -- low, medium, high, urgent
+    attachments JSONB DEFAULT '[]'::jsonb -- Array of attachment URLs
 );
 
 -- Enable RLS
@@ -120,4 +126,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_task_assigned
 AFTER INSERT ON public.tasks
 FOR EACH ROW
-EXECUTE FUNCTION notify_task_assigned(); 
+EXECUTE FUNCTION notify_task_assigned();

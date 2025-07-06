@@ -1,28 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class FaultModel {
-  final String id;
-  final String title;
-  final String description;
-  final String status;
-  final String assignedTo;
-  final String reportedBy;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-  final String priority;
-  final List<String> attachments;
-  final bool isResolved;
-  final String category;
-  final String location;
-  final Map<String, dynamic>? metadata;
-  final String? reporterId;
-
-  // Add getters for compatibility
-  String get itemName => title;
-  String get clientName => metadata?['clientName']?.toString() ?? '';
-  int get quantity => metadata?['quantity'] as int? ?? 0;
-  String get faultType => category;
-  String get details => description;
 
   FaultModel({
     required this.id,
@@ -61,6 +39,28 @@ class FaultModel {
       reporterId: json['reporter_id'] as String?,
     );
   }
+  final String id;
+  final String title;
+  final String description;
+  final String status;
+  final String assignedTo;
+  final String reportedBy;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final String priority;
+  final List<String> attachments;
+  final bool isResolved;
+  final String category;
+  final String location;
+  final Map<String, dynamic>? metadata;
+  final String? reporterId;
+
+  // Add getters for compatibility
+  String get itemName => title;
+  String get clientName => metadata?['clientName']?.toString() ?? '';
+  int get quantity => metadata?['quantity'] as int? ?? 0;
+  String get faultType => category;
+  String get details => description;
 
   Map<String, dynamic> toJson() {
     return {
@@ -81,6 +81,9 @@ class FaultModel {
       'reporter_id': reporterId,
     };
   }
+
+  // Alias for compatibility
+  Map<String, dynamic> toMap() => toJson();
 
   FaultModel copyWith({
     String? id,

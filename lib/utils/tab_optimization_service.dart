@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 
 /// Service to optimize performance for TabBarViews and prevent blank screens
 class TabOptimizationService {
   /// Enhances TabController with optimizations to reduce blank screens
   static TabController enhanceTabController(TabController controller) {
+    // Add optimized response time for tab animations
+    controller.animation?.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        // Force a frame rebuild after tab animation completes
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.scheduleForcedFrame();
+        });
+      }
+    });
+    
     return controller;
   }
   
@@ -12,15 +23,27 @@ class TabOptimizationService {
   static Widget optimizedTabContent({
     required Widget child,
     bool deferRendering = false,
-    Duration deferDuration = const Duration(milliseconds: 0),
+    Duration deferDuration = const Duration(milliseconds: 50),
     Widget? loadingPlaceholder,
   }) {
-    return child;
+    return _OptimizedTabContent(
+      deferRendering: deferRendering,
+      deferDuration: deferDuration,
+      loadingPlaceholder: loadingPlaceholder,
+      child: child,
+    );
   }
   
   /// Pre-initialize heavy widgets to prevent jank when switching tabs
   static void preInitializeWidgets(List<Widget> widgets) {
-    // تم تعطيل هذه الوظيفة لأنها تسبب مشاكل في الذاكرة
+    // Creating offscreen widgets can cause issues, so we'll use a simpler approach
+    for (final widget in widgets) {
+      // Schedule precaching for performance optimization
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Just ensure the widget is created but not attached to the tree
+        widget.createElement();
+      });
+    }
   }
   
   /// Apply critical performance optimizations to the TabBarView
@@ -29,19 +52,31 @@ class TabOptimizationService {
     required List<Widget> children,
     ScrollPhysics? physics = const ClampingScrollPhysics(),
     bool keepAlive = true,
-    bool deferRendering = false,
+    bool deferRendering = true,
   }) {
     final wrappedChildren = children.map((child) {
-      if (keepAlive) {
-        return _KeepAliveOptimized(child: child);
+      Widget optimizedChild = child;
+      
+      // Apply deferred rendering optimization
+      if (deferRendering) {
+        optimizedChild = optimizedTabContent(
+          child: optimizedChild,
+          deferRendering: true,
+        );
       }
-      return child;
+      
+      // Apply keep alive optimization if requested
+      if (keepAlive) {
+        optimizedChild = _KeepAliveOptimized(child: optimizedChild);
+      }
+      
+      return optimizedChild;
     }).toList();
     
     return TabBarView(
       controller: controller,
-      children: wrappedChildren,
       physics: physics,
+      children: wrappedChildren,
     );
   }
   
@@ -50,23 +85,45 @@ class TabOptimizationService {
     BuildContext context, 
     List<String> imageUrls,
   ) async {
-    // تم تعطيل هذه الوظيفة لتجنب استهلاك الذاكرة
+    final futures = <Future>[];
+    
+    for (final url in imageUrls) {
+      if (url.isNotEmpty) {
+        final future = precacheImage(NetworkImage(url), context);
+        futures.add(future);
+      }
+    }
+    
+    // Wait for the first few images (most critical ones) to load
+    await Future.wait(
+      futures.take(3).toList(),
+      eagerError: false,
+    );
   }
   
   /// Apply memory optimizations for heavy tabs
   static void applyMemoryOptimizations() {
-    // استخدام قيم معقولة لحجم ذاكرة التخزين المؤقت للصور
-    PaintingBinding.instance.imageCache?.maximumSizeBytes = 50 * 1024 * 1024; // 50MB
+    // Increase image cache size
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024; // 100MB
     
-    // تم تعطيل الوظائف التي قد تؤثر على أداء النظام
+    // Optimize rendering engine settings
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    });
+    
+    // Adjust platform channels for better performance
+    ServicesBinding.instance.defaultBinaryMessenger.setMessageHandler(
+      'flutter/system',
+      (ByteData? message) async => null,
+    );
   }
 }
 
 /// Optimized widget that keeps a tab alive when it's not visible
 class _KeepAliveOptimized extends StatefulWidget {
-  final Widget child;
 
   const _KeepAliveOptimized({required this.child});
+  final Widget child;
 
   @override
   State<_KeepAliveOptimized> createState() => _KeepAliveOptimizedState();
@@ -86,10 +143,6 @@ class _KeepAliveOptimizedState extends State<_KeepAliveOptimized>
 
 /// Widget that optimizes tab content rendering to prevent blank screens
 class _OptimizedTabContent extends StatefulWidget {
-  final Widget child;
-  final bool deferRendering;
-  final Duration deferDuration;
-  final Widget? loadingPlaceholder;
 
   const _OptimizedTabContent({
     required this.child,
@@ -97,6 +150,10 @@ class _OptimizedTabContent extends StatefulWidget {
     this.deferDuration = const Duration(milliseconds: 50),
     this.loadingPlaceholder,
   });
+  final Widget child;
+  final bool deferRendering;
+  final Duration deferDuration;
+  final Widget? loadingPlaceholder;
 
   @override
   State<_OptimizedTabContent> createState() => _OptimizedTabContentState();

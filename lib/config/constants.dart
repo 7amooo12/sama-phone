@@ -4,7 +4,7 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // API
-  static const String baseUrl = 'https://samastock.pythonanywhere.com/api';
+  static const String baseUrl = 'https://samastock.pythonanywhere.com';
   static const String apiKey = 'lux2025FlutterAccess';
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;
@@ -62,7 +62,7 @@ class AppConstants {
 
   // API Endpoints
   static const String apiVersion = 'v1';
-  static const String productsApi = 'products';
+  static const String productsApi = '/flutter/api/api/products';
   static const String ordersApi = 'orders';
   static const String authLoginUrl = 'https://auth.smartbiztracker.com/login';
   static const String secondaryUrl = 'https://app.smartbiztracker.com';

@@ -3,20 +3,20 @@ import 'package:intl/intl.dart';
 
 /// Widget for displaying a summary of invoices
 class InvoiceSummaryWidget extends StatelessWidget {
-  final Map<String, dynamic> invoiceData;
-  final bool isLoading;
-  final String? errorMessage;
-  final VoidCallback? onRefresh;
-  final Function(String)? onInvoiceSelected;
   
   const InvoiceSummaryWidget({
-    Key? key,
+    super.key,
     required this.invoiceData,
     this.isLoading = false,
     this.errorMessage,
     this.onRefresh,
     this.onInvoiceSelected,
-  }) : super(key: key);
+  });
+  final Map<String, dynamic> invoiceData;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback? onRefresh;
+  final Function(String)? onInvoiceSelected;
   
   @override
   Widget build(BuildContext context) {
@@ -43,7 +43,7 @@ class InvoiceSummaryWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.error_outline,
               color: Colors.red,
               size: 48,

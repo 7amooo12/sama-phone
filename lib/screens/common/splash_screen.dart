@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:smartbiztracker_new/config/routes.dart';
 import 'package:smartbiztracker_new/models/user_model.dart';
 import 'package:smartbiztracker_new/providers/supabase_provider.dart';
-import 'package:smartbiztracker_new/providers/home_provider.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/utils/animation_system.dart';
 import 'package:smartbiztracker_new/widgets/common/animated_screen.dart';
 import 'package:smartbiztracker_new/models/user_role.dart';
 import 'package:smartbiztracker_new/config/constants.dart' as app_constants;
 import 'package:smartbiztracker_new/utils/app_logger.dart';
+import 'package:smartbiztracker_new/routes/app_routes.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -50,6 +49,11 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkAuthState() async {
     try {
+      AppLogger.info('🔍 SplashScreen: Starting authentication check...');
+
+      // PERFORMANCE OPTIMIZATION: Since heavy initialization is now handled
+      // by InitializationService, we can focus purely on authentication flow
+
       final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
       await supabaseProvider.checkAuthState();
 
@@ -58,21 +62,23 @@ class _SplashScreenState extends State<SplashScreen>
       final user = supabaseProvider.user;
 
       if (user == null) {
-        // User is not logged in
+        AppLogger.info('🚪 No authenticated user found, navigating to login');
         _handleNavigation(user);
         return;
       }
 
-      if (user.status != 'approved') {
-        // User is not approved yet
+      AppLogger.info('👤 Authenticated user found: ${user.email} (${user.role.value})');
+
+      if (!user.isApproved && !user.isAdmin()) {
+        AppLogger.info('⏳ User not approved, navigating to waiting screen');
         _handleNavigation(user);
         return;
       }
 
-      // User is logged in, navigate to the appropriate dashboard
+      AppLogger.info('✅ User approved, navigating to dashboard');
       _handleNavigation(user);
     } catch (e) {
-      AppLogger.error('Error checking auth state: $e');
+      AppLogger.error('❌ Error checking auth state: $e');
       if (mounted) {
         _handleNavigation(null);
       }
@@ -109,6 +115,9 @@ class _SplashScreenState extends State<SplashScreen>
         break;
       case UserRole.accountant:
         _navigateToRoute('/accountant/dashboard');
+        break;
+      case UserRole.warehouseManager:
+        _navigateToRoute(AppRoutes.warehouseManagerDashboard);
         break;
       default:
         _navigateToRoute('/login');
@@ -205,7 +214,7 @@ class _SplashScreenState extends State<SplashScreen>
                     height: 50,
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const CircularProgressIndicator(

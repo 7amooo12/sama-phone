@@ -7,8 +7,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:smartbiztracker_new/utils/color_extension.dart';
 import 'package:smartbiztracker_new/utils/responsive_builder.dart';
-import 'package:smartbiztracker_new/widgets/common/responsive_grid_view.dart';
 import 'package:smartbiztracker_new/widgets/common/cached_image.dart';
+import 'package:smartbiztracker_new/utils/accountant_theme_config.dart';
+import 'package:smartbiztracker_new/services/ui_performance_optimizer.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -40,10 +41,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget build(BuildContext context) {
     return Consumer<ProductProvider>(
       builder: (context, productProvider, _) {
-        // Filter products based on search query
-        final filteredProducts = _searchQuery.isEmpty
+        // Filter products based on search query and hide zero stock products
+        var filteredProducts = _searchQuery.isEmpty
             ? productProvider.products
             : productProvider.searchProducts(_searchQuery);
+
+        // Filter out products with zero stock for client view
+        filteredProducts = filteredProducts.where((product) => product.quantity > 0).toList();
 
         return Stack(
           children: [
@@ -95,9 +99,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     color: Colors.red.withOpacity(0.7),
                                   ),
                                   const SizedBox(height: 16),
-                                  Text(
+                                  const Text(
                                     'حدث خطأ أثناء تحميل المنتجات',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -105,7 +109,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    productProvider.error!,
+                                    productProvider.error ?? 'خطأ غير معروف',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey,
@@ -165,7 +169,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                       aspectRatio = 0.85;
                                     }
 
-                                    return GridView.builder(
+                                    return UIPerformanceOptimizer.optimizedGridView(
                                       padding: const EdgeInsets.all(16),
                                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                         crossAxisCount: columnCount,
@@ -179,18 +183,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
                                         return AnimationConfiguration.staggeredGrid(
                                           position: index,
-                                          duration: const Duration(milliseconds: 375),
+                                          duration: const Duration(milliseconds: 300), // Reduced for better performance
                                           columnCount: columnCount,
                                           child: ScaleAnimation(
                                             child: FadeInAnimation(
                                               child: ProductCard(
                                                 product: product,
                                                 onTap: () => _showProductDetails(product),
-                                              ),
+                                              ).withRepaintBoundary(), // Add RepaintBoundary for better performance
                                             ),
                                           ),
                                         );
                                       },
+                                      addRepaintBoundary: true,
                                     );
                                   },
                                 ),
@@ -285,36 +290,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      product.name,
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: theme.primaryColor,
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Text(
-                                      '${product.price} جنيه',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              // Product name with SAMA styling
+                              Text(
+                                product.name,
+                                style: AccountantThemeConfig.headlineMedium.copyWith(
+                                  color: AccountantThemeConfig.primaryGreen,
+                                ),
                               ),
                               const SizedBox(height: 16),
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:smartbiztracker_new/models/product.dart';
+import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/providers/cart_provider.dart';
 import 'package:smartbiztracker_new/providers/product_provider.dart';
 import 'package:smartbiztracker_new/utils/app_localizations.dart';
@@ -10,18 +11,17 @@ import 'package:smartbiztracker_new/utils/style_system.dart';
 import 'package:smartbiztracker_new/utils/animation_system.dart';
 import 'package:smartbiztracker_new/screens/store/product_details_with_cart.dart';
 import 'package:smartbiztracker_new/widgets/loading_widget.dart';
-import 'package:smartbiztracker_new/widgets/error_widget.dart';
 import 'package:smartbiztracker_new/utils/app_logger.dart';
 
 class ClientProductScreen extends StatefulWidget {
-  const ClientProductScreen({Key? key}) : super(key: key);
+  const ClientProductScreen({super.key});
 
   @override
   _ClientProductScreenState createState() => _ClientProductScreenState();
 }
 
 class _ClientProductScreenState extends State<ClientProductScreen> {
-  late Future<List<Product>> _productsFuture;
+  Future<List<ProductModel>>? _productsFuture;
   String? _selectedCategory;
   double? _minPrice;
   double? _maxPrice;
@@ -32,12 +32,14 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
   List<String> _categories = [];
   bool _isSearching = false;
   bool _isCategoriesLoading = false;
+  bool _hasNetworkError = false;
+  String? _lastError;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    
+
     // Debug: Print out when component initializes
     print('ClientProductScreen initialized');
   }
@@ -46,7 +48,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
     print('Loading data in ClientProductScreen');
     await _loadCategories();
     await _loadProducts();
-    
+
     // Debug: Print out all categories and selected category
     print('Available categories: $_categories');
     print('Selected category: $_selectedCategory');
@@ -60,13 +62,13 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
     try {
       final productProvider = Provider.of<ProductProvider>(context, listen: false);
       final categories = await productProvider.getSamaCategories();
-      
+
       setState(() {
         // Remove 'All Categories' if it exists as we'll add our own "All" option in the UI
         _categories = categories.where((cat) => cat != 'All Categories').toList();
         _isCategoriesLoading = false;
       });
-      
+
       AppLogger.info('Loaded ${_categories.length} categories from API');
       print('Categories loaded: $_categories');
     } catch (e) {
@@ -79,7 +81,10 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
 
   Future<void> _loadProducts() async {
     final productProvider = Provider.of<ProductProvider>(context, listen: false);
+
     setState(() {
+      _hasNetworkError = false;
+      _lastError = null;
       _productsFuture = productProvider.loadSamaProducts(
         category: _selectedCategory,
         minPrice: _minPrice,
@@ -89,16 +94,169 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
     });
 
     try {
-      _allProducts = await _productsFuture;
+      final productModels = await _productsFuture!;
+      _allProducts = productModels.map((p) => Product.fromProductModel(p)).toList();
       _filteredProducts = List.from(_allProducts);
-      
+
+      setState(() {
+        _hasNetworkError = false;
+        _lastError = null;
+      });
+
       // Log the number of products received after filtering
       print('Loaded ${_allProducts.length} products');
       if (_selectedCategory != null) {
         print('Selected category: $_selectedCategory with ${_allProducts.length} products');
       }
     } catch (e) {
-      // Error will be handled in the FutureBuilder
+      setState(() {
+        _hasNetworkError = true;
+        _lastError = e.toString();
+      });
+
+      AppLogger.error('خطأ في تحميل المنتجات', e);
+
+      // Show user-friendly error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_getErrorMessage(e.toString())),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            action: SnackBarAction(
+              label: 'إعادة المحاولة',
+              onPressed: () => _loadProducts(),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  String _getErrorMessage(String error) {
+    if (error.contains('Failed host lookup') || error.contains('No address associated with hostname')) {
+      return 'لا يمكن الاتصال بالخادم. تحقق من اتصالك بالإنترنت';
+    } else if (error.contains('Connection refused') || error.contains('Connection timed out')) {
+      return 'انتهت مهلة الاتصال. يرجى المحاولة لاحقاً';
+    } else if (error.contains('SocketException')) {
+      return 'خطأ في الشبكة. تحقق من اتصالك بالإنترنت';
+    } else {
+      return 'حدث خطأ في تحميل المنتجات. يرجى المحاولة مرة أخرى';
+    }
+  }
+
+  Widget _buildErrorWidget(ThemeData theme, AppLocalizations appLocalizations) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.wifi_off,
+              size: 64,
+              color: theme.colorScheme.error.withOpacity(0.7),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'خطأ في الاتصال',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _lastError != null ? _getErrorMessage(_lastError!) : 'حدث خطأ غير متوقع',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _loadProducts,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('إعادة المحاولة'),
+                ),
+                const SizedBox(width: 16),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    // Try to load cached data or show offline mode
+                    _loadOfflineData();
+                  },
+                  icon: const Icon(Icons.offline_bolt),
+                  label: const Text('وضع عدم الاتصال'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, AppLocalizations appLocalizations) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.shopping_bag_outlined,
+            size: 64,
+            color: theme.colorScheme.primary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            appLocalizations.translate('no_products_found') ?? 'لا توجد منتجات',
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'جرب تغيير فلاتر البحث أو إعادة تحميل الصفحة',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _loadData,
+            icon: const Icon(Icons.refresh),
+            label: const Text('إعادة التحميل'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _loadOfflineData() async {
+    // Try to load any cached products
+    try {
+      final productProvider = Provider.of<ProductProvider>(context, listen: false);
+      // Check if there are any cached products
+      if (productProvider.products.isNotEmpty) {
+        setState(() {
+          _allProducts = productProvider.products.map((p) => Product.fromProductModel(p)).toList();
+          _filteredProducts = List.from(_allProducts);
+          _hasNetworkError = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تحميل البيانات المحفوظة محلياً'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا توجد بيانات محفوظة محلياً'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('خطأ في تحميل البيانات المحفوظة', e);
     }
   }
 
@@ -126,7 +284,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
   Widget build(BuildContext context) {
     final appLocalizations = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(appLocalizations.translate('store_products') ?? 'منتجات المتجر'),
@@ -163,7 +321,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                   onChanged: _filterProducts,
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Category filter with loading indicator
                 _isCategoriesLoading
                     ? SizedBox(
@@ -211,9 +369,9 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                                 print('Category selection changed to: $_selectedCategory');
                                 _loadProducts();
                               },
-                            )).toList(),
+                            )),
                             const SizedBox(width: 8),
-                            
+
                             // Sort dropdown
                             DropdownButton<String>(
                               value: _sortBy,
@@ -245,43 +403,26 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
               ],
             ),
           ),
-          
+
           // Products grid
           Expanded(
-            child: FutureBuilder<List<Product>>(
-              future: _productsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const LoadingWidget();
-                } else if (snapshot.hasError) {
-                  return AppErrorWidget(
-                    message: snapshot.error.toString(),
-                    onRetry: () => _loadProducts(),
-                  );
-                } else if (!snapshot.hasData || 
-                          (_isSearching && _filteredProducts.isEmpty) || 
-                          (!_isSearching && snapshot.data!.isEmpty)) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.shopping_bag_outlined,
-                          size: 64,
-                          color: theme.colorScheme.primary.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          appLocalizations.translate('no_products_found') ?? 'لا توجد منتجات',
-                          style: theme.textTheme.titleLarge,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                
-                final products = _isSearching ? _filteredProducts : snapshot.data!;
-                
+            child: _productsFuture == null
+                ? const LoadingWidget()
+                : FutureBuilder<List<ProductModel>>(
+                    future: _productsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const LoadingWidget();
+                      } else if (snapshot.hasError || _hasNetworkError) {
+                        return _buildErrorWidget(theme, appLocalizations);
+                      } else if (!snapshot.hasData ||
+                                (_isSearching && _filteredProducts.isEmpty) ||
+                                (!_isSearching && snapshot.data!.isEmpty)) {
+                        return _buildEmptyState(theme, appLocalizations);
+                      }
+
+                final products = _isSearching ? _filteredProducts : snapshot.data!.map((p) => Product.fromProductModel(p)).toList();
+
                 return AnimationLimiter(
                   child: GridView.builder(
                     padding: const EdgeInsets.all(16),
@@ -347,7 +488,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
 
   Widget _buildProductCard(BuildContext context, Product product) {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    
+
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 2,
@@ -376,15 +517,47 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                     imageUrl: product.imageUrl ?? '',
                     fit: BoxFit.cover,
                     width: double.infinity,
-                    placeholder: (context, url) => const Center(
-                      child: CircularProgressIndicator(),
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[100],
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(strokeWidth: 2),
+                            SizedBox(height: 8),
+                            Text(
+                              'تحميل...',
+                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image, size: 40),
-                    ),
+                    errorWidget: (context, url, error) {
+                      print('Product image error: $url - $error');
+                      return Container(
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                              SizedBox(height: 4),
+                              Text(
+                                'فشل تحميل الصورة',
+                                style: TextStyle(color: Colors.grey, fontSize: 10),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    httpHeaders: const {
+                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    },
                   ),
-                  
+
                   // Add to cart button
                   Positioned(
                     bottom: 8,
@@ -418,7 +591,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                 ],
               ),
             ),
-            
+
             // Product Details
             Expanded(
               child: Padding(
@@ -446,7 +619,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    
+
                     // Name
                     Text(
                       product.name,
@@ -458,7 +631,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    
+
                     // Price
                     Text(
                       '${product.price.toStringAsFixed(2)} جنيه',
@@ -468,9 +641,9 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 4),
-                    
+
                     // Stock status
                     if (product.inStock)
                       Text(
@@ -488,7 +661,7 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
                           fontSize: 12,
                         ),
                       ),
-                      
+
                     // View details button
                     const Spacer(),
                     SizedBox(
@@ -522,4 +695,4 @@ class _ClientProductScreenState extends State<ClientProductScreen> {
       ),
     );
   }
-} 
+}

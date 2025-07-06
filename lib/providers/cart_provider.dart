@@ -2,29 +2,29 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/product.dart';
-import '../utils/logger.dart';
+import '../utils/app_logger.dart';
 
 class CartItem {
-  final Product product;
-  int quantity;
 
   CartItem({
     required this.product,
     this.quantity = 1,
   });
 
+  factory CartItem.fromJson(Map<String, dynamic> json) {
+    return CartItem(
+      product: Product.fromJson(json['product'] as Map<String, dynamic>),
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+    );
+  }
+  final Product product;
+  int quantity;
+
   Map<String, dynamic> toJson() {
     return {
       'product': product.toJson(),
       'quantity': quantity,
     };
-  }
-
-  factory CartItem.fromJson(Map<String, dynamic> json) {
-    return CartItem(
-      product: Product.fromJson(json['product']),
-      quantity: json['quantity'],
-    );
   }
 
   double get totalPrice => product.price * quantity;
@@ -124,9 +124,9 @@ class CartProvider with ChangeNotifier {
       final cartData = prefs.getString('cart');
 
       if (cartData != null) {
-        final List<dynamic> decodedData = json.decode(cartData);
+        final List<dynamic> decodedData = json.decode(cartData) as List<dynamic>;
         _items = decodedData
-            .map((item) => CartItem.fromJson(item))
+            .map((item) => CartItem.fromJson(item as Map<String, dynamic>))
             .toList();
       }
     } catch (e) {

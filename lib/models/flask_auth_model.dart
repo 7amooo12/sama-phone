@@ -1,15 +1,8 @@
-import 'package:flutter/foundation.dart';
+
 
 import 'flask_user_model.dart';
 
 class FlaskAuthModel {
-  final bool success;
-  final FlaskUserModel? user;
-  final String? accessToken;
-  final String? refreshToken;
-  final String? message;
-  final String? error;
-  final String? status;
 
   const FlaskAuthModel({
     required this.success,
@@ -35,6 +28,22 @@ class FlaskAuthModel {
     );
   }
 
+  // Create an error model
+  factory FlaskAuthModel.error(String errorMessage, {String? status}) {
+    return FlaskAuthModel(
+      success: false,
+      error: errorMessage,
+      status: status,
+    );
+  }
+  final bool success;
+  final FlaskUserModel? user;
+  final String? accessToken;
+  final String? refreshToken;
+  final String? message;
+  final String? error;
+  final String? status;
+
   Map<String, dynamic> toJson() {
     return {
       'success': success,
@@ -47,21 +56,12 @@ class FlaskAuthModel {
     };
   }
 
-  // Create an error model
-  factory FlaskAuthModel.error(String errorMessage, {String? status}) {
-    return FlaskAuthModel(
-      success: false,
-      error: errorMessage,
-      status: status,
-    );
-  }
-
   // Check if the authentication was successful and has all required data
   bool get isAuthenticated => success && user != null && accessToken != null;
-  
+
   // Check if the account is pending approval
   bool get isPendingApproval => status == 'pending' || (user?.isPending ?? false);
 
   @override
   String toString() => 'FlaskAuthModel(success: $success, user: ${user?.username}, error: $error, status: $status)';
-} 
+}

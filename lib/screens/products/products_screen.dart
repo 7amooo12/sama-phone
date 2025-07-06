@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/providers/product_provider.dart';
-import 'package:smartbiztracker_new/services/samastock_api.dart';
 import 'package:smartbiztracker_new/utils/app_localizations.dart';
 import 'package:smartbiztracker_new/utils/theme_config.dart';
 import 'package:smartbiztracker_new/widgets/error_widget.dart';
@@ -12,7 +11,7 @@ import 'package:smartbiztracker_new/utils/logger.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({Key? key}) : super(key: key);
+  const ProductsScreen({super.key});
 
   @override
   _ProductsScreenState createState() => _ProductsScreenState();

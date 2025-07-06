@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:smartbiztracker_new/utils/style_system.dart';
@@ -6,14 +5,14 @@ import 'package:smartbiztracker_new/widgets/custom_text_field.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ErrorReportForm extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSubmit;
-  final bool isLoading;
 
   const ErrorReportForm({
-    Key? key,
+    super.key,
     required this.onSubmit,
     this.isLoading = false,
-  }) : super(key: key);
+  });
+  final Function(Map<String, dynamic>) onSubmit;
+  final bool isLoading;
 
   @override
   State<ErrorReportForm> createState() => _ErrorReportFormState();
@@ -33,7 +32,7 @@ class _ErrorReportFormState extends State<ErrorReportForm> {
   final List<String> _priorities = ['منخفض', 'متوسط', 'عالي', 'عاجل'];
 
   // Steps progress
-  int _currentStep = 0;
+  final int _currentStep = 0;
   
   @override
   void dispose() {
@@ -83,40 +82,80 @@ class _ErrorReportFormState extends State<ErrorReportForm> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(StyleSystem.radiusLarge),
-        color: theme.cardColor,
+        gradient: LinearGradient(
+          colors: [
+            Colors.black.withOpacity(0.8),
+            Colors.black.withOpacity(0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         boxShadow: [
           BoxShadow(
-            color: isDark 
-              ? Colors.black.withOpacity(0.2)
-              : Colors.grey.withOpacity(0.1),
+            color: const Color(0xFF10B981).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
+        border: Border.all(
+          color: const Color(0xFF10B981).withOpacity(0.3),
+          width: 1.5,
+        ),
       ),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-            // عنوان النموذج
+            // عنوان النموذج - تحسين الاستايل
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(0.1),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF10B981),
+                    const Color(0xFF10B981).withOpacity(0.8),
+                  ],
+                ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(StyleSystem.radiusLarge),
                   topRight: Radius.circular(StyleSystem.radiusLarge),
-                            ),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Text(
-                'الإبلاغ عن خطأ',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: theme.primaryColor,
-                  fontWeight: FontWeight.bold,
-                        ),
-                textAlign: TextAlign.center,
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.report_problem_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'الإبلاغ عن خطأ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        fontFamily: 'Cairo',
+                      ),
+                      textAlign: TextAlign.center,
                     ),
+                  ),
+                ],
+              ),
             ).animate().fadeIn(duration: 300.ms),
 
             Padding(
@@ -173,15 +212,19 @@ class _ErrorReportFormState extends State<ErrorReportForm> {
 
                   const SizedBox(height: 16),
                   
-                  // مستوى الأولوية
+                  // مستوى الأولوية - تحسين الاستايل
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.1),
+                          Colors.white.withOpacity(0.05),
+                        ],
+                      ),
                       border: Border.all(
-                        color: isDark 
-                          ? StyleSystem.textTertiaryDark.withOpacity(0.3)
-                          : Colors.grey[300]!,
-                        style: BorderStyle.solid,
+                        color: const Color(0xFF10B981).withOpacity(0.3),
+                        width: 1.5,
                       ),
                     ),
                     child: DropdownButtonHideUnderline(
@@ -190,13 +233,24 @@ class _ErrorReportFormState extends State<ErrorReportForm> {
                         isExpanded: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
-                        dropdownColor: theme.cardColor,
+                        dropdownColor: Colors.black.withOpacity(0.9),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'Cairo',
+                        ),
+                        icon: const Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.white,
+                        ),
                         items: _priorities.map((priority) {
                           return DropdownMenuItem(
                             value: priority,
                             child: Text(
                               priority,
-                              style: theme.textTheme.bodyMedium,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontFamily: 'Cairo',
+                              ),
                             ),
                           );
                         }).toList(),
@@ -213,34 +267,54 @@ class _ErrorReportFormState extends State<ErrorReportForm> {
 
                   const SizedBox(height: 24),
                 
-                  // إضافة لقطة شاشة
+                  // إضافة لقطة شاشة - تحسين الاستايل
                 InkWell(
                   onTap: _pickImage,
+                  borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
                   child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.1),
+                          Colors.white.withOpacity(0.05),
+                        ],
+                      ),
                       border: Border.all(
-                          color: isDark 
-                            ? StyleSystem.textTertiaryDark.withOpacity(0.3)
-                            : Colors.grey[300]!,
-                          style: BorderStyle.solid,
+                          color: const Color(0xFF10B981).withOpacity(0.3),
+                          width: 1.5,
                         ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
                         Icon(
-                            Icons.add_a_photo_outlined,
+                            _screenshot != null
+                                ? Icons.check_circle_rounded
+                                : Icons.add_a_photo_outlined,
                             size: 32,
-                            color: theme.primaryColor,
+                            color: _screenshot != null
+                                ? const Color(0xFF10B981)
+                                : Colors.white,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _screenshot != null 
-                              ? 'تم اختيار الصورة' 
+                          _screenshot != null
+                              ? 'تم اختيار الصورة'
                               : 'إضافة لقطة شاشة',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.primaryColor,
+                            style: TextStyle(
+                              color: _screenshot != null
+                                  ? const Color(0xFF10B981)
+                                  : Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Cairo',
                             ),
                           ),
                       ],
@@ -250,7 +324,7 @@ class _ErrorReportFormState extends State<ErrorReportForm> {
 
                   const SizedBox(height: 24),
                 
-                  // الموافقة على الشروط
+                  // الموافقة على الشروط - تحسين الاستايل
                       CheckboxListTile(
                         value: _agreeToTerms,
                         onChanged: (value) {
@@ -258,38 +332,70 @@ class _ErrorReportFormState extends State<ErrorReportForm> {
                         _agreeToTerms = value ?? false;
                           });
                         },
-                    title: Text(
+                    title: const Text(
                       'أوافق على سياسة الخصوصية وشروط الاستخدام',
-                      style: theme.textTheme.bodySmall,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Cairo',
+                        fontSize: 14,
+                      ),
                         ),
-                    activeColor: theme.primaryColor,
+                    activeColor: const Color(0xFF10B981),
+                    checkColor: Colors.white,
                     contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
                   ).animate().fadeIn(duration: 300.ms, delay: 500.ms),
 
                   const SizedBox(height: 24),
 
-                  // زر الإرسال
-                  ElevatedButton(
-                    onPressed: widget.isLoading ? null : _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                  // زر الإرسال - تحسين الاستايل
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981),
+                          const Color(0xFF10B981).withOpacity(0.8),
+                        ],
                       ),
+                      borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: widget.isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    child: ElevatedButton(
+                      onPressed: widget.isLoading ? null : _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(StyleSystem.radiusMedium),
+                        ),
                       ),
-                        )
-                      : const Text('إرسال البلاغ'),
+                      child: widget.isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                          )
+                        : const Text(
+                            'إرسال البلاغ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                    ),
                   ).animate().fadeIn(duration: 300.ms, delay: 600.ms).moveY(begin: 10, end: 0),
               ],
             ),

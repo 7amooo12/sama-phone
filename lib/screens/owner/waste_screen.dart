@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:smartbiztracker_new/models/waste_model.dart' as waste_models;
 import 'package:smartbiztracker_new/services/database_service.dart';
 import 'package:smartbiztracker_new/widgets/custom_loader.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -189,7 +188,7 @@ class _WasteScreenState extends State<WasteScreen> {
     return workerNames;
   }
 
-  // Show date picker
+  // Show date picker - إصلاح مشاكل الألوان البيضاء وجعله احترافي
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final initialDate =
         isStartDate ? _startDate ?? DateTime.now() : _endDate ?? DateTime.now();
@@ -200,12 +199,81 @@ class _WasteScreenState extends State<WasteScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Theme.of(context).primaryColor,
-              onPrimary: Colors.white,
-              onSurface: Theme.of(context).textTheme.bodyLarge!.color!,
+            colorScheme: isDark
+                ? ColorScheme.dark(
+                    primary: const Color(0xFF10B981), // أخضر احترافي
+                    onPrimary: Colors.white,
+                    surface: const Color(0xFF1E293B), // خلفية داكنة احترافية
+                    onSurface: Colors.white, // نص أبيض على الخلفية الداكنة
+                    onSurfaceVariant: Colors.white70, // نص ثانوي
+                    outline: const Color(0xFF10B981).withOpacity(0.3),
+                    surfaceContainerHighest: const Color(0xFF334155),
+                  )
+                : ColorScheme.light(
+                    primary: const Color(0xFF10B981), // أخضر احترافي
+                    onPrimary: Colors.white,
+                    surface: Colors.white, // خلفية بيضاء
+                    onSurface: Colors.black, // نص أسود على الخلفية البيضاء
+                    onSurfaceVariant: Colors.black87, // نص ثانوي
+                    outline: const Color(0xFF10B981).withOpacity(0.3),
+                    surfaceContainerHighest: const Color(0xFFF8FAFC),
+                  ),
+            textTheme: Theme.of(context).textTheme.copyWith(
+              headlineLarge: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+              ),
+              headlineMedium: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Cairo',
+              ),
+              bodyLarge: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontFamily: 'Cairo',
+              ),
+              bodyMedium: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black87,
+                fontFamily: 'Cairo',
+              ),
+              labelLarge: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Cairo',
+              ),
+            ),
+            appBarTheme: AppBarTheme(
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              foregroundColor: isDark ? Colors.white : Colors.black,
+              titleTextStyle: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+            ),
+            dialogTheme: DialogTheme(
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              titleTextStyle: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Cairo',
+              ),
+              contentTextStyle: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black87,
+                fontFamily: 'Cairo',
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
           ),
           child: child!,
@@ -259,58 +327,124 @@ class _WasteScreenState extends State<WasteScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Date range filters
+                  // Date range filters - تحسين التصميم
                   Row(
                     children: [
                       Expanded(
-                        child: InkWell(
-                          onTap: () => _selectDate(context, true),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 16),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _startDate != null
-                                      ? dateFormat.format(_startDate!)
-                                      : 'تاريخ البداية',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _selectDate(context, true),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF10B981).withOpacity(0.1),
+                                    const Color(0xFF10B981).withOpacity(0.05),
+                                  ],
                                 ),
-                              ],
+                                border: Border.all(
+                                  color: const Color(0xFF10B981).withOpacity(0.3),
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF10B981).withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 20,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _startDate != null
+                                          ? dateFormat.format(_startDate!)
+                                          : 'تاريخ البداية',
+                                      style: TextStyle(
+                                        color: _startDate != null
+                                            ? Colors.black
+                                            : Colors.grey.shade600,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: InkWell(
-                          onTap: () => _selectDate(context, false),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.calendar_today, size: 16),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _endDate != null
-                                      ? dateFormat.format(_endDate!)
-                                      : 'تاريخ النهاية',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _selectDate(context, false),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF10B981).withOpacity(0.1),
+                                    const Color(0xFF10B981).withOpacity(0.05),
+                                  ],
                                 ),
-                              ],
+                                border: Border.all(
+                                  color: const Color(0xFF10B981).withOpacity(0.3),
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF10B981).withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today_rounded,
+                                    size: 20,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _endDate != null
+                                          ? dateFormat.format(_endDate!)
+                                          : 'تاريخ النهاية',
+                                      style: TextStyle(
+                                        color: _endDate != null
+                                            ? Colors.black
+                                            : Colors.grey.shade600,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Cairo',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

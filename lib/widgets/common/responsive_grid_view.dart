@@ -3,18 +3,6 @@ import '../../utils/responsive_builder.dart';
 
 /// A responsive grid view that adjusts the number of columns based on screen size
 class ResponsiveGridView extends StatelessWidget {
-  final List<Widget> children;
-  final double spacing;
-  final double runSpacing;
-  final EdgeInsetsGeometry? padding;
-  final int? mobileColumns;
-  final int? tabletColumns;
-  final int? desktopColumns;
-  final ScrollPhysics? physics;
-  final bool shrinkWrap;
-  final ScrollController? controller;
-  final Widget? emptyWidget;
-  final bool showEmptyWidget;
   
   const ResponsiveGridView({
     super.key,
@@ -31,6 +19,18 @@ class ResponsiveGridView extends StatelessWidget {
     this.emptyWidget,
     this.showEmptyWidget = true,
   });
+  final List<Widget> children;
+  final double spacing;
+  final double runSpacing;
+  final EdgeInsetsGeometry? padding;
+  final int? mobileColumns;
+  final int? tabletColumns;
+  final int? desktopColumns;
+  final ScrollPhysics? physics;
+  final bool shrinkWrap;
+  final ScrollController? controller;
+  final Widget? emptyWidget;
+  final bool showEmptyWidget;
   
   @override
   Widget build(BuildContext context) {
@@ -93,16 +93,6 @@ class ResponsiveGridView extends StatelessWidget {
 
 /// A responsive grid view that wraps its children
 class ResponsiveWrapGrid extends StatelessWidget {
-  final List<Widget> children;
-  final double spacing;
-  final double runSpacing;
-  final EdgeInsetsGeometry? padding;
-  final WrapAlignment alignment;
-  final WrapAlignment runAlignment;
-  final WrapCrossAlignment crossAxisAlignment;
-  final Clip clipBehavior;
-  final Widget? emptyWidget;
-  final bool showEmptyWidget;
   
   const ResponsiveWrapGrid({
     super.key,
@@ -117,6 +107,16 @@ class ResponsiveWrapGrid extends StatelessWidget {
     this.emptyWidget,
     this.showEmptyWidget = true,
   });
+  final List<Widget> children;
+  final double spacing;
+  final double runSpacing;
+  final EdgeInsetsGeometry? padding;
+  final WrapAlignment alignment;
+  final WrapAlignment runAlignment;
+  final WrapCrossAlignment crossAxisAlignment;
+  final Clip clipBehavior;
+  final Widget? emptyWidget;
+  final bool showEmptyWidget;
   
   @override
   Widget build(BuildContext context) {
@@ -141,11 +141,6 @@ class ResponsiveWrapGrid extends StatelessWidget {
 
 /// A responsive grid item that adjusts its width based on screen size
 class ResponsiveGridItem extends StatelessWidget {
-  final Widget child;
-  final double? mobileWidth;
-  final double? tabletWidth;
-  final double? desktopWidth;
-  final double? height;
   
   const ResponsiveGridItem({
     super.key,
@@ -155,6 +150,11 @@ class ResponsiveGridItem extends StatelessWidget {
     this.desktopWidth = 250,
     this.height,
   });
+  final Widget child;
+  final double? mobileWidth;
+  final double? tabletWidth;
+  final double? desktopWidth;
+  final double? height;
   
   @override
   Widget build(BuildContext context) {

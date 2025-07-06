@@ -7,16 +7,11 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import '../utils/logger.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:path/path.dart' as path;
-import 'app_logger.dart';
+import 'package:path/path.dart' as p;
+
 
 /// Manages caching of images from URLs
-class ImageCacheManager extends BaseCacheManager {
-  static const key = 'customImageCache';
-  static const maxAgeCacheObject = Duration(days: 30);
-  static const maxNrOfCacheObjects = 100;
-
-  static ImageCacheManager? _instance;
+class ImageCacheManager extends CacheManager {
 
   factory ImageCacheManager() {
     _instance ??= ImageCacheManager._();
@@ -24,46 +19,54 @@ class ImageCacheManager extends BaseCacheManager {
   }
 
   ImageCacheManager._() : super(
-    key,
-    maxAgeCacheObject: maxAgeCacheObject,
-    maxNrOfCacheObjects: maxNrOfCacheObjects,
-    fileService: HttpFileService(),
+    Config(
+      key,
+      stalePeriod: const Duration(days: 7),
+      maxNrOfCacheObjects: 100,
+      repo: JsonCacheInfoRepository(databaseName: key),
+      fileService: HttpFileService(),
+    ),
   );
-  
+  static const key = 'customImageCache';
+  static const maxAgeCacheObject = Duration(days: 30);
+  static const maxNrOfCacheObjects = 100;
+
+  static ImageCacheManager? _instance;
+
   /// Returns a cached file for the given URL, or null if not cached
   Future<File?> getCachedImageFile(String url) async {
-    if (url.isEmpty) {
+    if (url.isEmpty || url == 'null' || Uri.tryParse(url) == null) {
       return null;
     }
-    
+
     url = _fixImageUrl(url);
-    
+
     try {
-      final cacheDir = await _getCacheDirectory();
+      final cacheDir = await getTemporaryDirectory();
       final fileName = _generateCacheFileName(url);
       final file = File('${cacheDir.path}/$fileName');
-      
+
       if (await file.exists()) {
         return file;
       }
-      
+
       return null;
     } catch (e) {
       AppLogger.error('Error getting cached file: $e');
       return null;
     }
   }
-  
+
   /// Downloads and caches an image, returns the image data
   Future<Uint8List?> getImageData(String url) async {
-    if (url.isEmpty) {
+    if (url.isEmpty || url == 'null' || Uri.tryParse(url) == null) {
       return null;
     }
-    
+
     final originalUrl = url;
     url = _fixImageUrl(url);
     AppLogger.info('تحميل صورة المنتج: $url');
-    
+
     try {
       // Try to get from cache first
       final cachedFile = await getCachedImageFile(url);
@@ -76,7 +79,7 @@ class ImageCacheManager extends BaseCacheManager {
           AppLogger.warning('Deleted corrupt cache file for: $url');
         }
       }
-      
+
       // Not in cache, download and cache
       final client = http.Client();
       try {
@@ -94,14 +97,14 @@ class ImageCacheManager extends BaseCacheManager {
             return http.Response('', 408); // 408 Request Timeout
           },
         );
-        
+
         if (response.statusCode == 200) {
           final imageData = response.bodyBytes;
-          
+
           if (imageData.isNotEmpty) {
             // Cache the image asynchronously
             _cacheImageData(url, imageData);
-            
+
             return imageData;
           } else {
             AppLogger.warning('Empty response body for image: $url');
@@ -120,7 +123,7 @@ class ImageCacheManager extends BaseCacheManager {
         }
       } catch (e) {
         AppLogger.error('خطأ في تحميل الصورة: $url - $e');
-        
+
         // Try alternative URL format if this might be the issue
         if (e.toString().contains('Invalid') || e.toString().contains('URL') || e.toString().contains('URI')) {
           final altUrl = _generateAlternativeUrl(url);
@@ -132,92 +135,92 @@ class ImageCacheManager extends BaseCacheManager {
       } finally {
         client.close();
       }
-      
+
       return null;
     } catch (e) {
       AppLogger.error('Error downloading image: $e');
       return null;
     }
   }
-  
+
   /// Generates alternative URL formats to try if the main URL fails
   String? _generateAlternativeUrl(String url) {
     // Don't attempt to retry an already retried URL
     if (url.contains('_retry')) {
       return null;
     }
-    
+
     try {
       final uri = Uri.parse(url);
       // Try adding https if protocol is missing
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         return 'https://$url';
       }
-      
+
       // Try converting http to https
       if (url.startsWith('http://')) {
         return url.replaceFirst('http://', 'https://');
       }
-      
+
       return null;
     } catch (e) {
       return null;
     }
   }
-  
+
   /// Caches image data for a URL
   Future<void> _cacheImageData(String url, Uint8List imageData) async {
     try {
-      final cacheDir = await _getCacheDirectory();
+      final cacheDir = await getTemporaryDirectory();
       final fileName = _generateCacheFileName(url);
       final file = File('${cacheDir.path}/$fileName');
-      
+
       await file.writeAsBytes(imageData);
     } catch (e) {
       AppLogger.error('Error caching image data: $e');
     }
   }
-  
+
   /// Gets the cache directory
   Future<Directory> _getCacheDirectory() async {
     final tempDir = await getTemporaryDirectory();
     final cacheDir = Directory('${tempDir.path}/image_cache');
-    
+
     if (!(await cacheDir.exists())) {
       await cacheDir.create(recursive: true);
     }
-    
+
     return cacheDir;
   }
-  
+
   /// Generates a file name for the cache based on the URL
   String _generateCacheFileName(String url) {
     final bytes = utf8.encode(url);
     final digest = sha256.convert(bytes);
     return digest.toString();
   }
-  
+
   /// Fix common URL issues such as extra digits in date part
   String _fixImageUrl(String url) {
     // Fix issue with incorrect URL format with extra 0 after year
     if (url.contains('202500')) {
       url = url.replaceAll('202500', '2025');
     }
-    
+
     // Fix other common year format issues
     if (url.contains('202300')) {
       url = url.replaceAll('202300', '2023');
     }
-    
+
     if (url.contains('202400')) {
       url = url.replaceAll('202400', '2024');
     }
-    
+
     // Ensure URL uses https instead of http when available
     if (url.startsWith('http://') && !url.contains('localhost') && !url.contains('127.0.0.1')) {
       url = url.replaceFirst('http://', 'https://');
     }
-    
+
     // Ensure URL is properly encoded
     try {
       final uri = Uri.parse(url);
@@ -237,10 +240,10 @@ class ImageCacheManager extends BaseCacheManager {
     } catch (e) {
       AppLogger.warning('Error parsing URL for encoding: $e');
     }
-    
+
     return url;
   }
-  
+
   /// Clears the entire image cache
   Future<void> clearCache() async {
     try {
@@ -253,21 +256,21 @@ class ImageCacheManager extends BaseCacheManager {
       AppLogger.error('Error clearing cache: $e');
     }
   }
-  
+
   /// Limits cache size to prevent excessive storage usage
   Future<void> trimCache(int maxSizeInMB) async {
     try {
       final cacheDir = await _getCacheDirectory();
       if (await cacheDir.exists()) {
         final files = await cacheDir.list().toList();
-        
+
         // Sort files by last access time
         files.sort((a, b) {
           final aLastAccess = (a as File).lastAccessedSync();
           final bLastAccess = (b as File).lastAccessedSync();
           return aLastAccess.compareTo(bLastAccess);
         });
-        
+
         // Calculate current size
         int totalSize = 0;
         for (var file in files) {
@@ -275,10 +278,10 @@ class ImageCacheManager extends BaseCacheManager {
             totalSize += await file.length();
           }
         }
-        
+
         // Convert maxSize to bytes
         final maxSizeInBytes = maxSizeInMB * 1024 * 1024;
-        
+
         // Remove oldest files until within size limit
         int i = 0;
         while (totalSize > maxSizeInBytes && i < files.length) {
@@ -295,4 +298,9 @@ class ImageCacheManager extends BaseCacheManager {
       AppLogger.error('Error trimming cache: $e');
     }
   }
-} 
+
+  Future<String> getFilePath() async {
+    final directory = await getTemporaryDirectory();
+    return p.join(directory.path, key);
+  }
+}

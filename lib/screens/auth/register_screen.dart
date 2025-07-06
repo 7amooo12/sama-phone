@@ -1,22 +1,11 @@
-import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:smartbiztracker_new/config/constants.dart';
-import 'package:smartbiztracker_new/config/routes.dart';
-import 'package:smartbiztracker_new/models/user_model.dart';
-import 'package:smartbiztracker_new/providers/auth_provider.dart';
-import 'package:smartbiztracker_new/utils/color_extension.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:flutter/foundation.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:sensors_plus/sensors_plus.dart';
-import 'package:smartbiztracker_new/utils/style_system.dart';
-import 'package:smartbiztracker_new/models/models.dart';
 import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:smartbiztracker_new/utils/app_logger.dart';
 import 'package:smartbiztracker_new/widgets/common/loading_overlay.dart';
+import 'package:smartbiztracker_new/widgets/effects/animated_background.dart';
+import 'package:smartbiztracker_new/widgets/effects/animated_login_card.dart';
+import 'package:smartbiztracker_new/widgets/forms/animated_input_field.dart';
+import 'package:provider/provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -25,7 +14,8 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -33,225 +23,81 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  UserRole _selectedRole = UserRole.client;
-
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   String? _errorMessage;
-  
-  // Robot animation and interaction variables
-  late AnimationController _animationController;
-  late WebViewController _webViewController;
-  bool _isWebViewLoaded = false;
-  bool _isRobotLoading = true;
-  StreamSubscription<GyroscopeEvent>? _gyroscopeSubscription;
-  final List<double> _gyroscopeValues = [0, 0, 0];
-  String _robotStatus = 'waiting';
-  
-  // Form Focus trackers for robot interaction
+
+  // Form Focus nodes
   final _nameFocusNode = FocusNode();
   final _emailFocusNode = FocusNode();
   final _phoneFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   final _confirmPasswordFocusNode = FocusNode();
 
+  // Animation controllers matching login screen
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  late AnimationController _logoController;
+  late Animation<double> _logoAnimation;
+
   @override
   void initState() {
     super.initState();
-    _initAnimations();
-    _initWebView();
-    _setupFocusListeners();
-    _setupGyroscope();
-  }
-  
-  void _initAnimations() {
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _animationController.forward();
-  }
-  
-  void _initWebView() {
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
-      ..loadRequest(Uri.parse('https://my.spline.design/genkubgreetingrobot-fPBEa36NwDk1RjClPxjur0T4/'))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) {
-            setState(() {
-              _isRobotLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            setState(() {
-              _isRobotLoading = false;
-              _isWebViewLoaded = true;
-            });
-            _triggerRobotAnimation('wave');
-          },
-        ),
-      );
-  }
-  
-  void _setupFocusListeners() {
-    _nameFocusNode.addListener(() {
-      if (_nameFocusNode.hasFocus) {
-        _updateRobotStatus('name');
-      }
-    });
-    
-    _emailFocusNode.addListener(() {
-      if (_emailFocusNode.hasFocus) {
-        _updateRobotStatus('email');
-      }
-    });
-    
-    _phoneFocusNode.addListener(() {
-      if (_phoneFocusNode.hasFocus) {
-        _updateRobotStatus('phone');
-      }
-    });
-    
-    _passwordFocusNode.addListener(() {
-      if (_passwordFocusNode.hasFocus) {
-        _updateRobotStatus('password');
-      }
-    });
-    
-    _confirmPasswordFocusNode.addListener(() {
-      if (_confirmPasswordFocusNode.hasFocus) {
-        _updateRobotStatus('confirm');
-      }
-    });
-  }
-  
-  void _setupGyroscope() {
-    _gyroscopeSubscription = gyroscopeEvents.listen((GyroscopeEvent event) {
-      if (mounted) {
-        setState(() {
-          _gyroscopeValues[0] = event.x;
-          _gyroscopeValues[1] = event.y;
-          _gyroscopeValues[2] = event.z;
-        });
-        _updateRobotEyeTracking();
-      }
-    });
-  }
-  
-  void _updateRobotStatus(String status) {
-    setState(() {
-      _robotStatus = status;
-    });
-    
-    // Add animation trigger based on the field focused
-    switch (status) {
-      case 'name':
-        _triggerRobotAnimation('look_curious');
-        break;
-      case 'email':
-        _triggerRobotAnimation('nod');
-        break;
-      case 'phone':
-        _triggerRobotAnimation('look_down');
-        break;
-      case 'password':
-        _triggerRobotAnimation('look_around');
-        break;
-      case 'confirm':
-        _triggerRobotAnimation('thumbs_up');
-        break;
-      case 'success':
-        _triggerRobotAnimation('celebrate');
-        break;
-      case 'error':
-        _triggerRobotAnimation('shake_head');
-        break;
-      default:
-        _triggerRobotAnimation('idle');
-    }
-  }
-  
-  void _triggerRobotAnimation(String animation) {
-    if (_isWebViewLoaded) {
-      try {
-        _webViewController.runJavaScript('''
-          try {
-            // This is a simplified example - the actual Spline API might differ
-            if (window.spline && window.spline.triggerAnimation) {
-              window.spline.triggerAnimation('$animation');
-            } else if (window.splineApp) {
-              // Alternative API that might be used
-              window.splineApp.triggerAnimation('$animation');
-            } else {
-              // Generic interaction with the scene
-              const scene = document.querySelector('spline-viewer');
-              if (scene) {
-                scene.dispatchEvent(new CustomEvent('animation', { detail: { name: '$animation' } }));
-              }
-            }
-          } catch(e) { console.log('Robot animation error: ' + e); }
-        ''');
-      } catch (e) {
-        debugPrint('Error triggering robot animation: $e');
-      }
-    }
-  }
-  
-  void _updateRobotEyeTracking() {
-    if (_isWebViewLoaded) {
-      try {
-        // Calculate eye position based on device tilt
-        final double tiltX = _clamp(_gyroscopeValues[1] * 20, -50, 50);
-        final double tiltY = _clamp(_gyroscopeValues[0] * 20, -50, 50);
-        
-        _webViewController.runJavaScript('''
-          try {
-            // Access Spline's eye tracking if available
-            if (window.spline && window.spline.setEyePosition) {
-              window.spline.setEyePosition($tiltX, $tiltY);
-            } else if (window.splineApp && window.splineApp.setLookAt) {
-              window.splineApp.setLookAt($tiltX, $tiltY, 0);
-            }
-          } catch(e) { console.log('Eye tracking error: ' + e); }
-        ''');
-      } catch (e) {
-        // Silently handle errors
-        debugPrint('Error updating robot eye tracking: $e');
-      }
-    }
-  }
-  
-  double _clamp(double value, double min, double max) {
-    return value < min ? min : (value > max ? max : value);
+    _initializeAnimation();
   }
 
-  String? _validatePasswords() {
-    if (_passwordController.text != _confirmPasswordController.text) {
-      return AppConstants.validationPasswordsDontMatch;
-    }
-    return null;
+  void _initializeAnimation() {
+    // Single lightweight fade animation
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
+
+    // Logo animation controller
+    _logoController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _logoAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.easeOut,
+    ));
+
+    // Start animations
+    _fadeController.forward();
+    _logoController.forward();
   }
 
   @override
   void dispose() {
+    _fadeController.dispose();
+    _logoController.dispose();
+
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    
+
     _nameFocusNode.dispose();
     _emailFocusNode.dispose();
     _phoneFocusNode.dispose();
     _passwordFocusNode.dispose();
     _confirmPasswordFocusNode.dispose();
-    
-    _animationController.dispose();
-    _gyroscopeSubscription?.cancel();
-    
+
     super.dispose();
   }
 
@@ -297,228 +143,324 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final supabaseProvider = Provider.of<SupabaseProvider>(context);
+    final screenSize = MediaQuery.of(context).size;
+
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: StyleSystem.darkModeGradient,
-            ),
-          ),
+        body: AnimatedBackground(
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(10),
-                        child: Image.asset(
-                          'assets/icons/app_logo.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-
-                      // Name Field
-                      TextFormField(
-                        controller: _nameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: StyleSystem.inputDecoration.copyWith(
-                          labelText: 'الاسم',
-                          prefixIcon: const Icon(Icons.person, color: Colors.white70),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'يرجى إدخال الاسم';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Email Field
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: StyleSystem.inputDecoration.copyWith(
-                          labelText: 'البريد الإلكتروني',
-                          prefixIcon: const Icon(Icons.email, color: Colors.white70),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'يرجى إدخال البريد الإلكتروني';
-                          }
-                          if (!value.contains('@')) {
-                            return 'يرجى إدخال بريد إلكتروني صحيح';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Phone Field
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: StyleSystem.inputDecoration.copyWith(
-                          labelText: 'رقم الهاتف',
-                          prefixIcon: const Icon(Icons.phone, color: Colors.white70),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'يرجى إدخال رقم الهاتف';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Password Field
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: StyleSystem.inputDecoration.copyWith(
-                          labelText: 'كلمة المرور',
-                          prefixIcon: const Icon(Icons.lock, color: Colors.white70),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.white70,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'يرجى إدخال كلمة المرور';
-                          }
-                          if (value.length < 8) {
-                            return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Confirm Password Field
-                      TextFormField(
-                        controller: _confirmPasswordController,
-                        obscureText: _obscureConfirmPassword,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: StyleSystem.inputDecoration.copyWith(
-                          labelText: 'تأكيد كلمة المرور',
-                          prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                              color: Colors.white70,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureConfirmPassword = !_obscureConfirmPassword;
-                              });
-                            },
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'يرجى تأكيد كلمة المرور';
-                          }
-                          if (value != _passwordController.text) {
-                            return 'كلمة المرور غير متطابقة';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 30),
-
-                      // Error Message
-                      if (_errorMessage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 14,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-
-                      // Register Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _register,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: StyleSystem.primaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            'إنشاء حساب',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Login Link
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: const Text(
-                          'لديك حساب بالفعل؟ سجل دخول',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: AnimatedLoginCard(
+                  maxWidth: screenSize.width > 600 ? 400 : screenSize.width - 32,
+                  maxHeight: screenSize.height * 0.9,
+                  child: _buildRegisterContent(supabaseProvider),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRegisterContent(SupabaseProvider supabaseProvider) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0), // Reduced padding to save space
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start, // Changed from center to start
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 20), // Add top spacing
+            // Logo container with gradient border and inner lighting
+            _buildAnimatedLogo(),
+
+            const SizedBox(height: 24), // Reduced spacing
+
+            // Title with gradient text
+            _buildGradientTitle(),
+
+            const SizedBox(height: 6), // Reduced spacing
+
+            // Subtitle
+            _buildSubtitle(),
+
+            const SizedBox(height: 24), // Reduced spacing
+
+            // Name input field
+            AnimatedInputField(
+              controller: _nameController,
+              focusNode: _nameFocusNode,
+              labelText: 'الاسم الكامل',
+              hintText: 'أدخل اسمك الكامل',
+              prefixIcon: Icons.person,
+              keyboardType: TextInputType.name,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'الاسم مطلوب';
+                }
+                return null;
+              },
+            ),
+
+            // Email input field
+            AnimatedInputField(
+              controller: _emailController,
+              focusNode: _emailFocusNode,
+              labelText: 'البريد الإلكتروني',
+              hintText: 'example@sama.com',
+              prefixIcon: Icons.email,
+              keyboardType: TextInputType.emailAddress,
+              helperText: 'يجب أن ينتهي البريد الإلكتروني بـ @sama.com',
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'البريد الإلكتروني مطلوب';
+                }
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  return 'البريد الإلكتروني غير صحيح';
+                }
+                if (!value.toLowerCase().endsWith('@sama.com')) {
+                  return 'يجب أن ينتهي البريد الإلكتروني بـ @sama.com';
+                }
+                return null;
+              },
+            ),
+
+            // Phone input field
+            AnimatedInputField(
+              controller: _phoneController,
+              focusNode: _phoneFocusNode,
+              labelText: 'رقم الهاتف',
+              hintText: 'أدخل رقم هاتفك',
+              prefixIcon: Icons.phone,
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'رقم الهاتف مطلوب';
+                }
+                return null;
+              },
+            ),
+
+            // Password input field
+            AnimatedInputField(
+              controller: _passwordController,
+              focusNode: _passwordFocusNode,
+              labelText: 'كلمة المرور',
+              hintText: 'أدخل كلمة المرور',
+              prefixIcon: Icons.lock,
+              obscureText: _obscurePassword,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: Colors.white.withOpacity(0.6),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'كلمة المرور مطلوبة';
+                }
+                if (value.length < 6) {
+                  return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                }
+                return null;
+              },
+            ),
+
+            // Confirm Password input field
+            AnimatedInputField(
+              controller: _confirmPasswordController,
+              focusNode: _confirmPasswordFocusNode,
+              labelText: 'تأكيد كلمة المرور',
+              hintText: 'أعد إدخال كلمة المرور',
+              prefixIcon: Icons.lock_outline,
+              obscureText: _obscureConfirmPassword,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: Colors.white.withOpacity(0.6),
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                  });
+                },
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'تأكيد كلمة المرور مطلوب';
+                }
+                if (value != _passwordController.text) {
+                  return 'كلمة المرور غير متطابقة';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 16), // Reduced spacing
+
+            // Error message display
+            if (_errorMessage != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16), // Reduced spacing
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.red.withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 14,
+                    fontFamily: 'Cairo',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+
+            // Submit button
+            AnimatedSubmitButton(
+              text: 'إنشاء حساب',
+              isLoading: _isLoading,
+              onPressed: _register,
+            ),
+
+            const SizedBox(height: 20), // Reduced spacing
+
+            // Login link
+            _buildLoginLink(),
+
+            const SizedBox(height: 20), // Bottom padding for scroll
+          ],
+        ),
+      ),
+    ),
+    );
+  }
+
+  Widget _buildAnimatedLogo() {
+    return AnimatedBuilder(
+      animation: _logoController,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _logoAnimation.value,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  Colors.purple.shade400,
+                  Colors.purple.shade600,
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.purple.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.person_add,
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGradientTitle() {
+    return ShaderMask(
+      shaderCallback: (bounds) {
+        return LinearGradient(
+          colors: [
+            Colors.white,
+            Colors.purple.shade200,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(bounds);
+      },
+      child: const Text(
+        'إنشاء حساب جديد',
+        style: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Cairo',
+          color: Colors.white,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildSubtitle() {
+    return Text(
+      'انضم إلى متجر سما وابدأ رحلتك معنا',
+      style: TextStyle(
+        fontSize: 16,
+        color: Colors.white.withOpacity(0.6),
+        fontFamily: 'Cairo',
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+  Widget _buildLoginLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'لديك حساب بالفعل؟ ',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.6),
+            fontSize: 14,
+            fontFamily: 'Cairo',
+          ),
+        ),
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).pop();
+          },
+          child: Text(
+            'تسجيل الدخول',
+            style: TextStyle(
+              color: Colors.purple.shade300,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Cairo',
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

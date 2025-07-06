@@ -4,7 +4,7 @@ import 'package:smartbiztracker_new/models/flask_models.dart';
 import 'package:smartbiztracker_new/providers/flask_providers.dart';
 
 class FlaskProductsScreen extends StatefulWidget {
-  const FlaskProductsScreen({Key? key}) : super(key: key);
+  const FlaskProductsScreen({super.key});
 
   @override
   _FlaskProductsScreenState createState() => _FlaskProductsScreenState();
@@ -437,9 +437,9 @@ class _FlaskProductsScreenState extends State<FlaskProductsScreen> {
                         horizontal: 8,
                         vertical: 4,
                       ),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.red,
-                        borderRadius: const BorderRadius.only(
+                        borderRadius: BorderRadius.only(
                           bottomLeft: Radius.circular(8),
                         ),
                       ),

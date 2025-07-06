@@ -3,14 +3,14 @@ import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/utils/color_extension.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
-  final ProductModel product;
-  final bool isAdmin;
 
   const ProductDetailsScreen({
-    Key? key,
+    super.key,
     required this.product,
     this.isAdmin = false,
-  }) : super(key: key);
+  });
+  final ProductModel product;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {

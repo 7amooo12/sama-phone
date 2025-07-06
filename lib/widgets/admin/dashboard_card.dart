@@ -70,8 +70,12 @@ class _DashboardCardState extends State<DashboardCard>
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: widget.color.safeOpacity(0.2),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
                 color: widget.color.safeOpacity(0.15),

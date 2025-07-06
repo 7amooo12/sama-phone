@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smartbiztracker_new/config/routes.dart';
-import 'package:smartbiztracker_new/models/user_model.dart';
-import 'package:smartbiztracker_new/providers/auth_provider.dart';
+import 'package:smartbiztracker_new/providers/supabase_provider.dart';
 import 'package:smartbiztracker_new/widgets/common/custom_app_bar.dart';
 import 'package:smartbiztracker_new/widgets/common/main_drawer.dart';
 import 'package:provider/provider.dart';
@@ -45,8 +44,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userModel = authProvider.user;
+    final supabaseProvider = Provider.of<SupabaseProvider>(context);
+    final userModel = supabaseProvider.user;
 
     if (userModel == null) {
       // Handle case where user is not logged in
@@ -317,10 +316,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
       case UserRole.owner:
       case UserRole.client:
       case UserRole.worker:
+      case UserRole.employee:
       case UserRole.accountant:
       case UserRole.manager:
+      case UserRole.warehouseManager:
         return true;
       case UserRole.user:
+      case UserRole.guest:
       case UserRole.pending:
         return false;
     }
@@ -340,11 +342,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
         return Colors.green;
       case UserRole.worker:
         return Colors.orange;
+      case UserRole.employee:
+        return Colors.indigo;
       case UserRole.accountant:
         return Colors.purple;
       case UserRole.manager:
         return Colors.teal;
+      case UserRole.warehouseManager:
+        return Colors.brown;
       case UserRole.user:
+      case UserRole.guest:
       case UserRole.pending:
         return Colors.grey;
     }
@@ -358,13 +365,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
         return Icons.person;
       case UserRole.worker:
         return Icons.engineering;
+      case UserRole.employee:
+        return Icons.work;
       case UserRole.owner:
         return Icons.business;
       case UserRole.accountant:
         return Icons.calculate;
       case UserRole.manager:
         return Icons.manage_accounts;
+      case UserRole.warehouseManager:
+        return Icons.warehouse;
       case UserRole.user:
+      case UserRole.guest:
       case UserRole.pending:
         return Icons.person_outline;
     }

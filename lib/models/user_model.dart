@@ -1,21 +1,6 @@
-// import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:smartbiztracker_new/utils/app_logger.dart';
-import 'package:smartbiztracker_new/services/supabase_service.dart';
 import 'package:smartbiztracker_new/models/user_role.dart';
-import 'package:flutter/foundation.dart';
 
 class UserModel {
-  final String id;
-  final String name;
-  final String email;
-  final UserRole role;
-  final String phone;
-  final String status;
-  final String? profileImage;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-  final bool isApproved;
-  final String? phoneNumber;
 
   UserModel({
     required this.id,
@@ -29,9 +14,8 @@ class UserModel {
     this.updatedAt,
     this.isApproved = false,
     this.phoneNumber,
-  });
-
-  String get userRole => role.value;
+    this.trackingLink,
+  }); // Alias for compatibility
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -39,14 +23,57 @@ class UserModel {
       name: json['name'] as String,
       email: json['email'] as String,
       role: UserRole.fromString(json['role'] as String),
-      phone: json['phone'] as String,
+      phone: json['phone_number'] as String? ?? json['phone'] as String? ?? '',
       status: json['status'] as String,
-      profileImage: json['profile_image'] as String?,
+      profileImage: _sanitizeProfileImageUrl(json['profile_image'] as String?),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-      isApproved: json['is_approved'] as bool? ?? false,
-      phoneNumber: json['phone_number'] as String?,
+      isApproved: json['status'] == 'approved' || json['status'] == 'active' || UserRole.fromString(json['role'] as String) == UserRole.admin,
+      phoneNumber: json['phone_number'] as String? ?? json['phone'] as String?,
+      trackingLink: json['tracking_link'] as String?,
     );
+  }
+  final String id;
+  final String name;
+  final String email;
+  final UserRole role;
+  final String phone;
+  final String status;
+  final String? profileImage;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final bool isApproved;
+  final String? phoneNumber;
+  final String? trackingLink;
+
+  String get userRole => role.value;
+  String get uid => id;
+
+  /// Sanitize profile image URL to prevent URI parsing errors
+  static String? _sanitizeProfileImageUrl(String? url) {
+    if (url == null || url.isEmpty || url == 'null' || url.trim() == 'null%20') {
+      return null;
+    }
+
+    final trimmedUrl = url.trim();
+
+    // Check for invalid file:// URLs
+    if (trimmedUrl.startsWith('file://')) {
+      return null;
+    }
+
+    // Check for valid HTTP/HTTPS URLs
+    if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+      try {
+        Uri.parse(trimmedUrl);
+        return trimmedUrl;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Return null for any other invalid formats
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -55,13 +82,13 @@ class UserModel {
       'name': name,
       'email': email,
       'role': role.value,
-      'phone': phone,
+      'phone_number': phone, // Fixed: Use phone_number instead of phone to match database schema
       'status': status,
       'profile_image': profileImage,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
-      'is_approved': isApproved,
-      'phone_number': phoneNumber,
+      'tracking_link': trackingLink,
+      // Note: Removed 'is_approved' field as database uses 'status' field instead
     };
   }
 
@@ -81,19 +108,27 @@ class UserModel {
     DateTime? updatedAt,
     bool? isApproved,
     String? phoneNumber,
+    String? trackingLink,
   }) {
+    // CRITICAL FIX: Sync phone and phoneNumber fields
+    // If phoneNumber is provided, use it for both phone and phoneNumber
+    // If phone is provided, use it for both phone and phoneNumber
+    // This ensures consistency between the two fields
+    final String? updatedPhoneValue = phoneNumber ?? phone ?? this.phone;
+
     return UserModel(
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
-      phone: phone ?? this.phone,
+      phone: updatedPhoneValue ?? '', // Use the synchronized phone value
       status: status ?? this.status,
       profileImage: profileImage ?? this.profileImage,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isApproved: isApproved ?? this.isApproved,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
+      phoneNumber: updatedPhoneValue, // Use the same synchronized value
+      trackingLink: trackingLink ?? this.trackingLink,
     );
   }
 
@@ -103,6 +138,7 @@ class UserModel {
   bool isAccountant() => role == UserRole.accountant;
   bool isClient() => role == UserRole.client;
   bool isManager() => role == UserRole.manager;
+  bool isWarehouseManager() => role == UserRole.warehouseManager;
 
   @override
   bool operator ==(Object other) =>
