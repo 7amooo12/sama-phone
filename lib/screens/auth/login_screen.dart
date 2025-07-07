@@ -11,6 +11,7 @@ import 'package:smartbiztracker_new/utils/app_logger.dart';
 import 'package:smartbiztracker_new/widgets/common/loading_overlay.dart';
 import 'package:smartbiztracker_new/services/email_confirmation_service.dart';
 import 'package:smartbiztracker_new/services/supabase_service.dart';
+import 'package:smartbiztracker_new/services/secure_credential_service.dart';
 import 'package:smartbiztracker_new/screens/auth/waiting_approval_screen.dart';
 import 'package:smartbiztracker_new/widgets/effects/animated_background.dart';
 import 'package:smartbiztracker_new/widgets/effects/animated_login_card.dart';
@@ -93,37 +94,29 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _checkBiometricAvailability() async {
     try {
-      final canCheckBiometrics = await _localAuth.canCheckBiometrics;
-      final isDeviceSupported = await _localAuth.isDeviceSupported();
+      final isAvailable = await SecureCredentialService.isBiometricAvailable();
+      final isEnabled = await SecureCredentialService.isBiometricEnabled();
+      final storedEmail = await SecureCredentialService.getStoredEmail();
 
       if (mounted) {
         setState(() {
-          _isBiometricAvailable = canCheckBiometrics && isDeviceSupported;
-        });
-
-        if (_isBiometricAvailable) {
-          final availableBiometrics = await _localAuth.getAvailableBiometrics();
-
-          // Check if fingerprint or face authentication is available (iOS uses face or fingerprint)
-          final hasBiometrics = availableBiometrics.contains(BiometricType.fingerprint) ||
-                               availableBiometrics.contains(BiometricType.face) ||
-                               availableBiometrics.contains(BiometricType.strong) ||
-                               availableBiometrics.contains(BiometricType.weak);
-
-          // Update the state if no biometrics are available
-          if (!hasBiometrics && mounted) {
-            setState(() {
-              _isBiometricAvailable = false;
-            });
+          _isBiometricAvailable = isAvailable && isEnabled;
+          if (storedEmail != null && storedEmail.isNotEmpty) {
+            _lastEmail = storedEmail;
+            _emailController.text = storedEmail;
+            _showQuickLogin = true;
           }
-        }
+        });
       }
+
+      AppLogger.info('🔍 Biometric check: available=$isAvailable, enabled=$isEnabled, storedEmail=$storedEmail');
     } catch (e) {
       if (mounted) {
         setState(() {
           _isBiometricAvailable = false;
         });
       }
+      AppLogger.error('❌ Error checking biometric availability: $e');
     }
   }
 
@@ -162,31 +155,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  Future<bool> _authenticateWithBiometrics() async {
-    try {
-      final authenticated = await _localAuth.authenticate(
-        localizedReason: 'قم بالمصادقة للدخول إلى حسابك',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-        ),
-      );
 
-      return authenticated;
-    } catch (e) {
-      // Show more specific error to user
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في المصادقة البيومترية: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return false;
-    }
-  }
 
   @override
   void dispose() {
@@ -330,62 +299,40 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleBiometricLogin() async {
-    if (_lastEmail == null || _lastEmail!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يجب تسجيل الدخول أولاً باستخدام كلمة المرور'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
+    setState(() => _isLoading = true);
 
-    final authenticated = await _authenticateWithBiometrics();
-    if (!authenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('فشلت المصادقة البيومترية'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    // Set the email from saved credentials
-    _emailController.text = _lastEmail!;
-
-    // Use the new biometric login method instead of regular login
-    final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
     try {
-      final success = await supabaseProvider.signInWithBiometric(_lastEmail!);
+      final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
+
+      AppLogger.info('🔐 Starting biometric login process...');
+
+      final success = await supabaseProvider.signInWithBiometric();
 
       if (success && mounted) {
-        // Get the user role after successful login
-        final userRole = supabaseProvider.user?.role;
+        final user = supabaseProvider.user;
+        AppLogger.info('✅ Biometric login successful for: ${user?.email}');
 
         // Navigate to appropriate dashboard based on user role
         String routeName;
-        switch (userRole) {
+        switch (user?.role) {
           case UserRole.admin:
             routeName = AppRoutes.adminDashboard;
             break;
           case UserRole.owner:
-            routeName = AppRoutes.ownerDashboard;
+            routeName = '/owner/dashboard';
             break;
           case UserRole.worker:
-            routeName = AppRoutes.workerDashboard;
+            routeName = '/worker/dashboard';
             break;
           case UserRole.accountant:
-            routeName = AppRoutes.accountantDashboard;
+            routeName = '/accountant/dashboard';
             break;
           case UserRole.warehouseManager:
             routeName = AppRoutes.warehouseManagerDashboard;
             break;
           case UserRole.client:
           default:
-            routeName = AppRoutes.clientDashboard;
+            routeName = '/client/dashboard';
             break;
         }
 
@@ -399,15 +346,19 @@ class _LoginScreenState extends State<LoginScreen>
         }
       } else if (mounted) {
         // Show error message
+        final errorMessage = supabaseProvider.error ?? 'فشل تسجيل الدخول باستخدام البصمة';
+        AppLogger.warning('⚠️ Biometric login failed: $errorMessage');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(supabaseProvider.error ?? 'فشل تسجيل الدخول باستخدام البصمة'),
+            content: Text(errorMessage),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (e) {
+      AppLogger.error('❌ Error during biometric login: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -416,6 +367,10 @@ class _LoginScreenState extends State<LoginScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }

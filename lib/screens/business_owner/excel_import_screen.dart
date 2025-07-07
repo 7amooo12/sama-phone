@@ -37,6 +37,12 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
   final TextEditingController _profitMarginController = TextEditingController();
   final TextEditingController _supplierNameController = TextEditingController();
 
+  // Safety constants to prevent Excel column/row limit errors
+  static const int MAX_COLUMNS_TO_SCAN = 100; // Maximum columns to scan for headers
+  static const int MAX_ROWS_TO_SCAN_FOR_HEADERS = 50; // Maximum rows to scan for headers
+  static const int MAX_ROWS_TO_PROCESS = 10000; // Maximum rows to process for data
+  static const int EXCEL_MAX_COLUMNS = 16384; // Excel's actual column limit (XFD)
+
   bool _isLoading = false;
   bool _isProcessing = false;
   File? _selectedFile;
@@ -396,8 +402,28 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
             'النظام سيبحث تلقائياً عن أسماء الأعمدة في جميع الصفوف',
           ),
           _buildInstructionItem(
-            'الأعمدة المدعومة:',
-            'Product Name, Item, Quantity, QTY, Price, Yuan, RMB, Image, Picture',
+            'النظام يدعم التعرف الذكي على الأعمدة:',
+            'يتعرف على أسماء الأعمدة بأي حالة أحرف (كبيرة/صغيرة) وبأشكال مختلفة ومختصرة',
+          ),
+          _buildInstructionItem(
+            'أمثلة على أسماء الأعمدة المدعومة لاسم المنتج:',
+            'Product Name, Item, Title, Description, Prod, SKU, Model, Code, اسم المنتج, المنتج, البضاعة',
+          ),
+          _buildInstructionItem(
+            'أمثلة على أسماء الأعمدة المدعومة للكمية:',
+            'Quantity, QTY, Pcs, Pieces, Count, Amount, Units, Total, Box, Pack, الكمية, عدد, القطع',
+          ),
+          _buildInstructionItem(
+            'أمثلة على أسماء الأعمدة المدعومة للسعر:',
+            'Price, Yuan, RMB, CNY, Cost, Rate, Value, Unit Price, Price (Yuan), السعر, ثمن, التكلفة',
+          ),
+          _buildInstructionItem(
+            'أمثلة على أسماء الأعمدة المدعومة للصورة:',
+            'Image, Picture, Photo, Pic, Img, URL, Link, Gallery, صورة, الصورة, رابط الصورة',
+          ),
+          _buildInstructionItem(
+            'مرونة في التعرف على الأعمدة:',
+            'النظام يدعم الاختصارات والأشكال المختلفة لأسماء الأعمدة، ويتعامل مع الفواصل والشرطات والمسافات',
           ),
           _buildInstructionItem(
             'تنسيق الملف المدعوم:',
@@ -1045,6 +1071,10 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         errorMessage = 'الملف تالف أو غير قابل للقراءة. يرجى التحقق من سلامة الملف';
       } else if (e.toString().contains('empty')) {
         errorMessage = 'الملف فارغ أو لا يحتوي على بيانات صالحة';
+      } else if (e.toString().contains('Reached Max') || e.toString().contains('XFD') || e.toString().contains('16384')) {
+        errorMessage = 'الملف يحتوي على عدد كبير جداً من الأعمدة. يرجى استخدام ملف بأعمدة أقل (الحد الأقصى 100 عمود)';
+      } else if (e.toString().contains('Invalid argument')) {
+        errorMessage = 'بنية الملف غير صحيحة. يرجى التحقق من تنسيق الملف وإعادة المحاولة';
       }
 
       _showErrorSnackBar(errorMessage);
@@ -1130,45 +1160,128 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     int processedRows = 0;
     int skippedRows = 0;
 
-    // Enhanced column name variations for comprehensive fuzzy matching
+    // Enhanced comprehensive column name variations for flexible fuzzy matching
+    // Supports case insensitivity, partial matching, and extensive variations
     final Map<String, List<String>> columnVariations = {
       'product_name': [
-        // English variations
-        'product name', 'item no', 'item', 'product description', 'product', 'name',
-        'description', 'item name', 'product_name', 'productname', 'item_name',
-        'goods', 'merchandise', 'article', 'commodity', 'sku', 'part number',
-        'part_number', 'partnumber', 'model', 'title', 'label',
-        // Arabic variations
+        // Complete phrases
+        'product name', 'item name', 'product description', 'item description',
+        'product title', 'item title', 'goods name', 'merchandise name',
+        'article name', 'commodity name', 'product info', 'item info',
+        'product details', 'item details', 'part number', 'model number',
+
+        // Single words and abbreviations
+        'product', 'item', 'name', 'title', 'label', 'description', 'desc',
+        'goods', 'merchandise', 'article', 'commodity', 'material', 'stuff',
+        'sku', 'model', 'part', 'code', 'id', 'identifier', 'ref', 'reference',
+
+        // Variations with underscores and concatenations
+        'product_name', 'productname', 'item_name', 'itemname', 'product_title',
+        'producttitle', 'item_title', 'itemtitle', 'part_number', 'partnumber',
+        'model_number', 'modelnumber', 'product_code', 'productcode',
+        'item_code', 'itemcode', 'product_id', 'productid', 'item_id', 'itemid',
+
+        // Abbreviated forms
+        'prod', 'itm', 'prd', 'pname', 'iname', 'pcode', 'icode', 'pid', 'iid',
+
+        // Arabic variations - comprehensive
         'اسم المنتج', 'المنتج', 'البضاعة', 'السلعة', 'الصنف', 'النوع', 'العنصر',
-        'الوصف', 'التسمية', 'الاسم', 'المادة', 'القطعة', 'الموديل'
+        'الوصف', 'التسمية', 'الاسم', 'المادة', 'القطعة', 'الموديل', 'العنوان',
+        'التفاصيل', 'البيانات', 'المعلومات', 'الكود', 'الرقم المرجعي', 'المرجع',
+        'رقم القطعة', 'رقم الموديل', 'كود المنتج', 'معرف المنتج', 'هوية المنتج'
       ],
+
       'quantity': [
-        // English variations
-        'quantity', 'qty', 'pcs', 'count', 'amount', 'pieces', 'units', 'number',
-        'num', 'no', '#', 'total', 'sum', 'volume', 'size', 'pack', 'box',
-        'carton', 'dozen', 'gross', 'each', 'ea', 'pc', 'unit',
-        // Arabic variations
+        // Complete phrases
+        'quantity', 'total quantity', 'item quantity', 'order quantity',
+        'purchase quantity', 'number of items', 'number of pieces',
+        'pieces count', 'units count', 'items count',
+
+        // Single words
+        'qty', 'pcs', 'pieces', 'units', 'count', 'amount', 'number', 'num',
+        'total', 'sum', 'volume', 'size', 'pack', 'box', 'carton', 'dozen',
+        'gross', 'each', 'nos', 'numbers', 'items', 'stock', 'inventory',
+
+        // Abbreviated and symbol forms
+        'ea', 'pc', 'unit', 'ct', 'cnt', '#', 'no', 'qnty', 'qtty',
+
+        // Packaging terms
+        'package', 'packages', 'bag', 'bags', 'bottle', 'bottles', 'can', 'cans',
+        'roll', 'rolls', 'sheet', 'sheets', 'set', 'sets', 'pair', 'pairs',
+
+        // Variations with underscores
+        'quantity_ordered', 'qty_ordered', 'order_qty', 'purchase_qty',
+        'item_count', 'piece_count', 'unit_count', 'total_count',
+
+        // Arabic variations - comprehensive
         'الكمية', 'عدد', 'كمية', 'المقدار', 'العدد', 'الرقم', 'القطع', 'الوحدات',
-        'المجموع', 'الإجمالي', 'الحجم', 'الصناديق', 'الكراتين'
+        'المجموع', 'الإجمالي', 'الحجم', 'الصناديق', 'الكراتين', 'العبوات',
+        'الأكياس', 'الزجاجات', 'العلب', 'اللفات', 'الأوراق', 'المجموعات',
+        'الأزواج', 'كمية الطلب', 'عدد القطع', 'عدد الوحدات', 'إجمالي الكمية'
       ],
+
       'yuan_price': [
-        // English variations
-        'unit price', 'price', 'unit price (rmb)', 'cost', 'yuan', 'rmb', 'cny',
-        'unit cost', 'price per unit', 'rate', 'value', 'amount', 'fee', 'charge',
-        'tariff', 'fare', 'toll', 'expense', 'outlay', 'expenditure', 'payment',
-        'price_yuan', 'yuan_price', 'rmb_price', 'cny_price', 'chinese_yuan',
-        // Arabic variations
+        // Complete phrases with currency
+        'unit price', 'price per unit', 'unit cost', 'cost per unit',
+        'unit price (rmb)', 'unit price (yuan)', 'unit price (cny)',
+        'price in yuan', 'cost in yuan', 'yuan price', 'rmb price',
+        'cny price', 'chinese yuan price', 'price per piece',
+
+        // Single words
+        'price', 'cost', 'rate', 'value', 'amount', 'fee', 'charge',
+        'tariff', 'fare', 'toll', 'expense', 'outlay', 'expenditure',
+        'payment', 'yuan', 'rmb', 'cny', 'renminbi',
+
+        // Currency and pricing terms
+        'unitprice', 'unitcost', 'priceper', 'costper', 'pricing', 'costing',
+        'valuation', 'quotation', 'quote', 'estimate', 'budget',
+
+        // Variations with underscores and symbols
+        'unit_price', 'unit_cost', 'price_yuan', 'yuan_price', 'rmb_price',
+        'cny_price', 'chinese_yuan', 'price_per_unit', 'cost_per_unit',
+        'price_per_piece', 'cost_per_piece', 'yuan_cost', 'rmb_cost',
+
+        // Abbreviated forms
+        'uprice', 'ucost', 'ppu', 'cpu', 'py', 'cy', 'ry',
+
+        // Arabic variations - comprehensive
         'السعر', 'سعر الوحدة', 'ثمن', 'التكلفة', 'المبلغ', 'القيمة', 'الرسوم',
-        'الأجرة', 'النفقة', 'المصروف', 'الدفعة', 'سعر اليوان', 'اليوان الصيني'
+        'الأجرة', 'النفقة', 'المصروف', 'الدفعة', 'سعر اليوان', 'اليوان الصيني',
+        'الرنمينبي', 'سعر القطعة', 'تكلفة الوحدة', 'ثمن الوحدة', 'قيمة الوحدة',
+        'مبلغ الوحدة', 'سعر الصرف', 'العملة الصينية', 'التسعير', 'التكلفة',
+        'التقييم', 'عرض السعر', 'التقدير', 'الميزانية'
       ],
+
       'product_image': [
-        // English variations
-        'pictures', 'picture', 'pics', 'image', 'images', 'photo', 'photos',
-        'img', 'photograph', 'snapshot', 'shot', 'pic', 'figure', 'illustration',
+        // Complete phrases
+        'product image', 'item image', 'product picture', 'item picture',
+        'product photo', 'item photo', 'product photograph', 'item photograph',
+        'image url', 'picture url', 'photo url', 'image link', 'picture link',
+
+        // Single words
+        'image', 'images', 'picture', 'pictures', 'photo', 'photos', 'pic', 'pics',
+        'img', 'photograph', 'snapshot', 'shot', 'figure', 'illustration',
         'graphic', 'visual', 'thumbnail', 'preview', 'gallery', 'media',
-        // Arabic variations
+
+        // Technical terms
+        'jpeg', 'jpg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg',
+        'file', 'attachment', 'document', 'resource', 'asset',
+
+        // Variations with underscores
+        'product_image', 'productimage', 'item_image', 'itemimage',
+        'product_picture', 'productpicture', 'item_picture', 'itempicture',
+        'product_photo', 'productphoto', 'item_photo', 'itemphoto',
+        'image_url', 'imageurl', 'picture_url', 'pictureurl',
+        'photo_url', 'photourl', 'img_url', 'imgurl',
+
+        // Abbreviated forms
+        'pimg', 'ppic', 'pphoto', 'iimg', 'ipic', 'iphoto', 'url', 'link',
+
+        // Arabic variations - comprehensive
         'صورة', 'الصورة', 'صور', 'الصور', 'لقطة', 'تصوير', 'رسم', 'مرئي',
-        'معرض', 'وسائط', 'ملف مرئي', 'الملف المرئي'
+        'معرض', 'وسائط', 'ملف مرئي', 'الملف المرئي', 'صورة المنتج', 'صورة العنصر',
+        'تصوير المنتج', 'لقطة المنتج', 'رابط الصورة', 'عنوان الصورة',
+        'ملف الصورة', 'مرفق الصورة', 'وثيقة مرئية', 'مورد مرئي', 'أصل مرئي'
       ],
     };
 
@@ -1178,17 +1291,26 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     int bestMatchScore = 0;
     Map<String, int> bestMapping = {};
 
-    AppLogger.info('بدء البحث عن رؤوس الأعمدة في ${sheet.maxRows} صف');
+    // Validate sheet structure before processing
+    if (!_validateSheetStructure(sheet)) {
+      throw Exception('بنية الملف غير صحيحة أو تحتوي على أخطاء');
+    }
 
-    // Scan ALL rows to find the best header match
-    for (int rowIndex = 0; rowIndex < sheet.maxRows && rowIndex < 50; rowIndex++) {
+    final maxRowsToScan = [sheet.maxRows, MAX_ROWS_TO_SCAN_FOR_HEADERS].reduce((a, b) => a < b ? a : b);
+    AppLogger.info('بدء البحث عن رؤوس الأعمدة في $maxRowsToScan صف');
+
+    // Scan rows to find the best header match with safe bounds
+    for (int rowIndex = 0; rowIndex < maxRowsToScan; rowIndex++) {
       try {
-        final row = sheet.row(rowIndex);
+        final row = _getSafeRow(sheet, rowIndex);
+        if (row.isEmpty) continue;
+
         final potentialMapping = <String, int>{};
         int matchScore = 0;
 
-        // Process each cell in the row
-        for (int colIndex = 0; colIndex < row.length && colIndex < 20; colIndex++) {
+        // Process each cell in the row with safe column bounds
+        final maxColsToScan = [row.length, MAX_COLUMNS_TO_SCAN].reduce((a, b) => a < b ? a : b);
+        for (int colIndex = 0; colIndex < maxColsToScan; colIndex++) {
           final cell = row[colIndex];
           if (cell?.value == null) continue;
 
@@ -1202,7 +1324,7 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
 
               for (final variation in variations) {
                 final similarity = _calculateAdvancedSimilarity(cellValue, variation);
-                if (similarity >= 0.8) { // 80% similarity threshold
+                if (similarity >= 0.75) { // 75% similarity threshold for enhanced matching
                   potentialMapping[columnKey] = colIndex;
                   matchScore += (similarity * 100).round();
                   AppLogger.info('تطابق عمود: $cellValue ≈ $variation (${(similarity * 100).toStringAsFixed(1)}%)');
@@ -1249,22 +1371,27 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     AppLogger.info('تم العثور على رأس الجدول في الصف ${headerRowIndex + 1}');
     AppLogger.info('تم تحديد الأعمدة: $columnMapping');
 
-    // Enhanced data extraction with performance optimization
-    AppLogger.info('بدء استخراج البيانات من الصف ${headerRowIndex + 2} إلى ${sheet.maxRows}');
+    // Enhanced data extraction with performance optimization and safe bounds
+    final int maxRowsToProcess = [sheet.maxRows, MAX_ROWS_TO_PROCESS].reduce((a, b) => a < b ? a : b);
+    AppLogger.info('بدء استخراج البيانات من الصف ${headerRowIndex + 2} إلى $maxRowsToProcess (محدود بـ $MAX_ROWS_TO_PROCESS)');
 
     const int batchSize = 100; // Process in batches for better performance
     int totalProcessed = 0;
     int validRows = 0;
 
-    for (int batchStart = headerRowIndex + 1; batchStart < sheet.maxRows; batchStart += batchSize) {
-      final batchEnd = (batchStart + batchSize).clamp(0, sheet.maxRows);
+    for (int batchStart = headerRowIndex + 1; batchStart < maxRowsToProcess; batchStart += batchSize) {
+      final batchEnd = (batchStart + batchSize).clamp(0, maxRowsToProcess);
 
       // Process batch
       for (int rowIndex = batchStart; rowIndex < batchEnd; rowIndex++) {
         totalProcessed++;
 
         try {
-          final row = sheet.row(rowIndex);
+          final row = _getSafeRow(sheet, rowIndex);
+          if (row.isEmpty) {
+            skippedRows++;
+            continue;
+          }
 
           // Enhanced empty row detection
           if (_isRowEmpty(row)) {
@@ -1343,29 +1470,131 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     return extractedData;
   }
 
-  /// Clean cell value for processing
+  /// Validate Excel sheet dimensions and structure to prevent column limit errors
+  bool _validateSheetStructure(excel.Sheet sheet) {
+    try {
+      // Check if sheet exists and has data
+      if (sheet.maxRows <= 0) {
+        AppLogger.warning('الورقة فارغة أو لا تحتوي على صفوف');
+        return false;
+      }
+
+      // Validate row count is within reasonable limits
+      if (sheet.maxRows > MAX_ROWS_TO_PROCESS) {
+        AppLogger.warning('عدد الصفوف كبير جداً: ${sheet.maxRows}. سيتم معالجة أول $MAX_ROWS_TO_PROCESS صف فقط');
+      }
+
+      // Try to access the first row safely to validate sheet structure
+      if (sheet.maxRows > 0) {
+        final firstRow = sheet.row(0);
+        if (firstRow.length > EXCEL_MAX_COLUMNS) {
+          AppLogger.error('عدد الأعمدة يتجاوز الحد الأقصى المسموح: ${firstRow.length}');
+          return false;
+        }
+      }
+
+      AppLogger.info('تم التحقق من بنية الورقة: ${sheet.maxRows} صف');
+      return true;
+    } catch (e) {
+      AppLogger.error('خطأ في التحقق من بنية الورقة: $e');
+      return false;
+    }
+  }
+
+  /// Enhanced cell value cleaning for comprehensive matching
+  /// Supports case insensitivity, special character handling, and normalization
   String _cleanCellValue(String value) {
     return value
         .trim()
         .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), ' ') // Normalize whitespace
-        .replaceAll(RegExp(r'[^\w\u0600-\u06FF\s]'), '') // Remove special chars except Arabic
+        // Normalize whitespace first
+        .replaceAll(RegExp(r'\s+'), ' ')
+        // Remove special characters but preserve Arabic text, parentheses, and basic punctuation
+        .replaceAll(RegExp(r'[^\w\u0600-\u06FF\s()_-]'), '')
+        // Replace underscores and hyphens with spaces for better word matching
+        .replaceAll(RegExp(r'[_-]'), ' ')
+        // Normalize whitespace again after replacements
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }
 
-  /// Advanced similarity calculation with multiple algorithms
+  /// Enhanced similarity calculation with comprehensive matching strategies
+  /// Supports exact matching, partial matching, word-based matching, and fuzzy matching
   double _calculateAdvancedSimilarity(String text1, String text2) {
     final clean1 = _cleanCellValue(text1);
     final clean2 = _cleanCellValue(text2);
 
-    // Exact match
+    // Exact match gets highest score
     if (clean1 == clean2) return 1.0;
 
-    // Contains match (high score)
+    // Split into words for advanced matching
+    final words1 = clean1.split(' ').where((w) => w.isNotEmpty).toList();
+    final words2 = clean2.split(' ').where((w) => w.isNotEmpty).toList();
+
+    // Single word matching with partial support
+    if (words2.length == 1) {
+      final targetWord = words2.first;
+      for (final word in words1) {
+        // Exact word match
+        if (word == targetWord) return 0.95;
+
+        // Partial matching for abbreviations and variations
+        if (word.startsWith(targetWord) && targetWord.length >= 3) {
+          return 0.85; // e.g., "prod" matches "product"
+        }
+        if (targetWord.startsWith(word) && word.length >= 3) {
+          return 0.80; // e.g., "qty" matches "quantity"
+        }
+
+        // Contains matching for compound words
+        if (word.contains(targetWord) && targetWord.length >= 4) {
+          return 0.75;
+        }
+        if (targetWord.contains(word) && word.length >= 4) {
+          return 0.75;
+        }
+      }
+    }
+
+    // Multi-word phrase matching
+    if (words2.length > 1) {
+      int exactMatches = 0;
+      int partialMatches = 0;
+
+      for (final targetWord in words2) {
+        bool foundMatch = false;
+        for (final word in words1) {
+          if (word == targetWord) {
+            exactMatches++;
+            foundMatch = true;
+            break;
+          } else if ((word.startsWith(targetWord) && targetWord.length >= 3) ||
+                     (targetWord.startsWith(word) && word.length >= 3) ||
+                     (word.contains(targetWord) && targetWord.length >= 4) ||
+                     (targetWord.contains(word) && word.length >= 4)) {
+            partialMatches++;
+            foundMatch = true;
+            break;
+          }
+        }
+      }
+
+      final totalWords = words2.length;
+      final matchRatio = (exactMatches + partialMatches * 0.7) / totalWords;
+
+      if (matchRatio >= 0.8) {
+        return 0.90 + (exactMatches / totalWords) * 0.05;
+      } else if (matchRatio >= 0.5) {
+        return 0.70 + matchRatio * 0.15;
+      }
+    }
+
+    // Fallback to traditional similarity algorithms
+    // Contains match (moderate score)
     if (clean1.contains(clean2) || clean2.contains(clean1)) {
       final longer = clean1.length > clean2.length ? clean1 : clean2;
-      final shorter = clean1.length > clean2.length ? clean2 : clean1;
-      return 0.9 + (shorter.length / longer.length) * 0.1;
+      final shorter = clean1.length <= clean2.length ? clean1 : clean2;
+      return 0.60 + (shorter.length / longer.length) * 0.20;
     }
 
     // Levenshtein similarity
@@ -1374,8 +1603,11 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     // Jaccard similarity (word-based)
     final jaccardSim = _calculateJaccardSimilarity(clean1, clean2);
 
-    // Combined score (weighted average)
-    return (levenshteinSim * 0.7) + (jaccardSim * 0.3);
+    // Weighted combination with threshold
+    final combinedSim = (levenshteinSim * 0.6) + (jaccardSim * 0.4);
+
+    // Only return meaningful similarities
+    return combinedSim >= 0.3 ? combinedSim : 0.0;
   }
 
   /// Calculate Jaccard similarity for word-based matching
@@ -1488,18 +1720,41 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     return matrix[s1.length][s2.length];
   }
 
+  /// Safely access Excel row with bounds checking to prevent column limit errors
+  List<dynamic> _getSafeRow(excel.Sheet sheet, int rowIndex) {
+    try {
+      if (rowIndex < 0 || rowIndex >= sheet.maxRows) {
+        return [];
+      }
+      final row = sheet.row(rowIndex);
+      // Limit row length to prevent column limit errors
+      if (row.length > MAX_COLUMNS_TO_SCAN) {
+        return row.take(MAX_COLUMNS_TO_SCAN).toList();
+      }
+      return row;
+    } catch (e) {
+      AppLogger.warning('خطأ في الوصول للصف $rowIndex: $e');
+      return [];
+    }
+  }
+
   /// Get cell value safely from Excel row
   String _getCellValue(List<dynamic> row, int? columnIndex) {
-    if (columnIndex == null || columnIndex >= row.length) {
+    if (columnIndex == null || columnIndex >= row.length || columnIndex >= MAX_COLUMNS_TO_SCAN) {
       return '';
     }
 
-    final cell = row[columnIndex];
-    if (cell?.value == null) {
+    try {
+      final cell = row[columnIndex];
+      if (cell?.value == null) {
+        return '';
+      }
+
+      return cell!.value.toString().trim();
+    } catch (e) {
+      AppLogger.warning('خطأ في قراءة الخلية في العمود $columnIndex: $e');
       return '';
     }
-
-    return cell!.value.toString().trim();
   }
 
   /// Reset import process
@@ -1676,21 +1931,86 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
   static List<Map<String, dynamic>> _extractDataFromExcelSheet(excel.Sheet sheet) {
     final List<Map<String, dynamic>> extractedData = [];
 
-    // Column name variations for fuzzy matching
+    // Enhanced comprehensive column name variations for flexible fuzzy matching
+    // Supports case insensitivity, partial matching, and extensive variations
     final Map<String, List<String>> columnVariations = {
       'product_name': [
-        'product name', 'item no', 'item', 'product description', 'product', 'name',
-        'description', 'item name', 'اسم المنتج', 'المنتج', 'البضاعة', 'السلعة'
+        // Complete phrases
+        'product name', 'item name', 'product description', 'item description',
+        'product title', 'item title', 'goods name', 'merchandise name',
+        'article name', 'commodity name', 'product info', 'item info',
+        'product details', 'item details', 'part number', 'model number',
+
+        // Single words and abbreviations
+        'product', 'item', 'name', 'title', 'label', 'description', 'desc',
+        'goods', 'merchandise', 'article', 'commodity', 'material', 'stuff',
+        'sku', 'model', 'part', 'code', 'id', 'identifier', 'ref', 'reference',
+
+        // Variations with underscores and concatenations
+        'product_name', 'productname', 'item_name', 'itemname', 'product_title',
+        'producttitle', 'item_title', 'itemtitle', 'part_number', 'partnumber',
+        'model_number', 'modelnumber', 'product_code', 'productcode',
+        'item_code', 'itemcode', 'product_id', 'productid', 'item_id', 'itemid',
+
+        // Abbreviated forms
+        'prod', 'itm', 'prd', 'pname', 'iname', 'pcode', 'icode', 'pid', 'iid',
+
+        // Arabic variations
+        'اسم المنتج', 'المنتج', 'البضاعة', 'السلعة', 'الصنف', 'النوع', 'العنصر',
+        'الوصف', 'التسمية', 'الاسم', 'المادة', 'القطعة', 'الموديل', 'العنوان',
+        'التفاصيل', 'البيانات', 'المعلومات', 'الكود', 'الرقم المرجعي', 'المرجع'
       ],
+
       'quantity': [
-        'quantity', 'qty', 'pcs', 'الكمية', 'عدد', 'كمية', 'count', 'amount', 'pieces'
+        // Complete phrases and single words
+        'quantity', 'total quantity', 'item quantity', 'order quantity',
+        'qty', 'pcs', 'pieces', 'units', 'count', 'amount', 'number', 'num',
+        'total', 'sum', 'volume', 'size', 'pack', 'box', 'carton', 'dozen',
+        'gross', 'each', 'nos', 'numbers', 'items', 'stock', 'inventory',
+
+        // Abbreviated forms
+        'ea', 'pc', 'unit', 'ct', 'cnt', '#', 'no', 'qnty', 'qtty',
+
+        // Arabic variations
+        'الكمية', 'عدد', 'كمية', 'المقدار', 'العدد', 'الرقم', 'القطع', 'الوحدات',
+        'المجموع', 'الإجمالي', 'الحجم', 'الصناديق', 'الكراتين', 'العبوات'
       ],
+
       'yuan_price': [
-        'unit price', 'price', 'unit price (rmb)', 'السعر', 'سعر الوحدة', 'ثمن',
-        'cost', 'yuan', 'rmb', 'unit cost', 'price per unit'
+        // Complete phrases with currency
+        'unit price', 'price per unit', 'unit cost', 'cost per unit',
+        'unit price (rmb)', 'unit price (yuan)', 'unit price (cny)',
+        'price in yuan', 'cost in yuan', 'yuan price', 'rmb price',
+        'cny price', 'chinese yuan price', 'price per piece',
+
+        // Single words
+        'price', 'cost', 'rate', 'value', 'amount', 'fee', 'charge',
+        'yuan', 'rmb', 'cny', 'renminbi', 'pricing', 'costing',
+
+        // Variations with underscores
+        'unit_price', 'unit_cost', 'price_yuan', 'yuan_price', 'rmb_price',
+        'cny_price', 'chinese_yuan', 'price_per_unit', 'cost_per_unit',
+
+        // Arabic variations
+        'السعر', 'سعر الوحدة', 'ثمن', 'التكلفة', 'المبلغ', 'القيمة', 'الرسوم',
+        'سعر اليوان', 'اليوان الصيني', 'الرنمينبي', 'سعر القطعة', 'تكلفة الوحدة'
       ],
+
       'product_image': [
-        'pictures', 'picture', 'pics', 'صورة', 'الصورة', 'صور', 'image', 'images', 'photo'
+        // Complete phrases and single words
+        'product image', 'item image', 'product picture', 'item picture',
+        'product photo', 'item photo', 'image url', 'picture url', 'photo url',
+        'image', 'images', 'picture', 'pictures', 'photo', 'photos', 'pic', 'pics',
+        'img', 'photograph', 'snapshot', 'shot', 'figure', 'illustration',
+        'graphic', 'visual', 'thumbnail', 'preview', 'gallery', 'media',
+
+        // Variations with underscores
+        'product_image', 'productimage', 'item_image', 'itemimage',
+        'image_url', 'imageurl', 'picture_url', 'pictureurl', 'photo_url', 'photourl',
+
+        // Arabic variations
+        'صورة', 'الصورة', 'صور', 'الصور', 'لقطة', 'تصوير', 'رسم', 'مرئي',
+        'معرض', 'وسائط', 'ملف مرئي', 'صورة المنتج', 'رابط الصورة'
       ],
     };
 
@@ -1698,11 +2018,18 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     int headerRowIndex = -1;
     Map<String, int> columnMapping = {};
 
-    for (int rowIndex = 0; rowIndex < sheet.maxRows && rowIndex < 50; rowIndex++) {
-      final row = sheet.row(rowIndex);
-      final potentialMapping = <String, int>{};
+    // Safe header scanning with bounds checking
+    final maxRowsToScan = [sheet.maxRows, 50].reduce((a, b) => a < b ? a : b);
+    for (int rowIndex = 0; rowIndex < maxRowsToScan; rowIndex++) {
+      try {
+        final row = sheet.row(rowIndex);
+        if (row.isEmpty) continue;
 
-      for (int colIndex = 0; colIndex < row.length && colIndex < 20; colIndex++) {
+        final potentialMapping = <String, int>{};
+
+        // Safe column scanning with bounds checking
+        final maxColsToScan = [row.length, 100].reduce((a, b) => a < b ? a : b);
+        for (int colIndex = 0; colIndex < maxColsToScan; colIndex++) {
         final cell = row[colIndex];
         if (cell?.value == null) continue;
 
@@ -1715,7 +2042,7 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
 
             for (final variation in variations) {
               final similarity = _calculateAdvancedSimilarityStatic(cellValue, variation);
-              if (similarity >= 0.8) {
+              if (similarity >= 0.75) { // 75% similarity threshold for enhanced matching
                 potentialMapping[columnKey] = colIndex;
                 break;
               }
@@ -1724,10 +2051,14 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         }
       }
 
-      if (potentialMapping.containsKey('product_name') && potentialMapping.containsKey('yuan_price')) {
-        headerRowIndex = rowIndex;
-        columnMapping = potentialMapping;
-        break;
+        if (potentialMapping.containsKey('product_name') && potentialMapping.containsKey('yuan_price')) {
+          headerRowIndex = rowIndex;
+          columnMapping = potentialMapping;
+          break;
+        }
+      } catch (e) {
+        // Skip problematic rows during header scanning
+        continue;
       }
     }
 
@@ -1735,17 +2066,22 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
       throw Exception('لم يتم العثور على أعمدة البيانات المطلوبة');
     }
 
-    // Extract data from rows after header
-    for (int rowIndex = headerRowIndex + 1; rowIndex < sheet.maxRows; rowIndex++) {
-      final row = sheet.row(rowIndex);
-
-      if (row.isEmpty || row.every((cell) => cell?.value == null || cell!.value.toString().trim().isEmpty)) {
-        continue;
-      }
-
+    // Extract data from rows after header with safe bounds
+    final maxRowsToProcess = [sheet.maxRows, 10000].reduce((a, b) => a < b ? a : b);
+    for (int rowIndex = headerRowIndex + 1; rowIndex < maxRowsToProcess; rowIndex++) {
       try {
-        final productName = _getCellValueStatic(row, columnMapping['product_name']);
-        final yuanPriceStr = _getCellValueStatic(row, columnMapping['yuan_price']);
+        final row = sheet.row(rowIndex);
+        if (row.isEmpty) continue;
+
+        // Limit row length to prevent column access errors
+        final safeRow = row.length > 100 ? row.take(100).toList() : row;
+
+        if (safeRow.isEmpty || safeRow.every((cell) => cell?.value == null || cell!.value.toString().trim().isEmpty)) {
+          continue;
+        }
+
+        final productName = _getCellValueStatic(safeRow, columnMapping['product_name']);
+        final yuanPriceStr = _getCellValueStatic(safeRow, columnMapping['yuan_price']);
 
         if (productName.isEmpty || yuanPriceStr.isEmpty) {
           continue;
@@ -1754,10 +2090,10 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         final yuanPrice = _parsePriceStatic(yuanPriceStr);
         if (yuanPrice <= 0) continue;
 
-        final quantityStr = _getCellValueStatic(row, columnMapping['quantity']);
+        final quantityStr = _getCellValueStatic(safeRow, columnMapping['quantity']);
         final quantity = _parseQuantityStatic(quantityStr);
 
-        final productImage = _getCellValueStatic(row, columnMapping['product_image']);
+        final productImage = _getCellValueStatic(safeRow, columnMapping['product_image']);
 
         extractedData.add({
           'product_name': productName.trim(),
@@ -1767,6 +2103,7 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         });
 
       } catch (e) {
+        // Skip problematic rows and continue processing
         continue;
       }
     }
@@ -1775,38 +2112,109 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
   }
 
   /// Static helper methods for isolate processing
+  /// Enhanced static similarity calculation for isolate processing
+  /// Supports comprehensive matching strategies including partial and word-based matching
   static double _calculateAdvancedSimilarityStatic(String text1, String text2) {
+    // Enhanced cleaning with better normalization
     final clean1 = text1
         .trim()
         .toLowerCase()
         .replaceAll(RegExp(r'\s+'), ' ')
-        .replaceAll(RegExp(r'[^\w\u0600-\u06FF\s]'), '')
+        .replaceAll(RegExp(r'[^\w\u0600-\u06FF\s()_-]'), '')
+        .replaceAll(RegExp(r'[_-]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     final clean2 = text2
         .trim()
         .toLowerCase()
         .replaceAll(RegExp(r'\s+'), ' ')
-        .replaceAll(RegExp(r'[^\w\u0600-\u06FF\s]'), '')
+        .replaceAll(RegExp(r'[^\w\u0600-\u06FF\s()_-]'), '')
+        .replaceAll(RegExp(r'[_-]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
 
-    // Exact match
+    // Exact match gets highest score
     if (clean1 == clean2) return 1.0;
 
-    // Contains match (high score)
-    if (clean1.contains(clean2) || clean2.contains(clean1)) {
-      final longer = clean1.length > clean2.length ? clean1 : clean2;
-      final shorter = clean1.length > clean2.length ? clean2 : clean1;
-      return 0.9 + (shorter.length / longer.length) * 0.1;
+    // Split into words for advanced matching
+    final words1 = clean1.split(' ').where((w) => w.isNotEmpty).toList();
+    final words2 = clean2.split(' ').where((w) => w.isNotEmpty).toList();
+
+    // Single word matching with partial support
+    if (words2.length == 1) {
+      final targetWord = words2.first;
+      for (final word in words1) {
+        // Exact word match
+        if (word == targetWord) return 0.95;
+
+        // Partial matching for abbreviations and variations
+        if (word.startsWith(targetWord) && targetWord.length >= 3) {
+          return 0.85; // e.g., "prod" matches "product"
+        }
+        if (targetWord.startsWith(word) && word.length >= 3) {
+          return 0.80; // e.g., "qty" matches "quantity"
+        }
+
+        // Contains matching for compound words
+        if (word.contains(targetWord) && targetWord.length >= 4) {
+          return 0.75;
+        }
+        if (targetWord.contains(word) && word.length >= 4) {
+          return 0.75;
+        }
+      }
     }
 
+    // Multi-word phrase matching
+    if (words2.length > 1) {
+      int exactMatches = 0;
+      int partialMatches = 0;
+
+      for (final targetWord in words2) {
+        for (final word in words1) {
+          if (word == targetWord) {
+            exactMatches++;
+            break;
+          } else if ((word.startsWith(targetWord) && targetWord.length >= 3) ||
+                     (targetWord.startsWith(word) && word.length >= 3) ||
+                     (word.contains(targetWord) && targetWord.length >= 4) ||
+                     (targetWord.contains(word) && word.length >= 4)) {
+            partialMatches++;
+            break;
+          }
+        }
+      }
+
+      final totalWords = words2.length;
+      final matchRatio = (exactMatches + partialMatches * 0.7) / totalWords;
+
+      if (matchRatio >= 0.8) {
+        return 0.90 + (exactMatches / totalWords) * 0.05;
+      } else if (matchRatio >= 0.5) {
+        return 0.70 + matchRatio * 0.15;
+      }
+    }
+
+    // Contains match (moderate score)
+    if (clean1.contains(clean2) || clean2.contains(clean1)) {
+      final longer = clean1.length > clean2.length ? clean1 : clean2;
+      final shorter = clean1.length <= clean2.length ? clean1 : clean2;
+      return 0.60 + (shorter.length / longer.length) * 0.20;
+    }
+
+    // Return 0 for no meaningful match
     return 0.0;
   }
 
   static String _getCellValueStatic(List<dynamic> row, int? columnIndex) {
-    if (columnIndex == null || columnIndex >= row.length) return '';
-    final cell = row[columnIndex];
-    if (cell?.value == null) return '';
-    return cell!.value.toString().trim();
+    if (columnIndex == null || columnIndex >= row.length || columnIndex >= 100) return '';
+    try {
+      final cell = row[columnIndex];
+      if (cell?.value == null) return '';
+      return cell!.value.toString().trim();
+    } catch (e) {
+      return '';
+    }
   }
 
   static double _parsePriceStatic(String priceStr) {

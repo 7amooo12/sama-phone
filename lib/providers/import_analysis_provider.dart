@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:smartbiztracker_new/models/import_analysis_models.dart';
+import 'package:smartbiztracker_new/models/container_import_models.dart';
 import 'package:smartbiztracker_new/services/import_analysis/excel_parsing_service.dart';
+import 'package:smartbiztracker_new/services/container_import_excel_service.dart';
 
 import 'package:smartbiztracker_new/services/import_analysis/packing_analyzer_service.dart';
 import 'package:smartbiztracker_new/services/import_analysis/smart_summary_service.dart';
@@ -41,6 +43,11 @@ class ImportAnalysisProvider extends ChangeNotifier {
   Map<String, dynamic>? _smartSummary;
   Map<String, dynamic>? _enhancedSummary;
   Map<String, dynamic>? _validationReport;
+
+  // بيانات استيراد الحاويات الجديدة
+  ContainerImportBatch? _currentContainerBatch;
+  List<ContainerImportItem> _currentContainerItems = [];
+  ContainerImportResult? _lastContainerImportResult;
   
   // إعدادات المستخدم
   ImportAnalysisSettings? _userSettings;
@@ -86,6 +93,11 @@ class ImportAnalysisProvider extends ChangeNotifier {
   Map<String, dynamic>? get smartSummary => _smartSummary;
   Map<String, dynamic>? get enhancedSummary => _enhancedSummary;
   Map<String, dynamic>? get validationReport => _validationReport;
+
+  // Container Import Getters
+  ContainerImportBatch? get currentContainerBatch => _currentContainerBatch;
+  List<ContainerImportItem> get currentContainerItems => _currentContainerItems;
+  ContainerImportResult? get lastContainerImportResult => _lastContainerImportResult;
   
   ImportAnalysisSettings? get userSettings => _userSettings;
   String get searchQuery => _searchQuery;
@@ -1686,6 +1698,101 @@ class ImportAnalysisProvider extends ChangeNotifier {
     } catch (e) {
       AppLogger.error('💥 خطأ في عملية التراجع: $e');
     }
+  }
+
+  /// معالجة ملف Excel للحاوية الجديدة
+  Future<void> processContainerImportFile() async {
+    if (_selectedFile == null) {
+      _setError('لم يتم اختيار ملف');
+      return;
+    }
+
+    try {
+      _setProcessing(true);
+      _setStatus('بدء معالجة ملف الحاوية...');
+      _setProgress(0.0);
+      _clearError();
+
+      AppLogger.info('🚀 Starting container import processing for: ${_selectedFile!.name}');
+
+      // Process the Excel file using the container import service
+      final result = await ContainerImportExcelService.processExcelFile(
+        filePath: _selectedFile!.path!,
+        filename: _selectedFile!.name,
+        onProgress: (progress) {
+          _setProgress(progress);
+        },
+        onStatusUpdate: (status) {
+          _setStatus(status);
+        },
+      );
+
+      if (result.success) {
+        _currentContainerBatch = result.batch;
+        _currentContainerItems = result.items;
+        _lastContainerImportResult = result;
+
+        AppLogger.info('✅ Container import processing completed successfully');
+        AppLogger.info('📊 Processed ${result.items.length} items from ${result.totalRows} rows');
+
+        if (result.errors.isNotEmpty) {
+          AppLogger.warning('⚠️ Processing completed with ${result.errors.length} errors');
+        }
+
+        if (result.warnings.isNotEmpty) {
+          AppLogger.warning('⚠️ Processing completed with ${result.warnings.length} warnings');
+        }
+
+        _setStatus('تم إكمال معالجة الحاوية بنجاح');
+        _setProgress(1.0);
+      } else {
+        throw Exception('فشل في معالجة ملف الحاوية: ${result.errors.join(', ')}');
+      }
+
+    } catch (e) {
+      AppLogger.error('❌ Error processing container import file: $e');
+      _setError('خطأ في معالجة ملف الحاوية: $e');
+    } finally {
+      _setProcessing(false);
+    }
+  }
+
+  /// مسح بيانات استيراد الحاوية الحالية
+  void clearContainerImportData() {
+    _currentContainerBatch = null;
+    _currentContainerItems.clear();
+    _lastContainerImportResult = null;
+    notifyListeners();
+    AppLogger.info('🧹 Container import data cleared');
+  }
+
+  /// الحصول على إحصائيات استيراد الحاوية
+  Map<String, dynamic> getContainerImportStatistics() {
+    if (_currentContainerItems.isEmpty) {
+      return {
+        'totalItems': 0,
+        'totalCartons': 0,
+        'totalQuantity': 0,
+        'uniqueProducts': 0,
+        'itemsWithDiscrepancies': 0,
+        'averagePiecesPerCarton': 0.0,
+      };
+    }
+
+    final totalCartons = _currentContainerItems.fold(0, (sum, item) => sum + item.numberOfCartons);
+    final totalQuantity = _currentContainerItems.fold(0, (sum, item) => sum + item.totalQuantity);
+    final uniqueProducts = _currentContainerItems.map((item) => item.productName).toSet().length;
+    final itemsWithDiscrepancies = _currentContainerItems.where((item) => !item.isQuantityConsistent).length;
+    final averagePiecesPerCarton = totalCartons > 0 ? totalQuantity / totalCartons : 0.0;
+
+    return {
+      'totalItems': _currentContainerItems.length,
+      'totalCartons': totalCartons,
+      'totalQuantity': totalQuantity,
+      'uniqueProducts': uniqueProducts,
+      'itemsWithDiscrepancies': itemsWithDiscrepancies,
+      'averagePiecesPerCarton': averagePiecesPerCarton,
+    };
   }
 
   @override

@@ -546,35 +546,7 @@ class SupabaseService {
     }
   }
 
-  /// SECURITY FIX: Secure biometric authentication
-  /// This method now requires a valid existing session and proper authentication
-  Future<UserModel?> signInWithSession(String email) async {
-    try {
-      AppLogger.info('Attempting secure biometric sign-in for: $email');
 
-      // SECURITY FIX: Only allow biometric login if there's already a valid authenticated session
-      if (_supabase.auth.currentSession != null && _supabase.auth.currentUser != null) {
-        final userId = _supabase.auth.currentUser?.id;
-        final sessionEmail = _supabase.auth.currentUser?.email;
-
-        // Verify the email matches the current session
-        if (userId != null && sessionEmail == email) {
-          AppLogger.info('Valid session found for biometric authentication: $email');
-          return await getUserData(userId);
-        } else {
-          AppLogger.warning('Email mismatch in biometric authentication: session=$sessionEmail, requested=$email');
-          throw Exception('جلسة المصادقة البيومترية غير صالحة');
-        }
-      }
-
-      // SECURITY FIX: No valid session - biometric authentication not allowed
-      AppLogger.warning('No valid session for biometric authentication: $email');
-      throw Exception('يجب تسجيل الدخول بكلمة المرور أولاً لتفعيل المصادقة البيومترية');
-    } catch (e) {
-      AppLogger.error('Error during secure biometric sign in: $e');
-      rethrow;
-    }
-  }
 
   // Database Methods
 

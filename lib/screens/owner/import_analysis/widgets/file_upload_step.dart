@@ -341,8 +341,10 @@ class _FileUploadStepState extends State<FileUploadStep> {
 
   /// بناء أزرار الإجراءات
   Widget _buildActionButtons() {
-    final canProceed = widget.provider.currentBatch != null &&
-                      widget.provider.currentItems.isNotEmpty;
+    final canProceed = (widget.provider.currentBatch != null &&
+                       widget.provider.currentItems.isNotEmpty) ||
+                      (widget.provider.currentContainerBatch != null &&
+                       widget.provider.currentContainerItems.isNotEmpty);
 
     return Row(
       children: [
@@ -454,7 +456,8 @@ class _FileUploadStepState extends State<FileUploadStep> {
   /// معالجة الملف
   Future<void> _processFile() async {
     if (widget.provider.selectedFile != null) {
-      await widget.provider.processSelectedFile();
+      // Use the new container import processing method
+      await widget.provider.processContainerImportFile();
     }
   }
 }

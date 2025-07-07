@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:smartbiztracker_new/providers/import_analysis_provider.dart';
 import 'package:smartbiztracker_new/utils/accountant_theme_config.dart';
+import 'package:smartbiztracker_new/screens/owner/import_analysis/widgets/container_import_data_display.dart';
 
 /// خطوة مراجعة والتحقق من البيانات - الخطوة الثالثة في سير عمل استيراد الحاوية
 class DataReviewStep extends StatefulWidget {
@@ -193,6 +194,16 @@ class _DataReviewStepState extends State<DataReviewStep> {
 
   /// بناء جدول البيانات
   Widget _buildDataTable() {
+    // Check if we have container import data
+    if (widget.provider.currentContainerItems.isNotEmpty) {
+      return ContainerImportDataDisplay(
+        items: widget.provider.currentContainerItems,
+        result: widget.provider.lastContainerImportResult,
+        onExport: _exportContainerData,
+        onSave: _saveContainerData,
+      );
+    }
+
     final items = widget.provider.currentItems;
 
     if (items.isEmpty) {
@@ -445,6 +456,10 @@ class _DataReviewStepState extends State<DataReviewStep> {
 
   /// بناء أزرار الإجراءات
   Widget _buildActionButtons() {
+    final hasContainerData = widget.provider.currentContainerItems.isNotEmpty;
+    final hasRegularData = widget.provider.currentItems.isNotEmpty;
+    final canProceed = hasContainerData || hasRegularData;
+
     return Row(
       children: [
         Expanded(
@@ -488,12 +503,16 @@ class _DataReviewStepState extends State<DataReviewStep> {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              gradient: AccountantThemeConfig.greenGradient,
+              gradient: canProceed
+                  ? AccountantThemeConfig.greenGradient
+                  : LinearGradient(colors: [Colors.grey[600]!, Colors.grey[500]!]),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: AccountantThemeConfig.glowShadows(AccountantThemeConfig.primaryGreen),
+              boxShadow: canProceed
+                  ? AccountantThemeConfig.glowShadows(AccountantThemeConfig.primaryGreen)
+                  : [],
             ),
             child: ElevatedButton(
-              onPressed: widget.onNext,
+              onPressed: canProceed ? widget.onNext : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
@@ -525,6 +544,36 @@ class _DataReviewStepState extends State<DataReviewStep> {
           ),
         ),
       ],
+    );
+  }
+
+  /// تصدير بيانات الحاوية
+  void _exportContainerData() {
+    // TODO: Implement container data export functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('سيتم تنفيذ تصدير البيانات قريباً'),
+        backgroundColor: AccountantThemeConfig.accentBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  /// حفظ بيانات الحاوية
+  void _saveContainerData() {
+    // TODO: Implement container data save functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('سيتم تنفيذ حفظ البيانات قريباً'),
+        backgroundColor: AccountantThemeConfig.primaryGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
     );
   }
 }

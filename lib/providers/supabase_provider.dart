@@ -8,6 +8,7 @@ import '../services/voucher_service.dart';
 import '../services/invoice_creation_service.dart';
 import '../services/auth_state_manager.dart';
 import '../services/auth_sync_service.dart';
+import '../services/secure_credential_service.dart';
 import '../utils/app_logger.dart';
 import '../models/voucher_model.dart';
 import '../models/client_voucher_model.dart';
@@ -443,6 +444,24 @@ class SupabaseProvider extends ChangeNotifier {
 
           AppLogger.info('🎉 SupabaseProvider: Sign-in completed successfully for: $email');
 
+          // Store credentials for biometric authentication if available
+          try {
+            final biometricAvailable = await SecureCredentialService.isBiometricAvailable();
+            if (biometricAvailable) {
+              AppLogger.info('🔐 Storing credentials for biometric authentication...');
+              await SecureCredentialService.storeCredentials(
+                email: email,
+                password: password,
+              );
+              AppLogger.info('✅ Credentials stored successfully for biometric authentication');
+            } else {
+              AppLogger.info('ℹ️ Biometric authentication not available on this device');
+            }
+          } catch (biometricError) {
+            AppLogger.warning('⚠️ Failed to store biometric credentials: $biometricError');
+            // Don't fail the login if biometric storage fails
+          }
+
           // CRITICAL FIX: Wait for session to fully propagate before synchronization
           AppLogger.info('⏳ SupabaseProvider: Waiting for session propagation...');
           await Future.delayed(const Duration(milliseconds: 500));
@@ -486,55 +505,51 @@ class SupabaseProvider extends ChangeNotifier {
   }
 
   // Sign in with biometric authentication
-  Future<bool> signInWithBiometric(String email) async {
+  Future<bool> signInWithBiometric() async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      AppLogger.info('Attempting biometric login for: $email');
+      AppLogger.info('🔐 Starting biometric authentication...');
 
-      // Get stored password from secure storage
-      // For this implementation, we'll use a mock approach since actual biometric auth is already verified
-      // In a real implementation, we would use secure storage to get the stored credentials
-      final prefs = await SharedPreferences.getInstance();
-      final hasSavedPassword = prefs.getBool('has_saved_password') ?? false;
+      // Use the secure credential service to authenticate and get credentials
+      final authResult = await SecureCredentialService.authenticateAndGetCredentials();
 
-      if (!hasSavedPassword) {
+      if (!authResult.success) {
         _isLoading = false;
-        _error = 'لا توجد بيانات مخزنة للمصادقة البيومترية';
+        _error = authResult.errorMessage ?? 'فشلت المصادقة البيومترية';
         notifyListeners();
+        AppLogger.warning('⚠️ Biometric authentication failed: ${authResult.errorMessage}');
         return false;
       }
 
-      // SECURITY FIX: Secure biometric authentication
-      // Only allow biometric login if user has a valid existing session
-      try {
-        final result = await _supabaseService.signInWithSession(email);
+      // Use the retrieved credentials to sign in normally
+      if (authResult.email != null && authResult.password != null) {
+        AppLogger.info('✅ Biometric authentication successful, signing in with retrieved credentials');
 
-        if (result != null) {
-          _user = result;
-          _isLoading = false;
-          notifyListeners();
-          return true;
+        // Sign in using the retrieved credentials
+        final success = await signIn(authResult.email!, authResult.password!);
+
+        if (success) {
+          AppLogger.info('✅ Biometric login completed successfully for: ${authResult.email}');
         } else {
-          _isLoading = false;
-          _error = 'فشل تسجيل الدخول باستخدام البصمة. يرجى تسجيل الدخول باستخدام كلمة المرور';
-          notifyListeners();
-          return false;
+          AppLogger.error('❌ Failed to sign in with biometric credentials');
         }
-      } catch (securityError) {
+
+        return success;
+      } else {
         _isLoading = false;
-        _error = securityError.toString();
+        _error = 'بيانات المصادقة البيومترية غير صالحة';
         notifyListeners();
-        AppLogger.error('Secure biometric authentication failed: $securityError');
+        AppLogger.error('❌ Invalid biometric credentials retrieved');
         return false;
       }
     } catch (e) {
       _isLoading = false;
       _error = 'خطأ في تسجيل الدخول البيومتري: ${e.toString()}';
       notifyListeners();
-      AppLogger.error('Biometric login error: $e');
+      AppLogger.error('❌ Biometric login error: $e');
       return false;
     }
   }
