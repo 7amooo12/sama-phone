@@ -499,7 +499,10 @@ class _ExportSaveStepState extends State<ExportSaveStep> {
 
       // تنفيذ العمليات المطلوبة
       if (_saveToDatabase) {
-        // حفظ في قاعدة البيانات (تم بالفعل في الخطوات السابقة)
+        // حفظ الحاوية في قاعدة البيانات
+        if (widget.provider.currentContainerItems.isNotEmpty) {
+          await widget.provider.saveContainerBatch();
+        }
       }
 
       if (_exportPdf) {

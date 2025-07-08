@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:uuid/uuid.dart';
 import '../utils/constants.dart';
 import '../utils/logger.dart';
 
@@ -149,7 +150,8 @@ class Helpers {
   }
 
   static String generateId() {
-    return DateTime.now().millisecondsSinceEpoch.toString();
+    const uuid = Uuid();
+    return uuid.v4(); // Generate proper UUID instead of timestamp
   }
 
   static bool isValidFileType(String filePath, List<String> allowedExtensions) {

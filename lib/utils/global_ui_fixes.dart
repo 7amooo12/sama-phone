@@ -84,6 +84,59 @@ class GlobalUIFixes {
     );
   }
 
+  /// إصلاح مشاكل overflow في Manufacturing Tools
+  static Widget fixManufacturingToolsOverflow(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: constraints.maxWidth,
+            maxHeight: constraints.maxHeight,
+          ),
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  /// إصلاح مشاكل overflow في النصوص الطويلة
+  static Widget fixTextOverflow(
+    String text, {
+    TextStyle? style,
+    int maxLines = 1,
+    TextAlign textAlign = TextAlign.start,
+    TextOverflow overflow = TextOverflow.ellipsis,
+  }) {
+    return Text(
+      text,
+      style: style,
+      maxLines: maxLines,
+      overflow: overflow,
+      textAlign: textAlign,
+      softWrap: true,
+    );
+  }
+
+  /// إصلاح مشاكل overflow في الصفوف (Rows)
+  static Widget fixRowOverflow({
+    required List<Widget> children,
+    MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
+    CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center,
+    MainAxisSize mainAxisSize = MainAxisSize.max,
+  }) {
+    return Row(
+      mainAxisAlignment: mainAxisAlignment,
+      crossAxisAlignment: crossAxisAlignment,
+      mainAxisSize: mainAxisSize,
+      children: children.map((child) {
+        return Flexible(child: child);
+      }).toList(),
+    );
+  }
+
   /// إصلاح مشاكل الـ keyboard overflow
   static Widget fixKeyboardOverflow(Widget child) {
     return Builder(

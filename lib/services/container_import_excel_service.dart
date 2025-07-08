@@ -227,11 +227,21 @@ class ContainerImportExcelService {
       );
 
       stopwatch.stop();
-      
-      onStatusUpdate?.call('اكتمل بنجاح');
+
+      // Debug logging
+      AppLogger.info('🎉 Container import completed successfully');
+      AppLogger.info('📊 Final results: ${extractionResult.items.length} items processed');
+      print('🔍 ContainerImportExcelService - Final items count: ${extractionResult.items.length}');
+
+      if (extractionResult.items.isNotEmpty) {
+        print('🔍 First item: ${extractionResult.items.first.productName}');
+        print('🔍 Last item: ${extractionResult.items.last.productName}');
+      }
+
+      onStatusUpdate?.call('اكتمل بنجاح - ${extractionResult.items.length} منتج');
       onProgress?.call(1.0);
 
-      return ContainerImportResult(
+      final result = ContainerImportResult(
         success: true,
         batch: batch,
         items: extractionResult.items,
@@ -243,6 +253,9 @@ class ContainerImportExcelService {
         warnings: extractionResult.warnings,
         processingTime: stopwatch.elapsedMilliseconds / 1000.0,
       );
+
+      print('🔍 ContainerImportExcelService - Returning result with ${result.items.length} items');
+      return result;
 
     } catch (e) {
       stopwatch.stop();
@@ -421,6 +434,11 @@ class ContainerImportExcelService {
         items.add(item);
         processedRows++;
 
+        // Debug logging for first few items
+        if (items.length <= 5) {
+          print('🔍 Item ${items.length}: ${item.productName} - ${item.numberOfCartons} cartons, ${item.totalQuantity} total');
+        }
+
         // Update progress
         if (onProgress != null && rowIndex % 100 == 0) {
           final progress = 0.5 + (0.4 * (rowIndex - dataStartRow) / (maxRowsToProcess - dataStartRow));
@@ -436,13 +454,32 @@ class ContainerImportExcelService {
 
     AppLogger.info('✅ Extraction completed: ${items.length} items processed, $skippedRows skipped');
 
-    return _ExtractionResult(
+    // Debug summary
+    print('🔍 Extraction Summary:');
+    print('   - Total items extracted: ${items.length}');
+    print('   - Processed rows: $processedRows');
+    print('   - Skipped rows: $skippedRows');
+    print('   - Errors: ${errors.length}');
+    print('   - Warnings: ${warnings.length}');
+
+    if (items.isNotEmpty) {
+      print('   - Sample items:');
+      for (int i = 0; i < items.length && i < 3; i++) {
+        final item = items[i];
+        print('     ${i + 1}. ${item.productName} (${item.totalQuantity} total)');
+      }
+    }
+
+    final result = _ExtractionResult(
       items: items,
       processedRows: processedRows,
       skippedRows: skippedRows,
       errors: errors,
       warnings: warnings,
     );
+
+    print('🔍 Returning _ExtractionResult with ${result.items.length} items');
+    return result;
   }
 
   /// Clean cell value for comparison

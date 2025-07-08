@@ -8,6 +8,9 @@ import 'package:smartbiztracker_new/models/manufacturing/production_batch.dart';
 import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/services/manufacturing/production_service.dart';
 import 'package:smartbiztracker_new/utils/app_logger.dart';
+import 'package:smartbiztracker_new/screens/manufacturing/widgets/production_gap_analysis_section.dart';
+import 'package:smartbiztracker_new/screens/manufacturing/widgets/required_tools_forecast_section.dart';
+import 'package:smartbiztracker_new/services/manufacturing/manufacturing_tools_refresh_service.dart';
 
 /// شاشة تفاصيل دفعة الإنتاج مع إمكانية تعديل الكمية
 class ProductionBatchDetailsScreen extends StatefulWidget {
@@ -41,17 +44,29 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
   ProductionBatch? _currentBatch;
   List<Map<String, dynamic>> _warehouseLocations = [];
 
+  // Manufacturing Tools Tracking data
+  bool _isLoadingGapAnalysis = false;
+  bool _isLoadingToolsForecast = false;
+  ProductionGapAnalysis? _gapAnalysis;
+  RequiredToolsForecast? _toolsForecast;
+
+  // Refresh service
+  late ManufacturingToolsRefreshService _refreshService;
+
   @override
   void initState() {
     super.initState();
+    _refreshService = ManufacturingToolsRefreshService(_productionService);
     _setupAnimations();
     _initializeData();
+    _setupRefreshService();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _quantityController.dispose();
+    _refreshService.dispose();
     super.dispose();
   }
 
@@ -87,6 +102,7 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
       _originalQuantity.truncateToDouble() == _originalQuantity ? 0 : 2
     );
     _loadWarehouseLocations();
+    _loadManufacturingToolsData();
   }
 
   /// تحميل مواقع المنتج في المخازن
@@ -105,6 +121,163 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
       }
     } catch (e) {
       AppLogger.error('❌ Error loading warehouse locations: $e');
+    }
+  }
+
+  /// تحميل بيانات تتبع أدوات التصنيع
+  /// يتم تحميل تحليل فجوة الإنتاج أولاً لضمان تحديث بيانات المنتج من API
+  Future<void> _loadManufacturingToolsData() async {
+    // تحميل تحليل فجوة الإنتاج أولاً لتحديث بيانات المنتج من API
+    await _loadProductionGapAnalysis();
+
+    // ثم تحميل باقي البيانات التي تعتمد على بيانات المنتج المحدثة
+    await _loadRequiredToolsForecast();
+  }
+
+
+
+  /// تحميل تحليل فجوة الإنتاج
+  Future<void> _loadProductionGapAnalysis() async {
+    try {
+      setState(() => _isLoadingGapAnalysis = true);
+
+      final gapAnalysis = await _productionService.getProductionGapAnalysis(
+        widget.batch.productId,
+        widget.batch.id
+      );
+
+      if (mounted) {
+        setState(() {
+          _gapAnalysis = gapAnalysis;
+          _isLoadingGapAnalysis = false;
+        });
+      }
+
+      AppLogger.info('✅ Loaded production gap analysis');
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingGapAnalysis = false);
+      }
+      AppLogger.error('❌ Error loading production gap analysis: $e');
+    }
+  }
+
+  /// تحميل توقعات الأدوات المطلوبة
+  Future<void> _loadRequiredToolsForecast() async {
+    try {
+      setState(() => _isLoadingToolsForecast = true);
+
+      // حساب القطع المتبقية من تحليل الفجوة أو استخدام قيمة افتراضية
+      final remainingPieces = _gapAnalysis?.remainingPieces ?? 0.0;
+
+      if (remainingPieces > 0) {
+        final forecast = await _productionService.getRequiredToolsForecast(
+          widget.batch.productId,
+          remainingPieces
+        );
+
+        if (mounted) {
+          setState(() {
+            _toolsForecast = forecast;
+            _isLoadingToolsForecast = false;
+          });
+        }
+
+        AppLogger.info('✅ Loaded required tools forecast');
+      } else {
+        if (mounted) {
+          setState(() => _isLoadingToolsForecast = false);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingToolsForecast = false);
+      }
+      AppLogger.error('❌ Error loading required tools forecast: $e');
+    }
+  }
+
+
+
+  /// إعداد خدمة التحديث
+  void _setupRefreshService() {
+    _refreshService.initialize(
+      batchId: widget.batch.id,
+      productId: widget.batch.productId,
+      enableAutoRefresh: true,
+      autoRefreshInterval: const Duration(minutes: 3),
+    );
+
+    // الاستماع لتغييرات حالة التحديث
+    _refreshService.addListener(_onRefreshStateChanged);
+  }
+
+  /// معالج تغيير حالة التحديث
+  void _onRefreshStateChanged() {
+    if (!mounted) return;
+
+    final data = _refreshService.currentData;
+    if (data != null) {
+      setState(() {
+        _gapAnalysis = data.gapAnalysis;
+        _toolsForecast = data.toolsForecast;
+        _isLoadingGapAnalysis = false;
+        _isLoadingToolsForecast = false;
+      });
+    }
+
+    // تحديث حالات التحميل بناءً على حالة التحديث
+    if (_refreshService.isRefreshing) {
+      setState(() {
+        _isLoadingGapAnalysis = true;
+        _isLoadingToolsForecast = true;
+      });
+    }
+  }
+
+  /// تحديث بيانات تتبع أدوات التصنيع
+  Future<void> _refreshManufacturingToolsData() async {
+    final result = await _refreshService.refreshData();
+
+    if (result.isError && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'فشل في تحديث البيانات'),
+          backgroundColor: Colors.red.withOpacity(0.9),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('تم تحديث بيانات أدوات التصنيع بنجاح'),
+          backgroundColor: Colors.green.withOpacity(0.9),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  /// تحديث توقعات الأدوات المطلوبة مع ضمان توفر البيانات المطلوبة
+  Future<void> _refreshRequiredToolsForecast() async {
+    final result = await _refreshService.refreshForecastWithDependencies();
+
+    if (result.isError && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message ?? 'فشل في تحديث توقعات الأدوات'),
+          backgroundColor: Colors.red.withOpacity(0.9),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('تم تحديث توقعات الأدوات بنجاح'),
+          backgroundColor: Colors.green.withOpacity(0.9),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -221,8 +394,9 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
           _isLoading = false;
         });
 
-        // إعادة تحميل مواقع المخازن
+        // إعادة تحميل مواقع المخازن وبيانات أدوات التصنيع
         await _loadWarehouseLocations();
+        await _refreshManufacturingToolsData();
 
         // عرض معلومات إضافية عن العملية
         final recipesFound = result['recipesFound'] ?? 0;
@@ -714,6 +888,9 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
                                     ],
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                                // مؤشر حالة التحديث
+                                _refreshService.buildLastUpdateInfo(),
                               ],
                             ),
                           ),
@@ -735,27 +912,33 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
         position: _slideAnimation,
         child: FadeTransition(
           opacity: _fadeAnimation,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: _refreshService.buildPullToRefresh(
+            onRefresh: _refreshManufacturingToolsData,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 _buildQuantityEditSection(),
                 const SizedBox(height: 24),
-                _buildProductionDetailsSection(),
+
+                // Manufacturing Tools Tracking Sections
+                _buildRequiredToolsForecastSection(),
                 const SizedBox(height: 24),
+                _buildProductionGapAnalysisSection(),
+                const SizedBox(height: 24),
+
                 if (_warehouseLocations.isNotEmpty) ...[
                   _buildWarehouseLocationsSection(),
                   const SizedBox(height: 24),
                 ],
-                _buildBatchInfoSection(),
                 const SizedBox(height: 100), // Space for floating action button
               ],
             ),
           ),
         ),
       ),
-    );
+    ));
   }
 
   /// بناء قسم تعديل الكمية
@@ -932,52 +1115,7 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
     ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.3, end: 0);
   }
 
-  /// بناء قسم تفاصيل الإنتاج
-  Widget _buildProductionDetailsSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AccountantThemeConfig.cardGradient,
-        borderRadius: BorderRadius.circular(20),
-        border: AccountantThemeConfig.glowBorder(Colors.white.withOpacity(0.3)),
-        boxShadow: AccountantThemeConfig.cardShadows,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                color: AccountantThemeConfig.accentBlue,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'تفاصيل الإنتاج',
-                style: AccountantThemeConfig.headlineSmall.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildDetailRow('رقم الدفعة', '#${widget.batch.id}', Icons.tag),
-          _buildDetailRow('معرف المنتج', '${widget.batch.productId}', Icons.inventory),
-          if (widget.product != null) ...[
-            _buildDetailRow('اسم المنتج', widget.product!.name, Icons.shopping_bag),
-            _buildDetailRow('فئة المنتج', widget.product!.category, Icons.category),
-          ],
-          _buildDetailRow('الحالة', (_currentBatch ?? widget.batch).statusText, _statusIcon, statusColor: _statusColor),
-          _buildDetailRow('تاريخ الإكمال', widget.batch.formattedCompletionDate, Icons.calendar_today),
-          _buildDetailRow('وقت الإكمال', widget.batch.formattedCompletionTime, Icons.access_time),
-          if (widget.batch.warehouseManagerName != null)
-            _buildDetailRow('مدير المخزن', widget.batch.warehouseManagerName!, Icons.person),
-        ],
-      ),
-    ).animate().fadeIn(duration: 800.ms, delay: 200.ms).slideY(begin: 0.3, end: 0);
-  }
+
 
   /// بناء قسم مواقع المخازن
   Widget _buildWarehouseLocationsSection() {
@@ -1151,89 +1289,7 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
     );
   }
 
-  /// بناء قسم معلومات الدفعة
-  Widget _buildBatchInfoSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: AccountantThemeConfig.cardGradient,
-        borderRadius: BorderRadius.circular(20),
-        border: AccountantThemeConfig.glowBorder(Colors.white.withOpacity(0.3)),
-        boxShadow: AccountantThemeConfig.cardShadows,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.note_alt_outlined,
-                color: AccountantThemeConfig.warningOrange,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'معلومات إضافية',
-                style: AccountantThemeConfig.headlineSmall.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          if (widget.batch.notes != null && widget.batch.notes!.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ملاحظات الدفعة',
-                    style: AccountantThemeConfig.bodyMedium.copyWith(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.batch.notes!,
-                    style: AccountantThemeConfig.bodyMedium.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
-              ),
-              child: Text(
-                'لا توجد ملاحظات لهذه الدفعة',
-                style: AccountantThemeConfig.bodyMedium.copyWith(
-                  color: Colors.white54,
-                  fontStyle: FontStyle.italic,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-        ],
-      ),
-    ).animate().fadeIn(duration: 1000.ms, delay: 400.ms).slideY(begin: 0.3, end: 0);
-  }
+
 
   /// بناء صف التفاصيل
   Widget _buildDetailRow(String label, String value, IconData icon, {Color? statusColor}) {
@@ -1273,6 +1329,357 @@ class _ProductionBatchDetailsScreenState extends State<ProductionBatchDetailsScr
               ),
               textAlign: TextAlign.end,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  /// بناء قسم تحليل فجوة الإنتاج
+  Widget _buildProductionGapAnalysisSection() {
+    return ProductionGapAnalysisSection(
+      productId: widget.batch.productId,
+      batchId: widget.batch.id,
+      product: widget.product,
+      currentProduction: (_currentBatch ?? widget.batch).unitsProduced,
+      isLoading: _isLoadingGapAnalysis,
+      gapAnalysis: _gapAnalysis,
+      onRefresh: _refreshManufacturingToolsData,
+      onTargetUpdate: _onTargetUpdate,
+    );
+  }
+
+  /// بناء قسم توقعات الأدوات المطلوبة
+  Widget _buildRequiredToolsForecastSection() {
+    return RequiredToolsForecastSection(
+      productId: widget.batch.productId,
+      remainingPieces: _gapAnalysis?.remainingPieces ?? 0.0,
+      isLoading: _isLoadingToolsForecast,
+      forecast: _toolsForecast,
+      onRefresh: _refreshRequiredToolsForecast,
+      onToolTap: _onToolTap,
+      onProcureTools: _onProcureTools,
+      onBulkProcurement: _onBulkProcurement,
+    );
+  }
+
+
+
+  /// معالج النقر على أداة
+  void _onToolTap(int toolId) {
+    // يمكن إضافة التنقل إلى شاشة تفاصيل الأداة هنا
+    AppLogger.info('Tool tapped: $toolId');
+
+    // عرض معلومات الأداة في حوار
+    _showToolDetailsDialog(toolId);
+  }
+
+  /// معالج تحديث الهدف
+  void _onTargetUpdate() {
+    // يمكن إضافة حوار لتحديث الهدف المطلوب هنا
+    AppLogger.info('Target update requested');
+
+    _showTargetUpdateDialog();
+  }
+
+  /// معالج شراء الأدوات
+  void _onProcureTools() {
+    // يمكن إضافة التنقل إلى شاشة شراء الأدوات هنا
+    AppLogger.info('Procure tools requested');
+
+    _showProcureToolsDialog();
+  }
+
+
+
+  /// معالج الشراء المجمع للأدوات عالية الأولوية
+  void _onBulkProcurement(List<RequiredToolItem> highPriorityTools) {
+    AppLogger.info('Bulk procurement requested for ${highPriorityTools.length} high priority tools');
+
+    if (highPriorityTools.isEmpty) {
+      _showErrorSnackBar('لا توجد أدوات عالية الأولوية للشراء');
+      return;
+    }
+
+    _showBulkProcurementDialog(highPriorityTools);
+  }
+
+  /// عرض حوار شراء الأدوات
+  void _showProcurementDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AccountantThemeConfig.cardColor,
+        title: Text(
+          'شراء الأدوات',
+          style: AccountantThemeConfig.headlineSmall.copyWith(color: Colors.white),
+        ),
+        content: Text(
+          'هذه الميزة قيد التطوير. سيتم إضافة إمكانية شراء الأدوات قريباً.',
+          style: AccountantThemeConfig.bodyMedium.copyWith(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('حسناً', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  /// عرض حوار الشراء المجمع
+  void _showBulkProcurementDialog(List<RequiredToolItem> highPriorityTools) {
+    final totalCost = highPriorityTools.fold(0.0, (sum, tool) => sum + (tool.estimatedCost ?? 0.0));
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AccountantThemeConfig.cardColor,
+        title: Row(
+          children: [
+            Icon(Icons.priority_high, color: Colors.red, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'شراء عاجل - أدوات عالية الأولوية',
+                style: AccountantThemeConfig.headlineSmall.copyWith(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'الأدوات المطلوبة بشكل عاجل:',
+                    style: AccountantThemeConfig.bodyMedium.copyWith(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...highPriorityTools.take(3).map((tool) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• ${tool.toolName}: ${tool.shortfall.toStringAsFixed(1)} ${tool.unit}',
+                      style: AccountantThemeConfig.bodySmall.copyWith(color: Colors.white70),
+                    ),
+                  )),
+                  if (highPriorityTools.length > 3)
+                    Text(
+                      'و ${highPriorityTools.length - 3} أداة أخرى...',
+                      style: AccountantThemeConfig.bodySmall.copyWith(color: Colors.white54),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (totalCost > 0)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.attach_money, color: Colors.amber, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'التكلفة الإجمالية المتوقعة: ${totalCost.toStringAsFixed(2)} ريال',
+                        style: AccountantThemeConfig.bodyMedium.copyWith(
+                          color: Colors.amber,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('إلغاء', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _processBulkProcurement(highPriorityTools);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('شراء عاجل'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  /// معالجة الشراء المجمع
+  void _processBulkProcurement(List<RequiredToolItem> tools) {
+    _showErrorSnackBar('ميزة الشراء المجمع قيد التطوير');
+  }
+
+  /// عرض حوار تفاصيل الأداة
+  void _showToolDetailsDialog(int toolId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AccountantThemeConfig.backgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.build,
+              color: AccountantThemeConfig.accentBlue,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'تفاصيل الأداة',
+              style: AccountantThemeConfig.headlineSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'سيتم إضافة تفاصيل الأداة رقم $toolId هنا',
+          style: AccountantThemeConfig.bodyMedium.copyWith(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'إغلاق',
+              style: TextStyle(color: AccountantThemeConfig.accentBlue),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// عرض حوار تحديث الهدف
+  void _showTargetUpdateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AccountantThemeConfig.backgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.flag,
+              color: AccountantThemeConfig.primaryGreen,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'تحديث الهدف',
+              style: AccountantThemeConfig.headlineSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'سيتم إضافة واجهة تحديث الهدف المطلوب هنا',
+          style: AccountantThemeConfig.bodyMedium.copyWith(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // تحديث الهدف هنا
+            },
+            style: AccountantThemeConfig.primaryButtonStyle,
+            child: Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// عرض حوار شراء الأدوات
+  void _showProcureToolsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AccountantThemeConfig.backgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.shopping_cart,
+              color: Colors.orange,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'شراء الأدوات',
+              style: AccountantThemeConfig.headlineSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'سيتم إضافة واجهة شراء الأدوات المطلوبة هنا',
+          style: AccountantThemeConfig.bodyMedium.copyWith(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'إلغاء',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // التنقل إلى شاشة الشراء هنا
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('متابعة'),
           ),
         ],
       ),

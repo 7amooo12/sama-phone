@@ -48,6 +48,7 @@ class ImportAnalysisProvider extends ChangeNotifier {
   ContainerImportBatch? _currentContainerBatch;
   List<ContainerImportItem> _currentContainerItems = [];
   ContainerImportResult? _lastContainerImportResult;
+  List<ContainerImportBatch> _containerBatches = [];
   
   // إعدادات المستخدم
   ImportAnalysisSettings? _userSettings;
@@ -98,6 +99,7 @@ class ImportAnalysisProvider extends ChangeNotifier {
   ContainerImportBatch? get currentContainerBatch => _currentContainerBatch;
   List<ContainerImportItem> get currentContainerItems => _currentContainerItems;
   ContainerImportResult? get lastContainerImportResult => _lastContainerImportResult;
+  List<ContainerImportBatch> get containerBatches => _containerBatches;
   
   ImportAnalysisSettings? get userSettings => _userSettings;
   String get searchQuery => _searchQuery;
@@ -147,6 +149,7 @@ class ImportAnalysisProvider extends ChangeNotifier {
     try {
       await _loadUserSettings();
       await _loadImportBatches();
+      await loadContainerBatches();
     } catch (e) {
       AppLogger.error('خطأ في تهيئة مزود تحليل الاستيراد: $e');
     }
@@ -1735,16 +1738,25 @@ class ImportAnalysisProvider extends ChangeNotifier {
         AppLogger.info('✅ Container import processing completed successfully');
         AppLogger.info('📊 Processed ${result.items.length} items from ${result.totalRows} rows');
 
+        // Debug logging for UI
+        print('🔍 Provider - Container items set: ${_currentContainerItems.length}');
+        print('🔍 Provider - First item: ${_currentContainerItems.isNotEmpty ? _currentContainerItems.first.productName : 'None'}');
+
         if (result.errors.isNotEmpty) {
           AppLogger.warning('⚠️ Processing completed with ${result.errors.length} errors');
+          print('⚠️ Errors: ${result.errors}');
         }
 
         if (result.warnings.isNotEmpty) {
           AppLogger.warning('⚠️ Processing completed with ${result.warnings.length} warnings');
+          print('⚠️ Warnings: ${result.warnings}');
         }
 
-        _setStatus('تم إكمال معالجة الحاوية بنجاح');
+        _setStatus('تم إكمال معالجة الحاوية بنجاح - ${result.items.length} منتج');
         _setProgress(1.0);
+
+        // Ensure UI is notified of the data change
+        notifyListeners();
       } else {
         throw Exception('فشل في معالجة ملف الحاوية: ${result.errors.join(', ')}');
       }
@@ -1793,6 +1805,248 @@ class ImportAnalysisProvider extends ChangeNotifier {
       'itemsWithDiscrepancies': itemsWithDiscrepancies,
       'averagePiecesPerCarton': averagePiecesPerCarton,
     };
+  }
+
+  /// حفظ دفعة الحاوية في قاعدة البيانات
+  Future<void> saveContainerBatch() async {
+    if (_currentContainerBatch == null || _currentContainerItems.isEmpty) {
+      _setError('لا توجد بيانات حاوية لحفظها');
+      return;
+    }
+
+    try {
+      _setLoading(true);
+      _setStatus('حفظ بيانات الحاوية...');
+      _clearError();
+
+      final userId = _supabaseService.currentUserId;
+      if (userId == null) {
+        throw Exception('المستخدم غير مسجل الدخول');
+      }
+
+      AppLogger.info('💾 Saving container batch: ${_currentContainerBatch!.filename}');
+
+      // إعداد بيانات الدفعة للحفظ
+      final batchData = {
+        'id': _currentContainerBatch!.id,
+        'filename': _currentContainerBatch!.filename,
+        'original_filename': _currentContainerBatch!.originalFilename,
+        'file_size': _currentContainerBatch!.fileSize,
+        'file_type': _currentContainerBatch!.fileType,
+        'total_items': _currentContainerItems.length,
+        'processed_items': _currentContainerItems.length,
+        'processing_status': 'completed',
+        'summary_stats': getContainerImportStatistics(),
+        'created_at': _currentContainerBatch!.createdAt.toIso8601String(),
+        'created_by': userId,
+        'metadata': {
+          'import_type': 'container',
+          'success_rate': _lastContainerImportResult?.successRate ?? 1.0,
+          'has_issues': _lastContainerImportResult?.hasIssues ?? false,
+          'errors': _lastContainerImportResult?.errors ?? [],
+          'warnings': _lastContainerImportResult?.warnings ?? [],
+          ..._currentContainerBatch!.metadata ?? {},
+        },
+      };
+
+      // حفظ الدفعة
+      final savedBatch = await _supabaseService.createRecord(
+        'import_batches',
+        batchData,
+      );
+
+      final batchId = savedBatch['id'] as String;
+      AppLogger.info('✅ Container batch saved with ID: $batchId');
+
+      // حفظ عناصر الحاوية
+      for (int i = 0; i < _currentContainerItems.length; i++) {
+        final item = _currentContainerItems[i];
+        final itemData = {
+          'id': item.id,
+          'import_batch_id': batchId,
+          'serial_number': i + 1,
+          'item_number': item.productName,
+          'carton_count': item.numberOfCartons,
+          'pieces_per_carton': item.piecesPerCarton,
+          'total_quantity': item.totalQuantity,
+          'remarks': item.remarks,
+          'created_at': item.createdAt.toIso8601String(),
+          'metadata': {
+            'is_quantity_consistent': item.isQuantityConsistent,
+            'additional_data': item.additionalData ?? {},
+          },
+        };
+
+        await _supabaseService.createRecord(
+          'packing_list_items',
+          itemData,
+        );
+      }
+
+      // إضافة الدفعة المحفوظة إلى القائمة
+      final savedContainerBatch = ContainerImportBatch(
+        id: batchId,
+        filename: _currentContainerBatch!.filename,
+        originalFilename: _currentContainerBatch!.originalFilename,
+        fileSize: _currentContainerBatch!.fileSize,
+        fileType: _currentContainerBatch!.fileType,
+        items: List.from(_currentContainerItems),
+        createdAt: _currentContainerBatch!.createdAt,
+        createdBy: userId,
+        metadata: batchData['metadata'] as Map<String, dynamic>,
+      );
+
+      _containerBatches.insert(0, savedContainerBatch);
+
+      AppLogger.info('✅ Container batch and ${_currentContainerItems.length} items saved successfully');
+      _setStatus('تم حفظ بيانات الحاوية بنجاح');
+
+      notifyListeners();
+
+    } catch (e) {
+      AppLogger.error('❌ Error saving container batch: $e');
+      _setError('خطأ في حفظ بيانات الحاوية: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// تحميل دفعات الحاويات المحفوظة
+  Future<void> loadContainerBatches() async {
+    try {
+      _setLoading(true);
+      _clearError();
+
+      final userId = _supabaseService.currentUserId;
+      if (userId == null) return;
+
+      AppLogger.info('📥 Loading container batches for user: $userId');
+
+      // تحميل الدفعات من قاعدة البيانات
+      final batches = await _supabaseService.getRecordsByFilter(
+        'import_batches',
+        'created_by',
+        userId,
+      );
+
+      // فلترة دفعات الحاويات فقط
+      final containerBatchesData = batches.where((batch) {
+        final metadata = batch['metadata'] as Map<String, dynamic>?;
+        return metadata?['import_type'] == 'container';
+      }).toList();
+
+      _containerBatches.clear();
+
+      for (final batchData in containerBatchesData) {
+        try {
+          // تحميل عناصر الدفعة
+          final itemsData = await _supabaseService.getRecordsByFilter(
+            'packing_list_items',
+            'import_batch_id',
+            batchData['id'],
+          );
+
+          final items = itemsData.map((itemData) {
+            return ContainerImportItem(
+              id: itemData['id'],
+              productName: itemData['item_number'] ?? '',
+              numberOfCartons: itemData['carton_count'] ?? 0,
+              piecesPerCarton: itemData['pieces_per_carton'] ?? 0,
+              totalQuantity: itemData['total_quantity'] ?? 0,
+              remarks: itemData['remarks'] ?? '',
+              createdAt: DateTime.parse(itemData['created_at']),
+              additionalData: (itemData['metadata'] as Map<String, dynamic>?)?['additional_data'],
+            );
+          }).toList();
+
+          final batch = ContainerImportBatch(
+            id: batchData['id'],
+            filename: batchData['filename'] ?? '',
+            originalFilename: batchData['original_filename'] ?? '',
+            fileSize: batchData['file_size'] ?? 0,
+            fileType: batchData['file_type'] ?? 'xlsx',
+            items: items,
+            createdAt: DateTime.parse(batchData['created_at']),
+            createdBy: batchData['created_by'],
+            metadata: batchData['metadata'] as Map<String, dynamic>?,
+          );
+
+          _containerBatches.add(batch);
+        } catch (e) {
+          AppLogger.warning('⚠️ Failed to load container batch ${batchData['id']}: $e');
+        }
+      }
+
+      // ترتيب حسب تاريخ الإنشاء
+      _containerBatches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      AppLogger.info('✅ Loaded ${_containerBatches.length} container batches');
+      notifyListeners();
+
+    } catch (e) {
+      AppLogger.error('❌ Error loading container batches: $e');
+      _setError('خطأ في تحميل دفعات الحاويات: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// تحميل دفعة حاوية محددة
+  Future<void> loadContainerBatch(String batchId) async {
+    try {
+      _setLoading(true);
+      _clearError();
+
+      AppLogger.info('📥 Loading container batch: $batchId');
+
+      // البحث في الدفعات المحملة أولاً
+      final existingBatch = _containerBatches.firstWhere(
+        (batch) => batch.id == batchId,
+        orElse: () => throw Exception('الدفعة غير موجودة'),
+      );
+
+      _currentContainerBatch = existingBatch;
+      _currentContainerItems = List.from(existingBatch.items);
+
+      AppLogger.info('✅ Container batch loaded: ${existingBatch.filename}');
+      notifyListeners();
+
+    } catch (e) {
+      AppLogger.error('❌ Error loading container batch: $e');
+      _setError('خطأ في تحميل دفعة الحاوية: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// حذف دفعة حاوية
+  Future<void> deleteContainerBatch(String batchId) async {
+    try {
+      _setLoading(true);
+      _clearError();
+
+      AppLogger.info('🗑️ Deleting container batch: $batchId');
+
+      // حذف من قاعدة البيانات
+      await _supabaseService.deleteRecord('import_batches', batchId);
+
+      // حذف من القائمة المحلية
+      _containerBatches.removeWhere((batch) => batch.id == batchId);
+
+      // إذا كانت الدفعة المحذوفة هي الحالية، مسحها
+      if (_currentContainerBatch?.id == batchId) {
+        clearContainerImportData();
+      }
+
+      AppLogger.info('✅ Container batch deleted successfully');
+      notifyListeners();
+
+    } catch (e) {
+      AppLogger.error('❌ Error deleting container batch: $e');
+      _setError('خطأ في حذف دفعة الحاوية: $e');
+    } finally {
+      _setLoading(false);
+    }
   }
 
   @override

@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:smartbiztracker_new/models/manufacturing/production_recipe.dart';
 import 'package:smartbiztracker_new/models/manufacturing/production_batch.dart';
 import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/services/unified_products_service.dart';
+import 'package:smartbiztracker_new/services/manufacturing/manufacturing_tools_edge_cases_handler.dart';
 import 'package:smartbiztracker_new/utils/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -704,13 +706,17 @@ class ProductionService {
   }
 
   /// التحقق من صحة الكاش
-  bool _isCacheValid(String key) {
+  bool _isCacheValid(String key, {int? maxAgeMinutes}) {
     if (!_cache.containsKey(key)) return false;
 
     final cacheEntry = _cache[key];
     final timestamp = cacheEntry['timestamp'] as DateTime;
 
-    return DateTime.now().difference(timestamp) < _cacheDuration;
+    final maxAge = maxAgeMinutes != null
+        ? Duration(minutes: maxAgeMinutes)
+        : _cacheDuration;
+
+    return DateTime.now().difference(timestamp) < maxAge;
   }
 
   /// مسح الكاش
@@ -719,9 +725,70 @@ class ProductionService {
     AppLogger.info('🗑️ Production service cache cleared');
   }
 
+  /// تحديث بيانات المنتج في قاعدة البيانات بناءً على بيانات API
+  Future<void> _updateProductDataInDatabase(int productId, ProductModel apiProduct) async {
+    try {
+      AppLogger.info('💾 Updating product data in database for product: $productId');
+
+      // التحقق من صحة البيانات قبل التحديث
+      if (apiProduct.name.isEmpty) {
+        AppLogger.warning('⚠️ Invalid product name, skipping database update');
+        return;
+      }
+
+      if (apiProduct.quantity < 0) {
+        AppLogger.warning('⚠️ Invalid product quantity (${apiProduct.quantity}), skipping database update');
+        return;
+      }
+
+      // تحديث بيانات المنتج في جدول products
+      await _supabase.from('products').upsert({
+        'id': productId.toString(),
+        'name': apiProduct.name.trim(),
+        'quantity': apiProduct.quantity,
+        'price': apiProduct.price,
+        'description': apiProduct.description?.trim() ?? '',
+        'category': apiProduct.category?.trim() ?? '',
+        'sku': apiProduct.sku?.trim() ?? '',
+        'image_url': apiProduct.imageUrl?.trim(),
+        'active': apiProduct.isActive, // Fixed: use 'active' instead of 'is_active' to match database schema
+        'updated_at': DateTime.now().toIso8601String(),
+        'supplier': apiProduct.supplier?.trim(),
+        'manufacturing_cost': apiProduct.manufacturingCost,
+        'reorder_point': apiProduct.reorderPoint,
+        'minimum_stock': apiProduct.minimumStock,
+      }).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          AppLogger.warning('⏰ Database update timeout for product $productId');
+          throw Exception('Database update timeout');
+        },
+      );
+
+      AppLogger.info('✅ Product data updated successfully in database');
+    } catch (e) {
+      AppLogger.error('❌ Error updating product data in database: $e');
+      // لا نرمي استثناء هنا لأن هذا ليس أمراً حرجاً
+      // ولكن نسجل الخطأ للمراجعة
+    }
+  }
+
   /// مسح الكاش يدوياً
   void clearCache() {
     _clearCache();
+  }
+
+  /// مسح كاش تحليلات الأدوات لدفعة معينة
+  void clearToolAnalyticsCache(int batchId) {
+    final cacheKey = 'tool_analytics_$batchId';
+    _cache.remove(cacheKey);
+    AppLogger.info('🗑️ Cleared tool analytics cache for batch: $batchId');
+  }
+
+  /// إجبار تحديث تحليلات الأدوات (بدون كاش)
+  Future<List<ToolUsageAnalytics>> forceRefreshToolAnalytics(int batchId) async {
+    clearToolAnalyticsCache(batchId);
+    return await getToolUsageAnalytics(batchId);
   }
 
   /// الحصول على تفاصيل المنتج بالمعرف
@@ -806,6 +873,304 @@ class ProductionService {
     } catch (e) {
       AppLogger.error('❌ Error fetching products by IDs: $e');
       return {};
+    }
+  }
+
+  /// الحصول على تحليلات استخدام أدوات التصنيع لدفعة إنتاج
+  Future<List<ToolUsageAnalytics>> getToolUsageAnalytics(int batchId) async {
+    try {
+      AppLogger.info('📊 Fetching tool usage analytics for batch: $batchId with enhanced remaining stock calculation');
+
+      final cacheKey = 'tool_analytics_$batchId';
+
+      // التحقق من الكاش (مع تقليل مدة الكاش لضمان الحصول على البيانات المحدثة)
+      if (_cache.containsKey(cacheKey)) {
+        final cached = _cache[cacheKey];
+        if (cached != null &&
+            DateTime.now().difference(cached['timestamp']).inMinutes < 2) { // تقليل مدة الكاش إلى دقيقتين
+          AppLogger.info('📦 Using cached tool analytics data');
+          final cachedData = cached['data'] as List<dynamic>;
+          return cachedData.map((json) => ToolUsageAnalytics.fromJson(json)).toList();
+        }
+      }
+
+      // استدعاء دالة قاعدة البيانات للحصول على تحليلات الأدوات مع الحساب المحسن
+      final response = await _supabase.rpc('get_batch_tool_usage_analytics', params: {
+        'p_batch_id': batchId,
+      }) as List<dynamic>;
+
+      AppLogger.info('📊 Raw analytics response: ${response.length} tools found');
+
+      final analytics = response
+          .map((json) {
+            final data = json as Map<String, dynamic>;
+            AppLogger.info('🔧 Tool: ${data['tool_name']}, Remaining Stock: ${data['remaining_stock']}, Used Per Unit: ${data['quantity_used_per_unit']}');
+            return ToolUsageAnalytics.fromJson(data);
+          })
+          .toList();
+
+      // تطبيق معالجة الحالات الاستثنائية
+      final List<ToolUsageAnalytics> sanitizedAnalytics = analytics
+          .map((analytic) => ManufacturingToolsEdgeCasesHandler.sanitizeToolAnalytics(analytic))
+          .toList();
+
+      // حفظ في الكاش
+      _cache[cacheKey] = {
+        'data': response,
+        'timestamp': DateTime.now(),
+      };
+
+      AppLogger.info('✅ Fetched ${sanitizedAnalytics.length} tool usage analytics with enhanced remaining stock calculation');
+      return sanitizedAnalytics;
+    } catch (e) {
+      AppLogger.error('❌ Error fetching tool usage analytics: $e');
+      return [];
+    }
+  }
+
+  /// الحصول على تحليل فجوة الإنتاج مع بيانات المنتج الحديثة من API
+  Future<ProductionGapAnalysis?> getProductionGapAnalysis(int productId, int batchId) async {
+    try {
+      AppLogger.info('📈 Fetching production gap analysis for product: $productId, batch: $batchId');
+
+      final cacheKey = 'gap_analysis_${productId}_$batchId';
+
+      // التحقق من الكاش (مع مدة انتهاء صلاحية أقصر للحصول على بيانات حديثة)
+      if (_isCacheValid(cacheKey, maxAgeMinutes: 5)) {
+        AppLogger.info('📦 Using cached gap analysis data');
+        final cachedData = _cache[cacheKey]['data'] as Map<String, dynamic>;
+        return ProductionGapAnalysis.fromJson(cachedData);
+      }
+
+      // جلب بيانات المنتج الحديثة من API أولاً مع معالجة الأخطاء
+      ProductModel? apiProduct;
+      try {
+        AppLogger.info('🔄 Fetching fresh product data from API for product: $productId');
+        apiProduct = await getProductById(productId).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            AppLogger.warning('⏰ API timeout for product $productId, using database fallback');
+            return null;
+          },
+        );
+
+        // تحديث بيانات المنتج في قاعدة البيانات إذا تم العثور على بيانات API
+        if (apiProduct != null) {
+          AppLogger.info('✅ Fresh product data found: ${apiProduct.name}, quantity: ${apiProduct.quantity}');
+          await _updateProductDataInDatabase(productId, apiProduct);
+        } else {
+          AppLogger.warning('⚠️ No API product data found for product: $productId, using database fallback');
+        }
+      } catch (e) {
+        AppLogger.error('❌ Error fetching API product data for product $productId: $e');
+        AppLogger.info('🔄 Continuing with database fallback for gap analysis');
+        apiProduct = null;
+      }
+
+      // استدعاء دالة قاعدة البيانات للحصول على تحليل الفجوة (ستستخدم البيانات المحدثة)
+      final response = await _supabase.rpc('get_production_gap_analysis', params: {
+        'p_product_id': productId,
+        'p_batch_id': batchId,
+      });
+
+      if (response == null) {
+        AppLogger.warning('⚠️ No gap analysis data found');
+        return null;
+      }
+
+      // تحويل الاستجابة إلى Map إذا كانت JSONB
+      Map<String, dynamic> responseMap;
+      if (response is Map<String, dynamic>) {
+        responseMap = response;
+      } else if (response is String) {
+        // إذا كانت الاستجابة نص JSON، قم بتحليلها
+        responseMap = jsonDecode(response) as Map<String, dynamic>;
+      } else {
+        // إذا كانت الاستجابة من نوع آخر، حاول تحويلها
+        responseMap = Map<String, dynamic>.from(response as Map);
+      }
+
+      // إذا كان لدينا بيانات API حديثة، استخدم الكمية من API كهدف
+      if (apiProduct != null && apiProduct.quantity > 0) {
+        AppLogger.info('🎯 Using API product quantity as target: ${apiProduct.quantity}');
+        responseMap['target_quantity'] = apiProduct.quantity.toDouble();
+
+        // إعادة حساب القيم المعتمدة على الهدف الجديد
+        final currentProduction = (responseMap['current_production'] as num).toDouble();
+        final newTargetQuantity = apiProduct.quantity.toDouble();
+
+        responseMap['remaining_pieces'] = newTargetQuantity - currentProduction;
+        responseMap['completion_percentage'] = newTargetQuantity > 0
+            ? (currentProduction / newTargetQuantity) * 100
+            : 0.0;
+        responseMap['is_over_produced'] = currentProduction > newTargetQuantity;
+        responseMap['is_completed'] = currentProduction >= newTargetQuantity;
+
+        AppLogger.info('📊 Updated gap analysis with API target - Target: $newTargetQuantity, Current: $currentProduction, Remaining: ${responseMap['remaining_pieces']}');
+      }
+
+      final gapAnalysis = ProductionGapAnalysis.fromJson(responseMap);
+
+      // حفظ في الكاش
+      _cache[cacheKey] = {
+        'data': responseMap,
+        'timestamp': DateTime.now(),
+      };
+
+      // إذا تم تحديث بيانات المنتج من API، قم بمسح كاش تحليلات الأدوات لضمان استخدام البيانات الجديدة
+      if (apiProduct != null) {
+        final toolAnalyticsCacheKey = 'tool_analytics_$batchId';
+        if (_cache.containsKey(toolAnalyticsCacheKey)) {
+          _cache.remove(toolAnalyticsCacheKey);
+          AppLogger.info('🗑️ Invalidated tool analytics cache due to API product update');
+        }
+      }
+
+      AppLogger.info('✅ Production gap analysis loaded successfully with ${apiProduct != null ? 'API' : 'database'} target data');
+      return gapAnalysis;
+    } catch (e) {
+      AppLogger.error('❌ Error fetching production gap analysis: $e');
+      return null;
+    }
+  }
+
+  /// الحصول على توقعات الأدوات المطلوبة للإنتاج المتبقي
+  Future<RequiredToolsForecast?> getRequiredToolsForecast(int productId, double remainingPieces) async {
+    try {
+      AppLogger.info('🔮 Fetching required tools forecast for product: $productId, remaining: $remainingPieces');
+
+      final cacheKey = 'tools_forecast_${productId}_${remainingPieces.toStringAsFixed(2)}';
+
+      // التحقق من الكاش
+      if (_isCacheValid(cacheKey)) {
+        AppLogger.info('📦 Using cached tools forecast data');
+        final cachedData = _cache[cacheKey]['data'] as Map<String, dynamic>;
+        return RequiredToolsForecast.fromJson(cachedData);
+      }
+
+      // Handle edge case: zero remaining pieces
+      if (remainingPieces <= 0) {
+        AppLogger.info('🔄 Zero remaining pieces - returning completed forecast');
+        final completedForecast = RequiredToolsForecast(
+          productId: productId,
+          remainingPieces: 0.0,
+          requiredTools: [],
+          canCompleteProduction: true,
+          unavailableTools: [],
+          totalCost: 0.0,
+        );
+
+        // Cache the result
+        _cache[cacheKey] = {
+          'data': completedForecast.toJson(),
+          'timestamp': DateTime.now(),
+        };
+
+        return completedForecast;
+      }
+
+      // استدعاء دالة قاعدة البيانات للحصول على توقعات الأدوات
+      final response = await _supabase.rpc('get_required_tools_forecast', params: {
+        'p_product_id': productId,
+        'p_remaining_pieces': remainingPieces,
+      });
+
+      // Handle different response types (Map or String)
+      Map<String, dynamic> responseMap;
+      if (response is Map<String, dynamic>) {
+        responseMap = response;
+      } else if (response is String) {
+        try {
+          responseMap = jsonDecode(response) as Map<String, dynamic>;
+        } catch (e) {
+          AppLogger.error('❌ Failed to parse JSON response: $e');
+          return null;
+        }
+      } else if (response != null) {
+        responseMap = Map<String, dynamic>.from(response as Map);
+      } else {
+        AppLogger.warning('⚠️ Null response from database function');
+        return null;
+      }
+
+      if (responseMap['success'] != true) {
+        AppLogger.warning('⚠️ Database function returned error: ${responseMap['error'] ?? 'Unknown error'}');
+        return null;
+      }
+
+      // Extract and validate the forecast data with proper structure for RequiredToolsForecast model
+      final forecastData = {
+        'product_id': responseMap['product_id'] ?? productId,
+        'remaining_pieces': (responseMap['remaining_pieces'] as num?)?.toDouble() ?? remainingPieces,
+        'required_tools': responseMap['required_tools'] ?? [],
+        'can_complete_production': responseMap['can_complete_production'] ?? false,
+        'unavailable_tools': responseMap['unavailable_tools'] ?? [],
+        'total_cost': (responseMap['total_cost'] as num?)?.toDouble() ?? 0.0,
+      };
+
+      // Validate required_tools structure
+      final requiredToolsList = forecastData['required_tools'] as List<dynamic>;
+      AppLogger.info('📊 Processing ${requiredToolsList.length} required tools');
+
+      // Log detailed tool information for debugging
+      for (int i = 0; i < requiredToolsList.length; i++) {
+        final tool = requiredToolsList[i] as Map<String, dynamic>;
+        AppLogger.info('🔧 Tool ${i + 1}: ${tool['tool_name']} - Required: ${tool['total_quantity_needed']}, Available: ${tool['available_stock']}, Status: ${tool['availability_status']}');
+      }
+
+      final forecast = RequiredToolsForecast.fromJson(forecastData);
+
+      // حفظ في الكاش
+      _cache[cacheKey] = {
+        'data': forecastData,
+        'timestamp': DateTime.now(),
+      };
+
+      AppLogger.info('✅ Fetched tools forecast: ${forecast.toolsCount} tools, can complete: ${forecast.canCompleteProduction}, total cost: ${forecast.totalCost.toStringAsFixed(2)}');
+      return forecast;
+    } catch (e, stackTrace) {
+      AppLogger.error('❌ Error fetching required tools forecast: $e');
+      AppLogger.error('Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// الحصول على تاريخ استخدام أداة معينة
+  Future<List<ToolUsageEntry>> getSpecificToolUsageHistory(int toolId, {int? batchId, int limit = 50}) async {
+    try {
+      AppLogger.info('📜 Fetching tool usage history for tool: $toolId');
+
+      final cacheKey = 'tool_history_${toolId}_${batchId ?? 'all'}_$limit';
+
+      // التحقق من الكاش
+      if (_isCacheValid(cacheKey)) {
+        AppLogger.info('📦 Using cached tool usage history');
+        final cachedData = _cache[cacheKey]['data'] as List<dynamic>;
+        return cachedData.map((json) => ToolUsageEntry.fromJson(json)).toList();
+      }
+
+      // استدعاء دالة قاعدة البيانات للحصول على تاريخ الاستخدام
+      final response = await _supabase.rpc('get_tool_usage_history', params: {
+        'p_tool_id': toolId,
+        'p_batch_id': batchId,
+        'p_limit': limit,
+      }) as List<dynamic>;
+
+      final history = response
+          .map((json) => ToolUsageEntry.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // حفظ في الكاش
+      _cache[cacheKey] = {
+        'data': response,
+        'timestamp': DateTime.now(),
+      };
+
+      AppLogger.info('✅ Fetched ${history.length} tool usage history entries');
+      return history;
+    } catch (e) {
+      AppLogger.error('❌ Error fetching tool usage history: $e');
+      return [];
     }
   }
 }

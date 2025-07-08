@@ -1,5 +1,6 @@
 import 'package:smartbiztracker_new/models/product_model.dart';
 import 'package:smartbiztracker_new/models/warehouse_model.dart';
+import 'package:uuid/uuid.dart';
 
 /// نموذج العلاقة بين المخزن والمنتج
 /// يمثل منتج محدد في مخزن محدد مع الكمية المتاحة
@@ -248,9 +249,10 @@ class WarehouseProductModel {
     ProductModel? product,
     WarehouseModel? warehouse,
   }) {
+    const uuid = Uuid();
     final now = DateTime.now();
     return WarehouseProductModel(
-      id: '${warehouseId}_${productId}_${now.millisecondsSinceEpoch}',
+      id: uuid.v4(), // Generate proper UUID instead of composite timestamp ID
       warehouseId: warehouseId,
       productId: productId,
       quantity: quantity,

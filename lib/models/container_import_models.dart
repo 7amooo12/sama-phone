@@ -1,9 +1,10 @@
 /// Container Import Data Models
-/// 
+///
 /// This file contains data models for container import functionality,
 /// supporting multiple product names, cartons, quantities, and remarks.
 
 import 'dart:convert';
+import 'package:uuid/uuid.dart';
 
 /// Model for individual container import item
 class ContainerImportItem {
@@ -36,8 +37,9 @@ class ContainerImportItem {
     required String remarks,
     Map<String, dynamic>? additionalData,
   }) {
+    const uuid = Uuid();
     return ContainerImportItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: uuid.v4(), // Generate proper UUID instead of timestamp
       productName: productName.trim(),
       numberOfCartons: numberOfCartons,
       piecesPerCarton: piecesPerCarton,
@@ -191,8 +193,9 @@ class ContainerImportBatch {
     String? createdBy,
     Map<String, dynamic>? metadata,
   }) {
+    const uuid = Uuid();
     return ContainerImportBatch(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: uuid.v4(), // Generate proper UUID instead of timestamp
       filename: filename,
       originalFilename: originalFilename,
       fileSize: fileSize,
