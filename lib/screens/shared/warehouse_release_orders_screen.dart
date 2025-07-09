@@ -1113,78 +1113,176 @@ class _WarehouseReleaseOrdersScreenState extends State<WarehouseReleaseOrdersScr
   Widget _buildItemCard(WarehouseReleaseOrderItem item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16), // Increased padding for better spacing
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12), // Slightly more rounded corners
         border: Border.all(
           color: Colors.white.withOpacity(0.1),
           width: 1,
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Product image placeholder
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AccountantThemeConfig.primaryGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AccountantThemeConfig.primaryGreen.withOpacity(0.3),
-                width: 1,
+          Row(
+            children: [
+              // Product image placeholder
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: AccountantThemeConfig.primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AccountantThemeConfig.primaryGreen.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  Icons.inventory_2_rounded,
+                  color: AccountantThemeConfig.primaryGreen,
+                  size: 24,
+                ),
               ),
-            ),
-            child: Icon(
-              Icons.inventory_2_rounded,
-              color: AccountantThemeConfig.primaryGreen,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-          // Product details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+              // Product name - with proper text overflow handling
+              Expanded(
+                child: Text(
                   item.productName,
                   style: AccountantThemeConfig.bodyMedium.copyWith(
                     color: Colors.white,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
                   ),
+                  maxLines: 2, // Allow up to 2 lines for product name
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      'الكمية: ${item.quantity}',
-                      style: AccountantThemeConfig.bodySmall.copyWith(
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      'السعر: ${item.unitPrice.toStringAsFixed(2)} جنيه',
-                      style: AccountantThemeConfig.bodySmall.copyWith(
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
 
-          // Total
-          Text(
-            '${item.subtotal.toStringAsFixed(2)} جنيه',
-            style: AccountantThemeConfig.bodyMedium.copyWith(
-              color: AccountantThemeConfig.primaryGreen,
-              fontWeight: FontWeight.bold,
-            ),
+          const SizedBox(height: 12),
+
+          // Product details in separate row for better layout
+          Row(
+            children: [
+              // Quantity section
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AccountantThemeConfig.accentBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AccountantThemeConfig.accentBlue.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'الكمية',
+                        style: AccountantThemeConfig.bodySmall.copyWith(
+                          color: AccountantThemeConfig.accentBlue,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${item.quantity}',
+                        style: AccountantThemeConfig.bodyMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Unit price section (less important, smaller space)
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'سعر الوحدة',
+                        style: AccountantThemeConfig.bodySmall.copyWith(
+                          color: Colors.white60,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${item.unitPrice.toStringAsFixed(2)} جنيه',
+                        style: AccountantThemeConfig.bodySmall.copyWith(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Total section - most prominent
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AccountantThemeConfig.primaryGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AccountantThemeConfig.primaryGreen.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'الإجمالي',
+                        style: AccountantThemeConfig.bodySmall.copyWith(
+                          color: AccountantThemeConfig.primaryGreen,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${item.subtotal.toStringAsFixed(2)} جنيه',
+                        style: AccountantThemeConfig.bodyMedium.copyWith(
+                          color: AccountantThemeConfig.primaryGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

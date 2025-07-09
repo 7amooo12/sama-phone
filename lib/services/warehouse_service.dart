@@ -2456,6 +2456,7 @@ class WarehouseService {
             'warehouse_id': warehouseUuid,
             'product_id': validProductId,
             'quantity': quantity,
+            'quantity_change': quantity, // إضافة حقل quantity_change
             'quantity_before': 0,
             'quantity_after': quantity,
             'type': 'stock_in',
@@ -2605,6 +2606,7 @@ class WarehouseService {
           'warehouse_id': warehouseUuid,
           'product_id': validProductId,
           'quantity': currentQuantity, // الكمية المسحوبة (موجبة)
+          'quantity_change': -currentQuantity, // إضافة حقل quantity_change (سالب للسحب)
           'quantity_before': currentQuantity,
           'quantity_after': 0,
           'type': 'stock_out',

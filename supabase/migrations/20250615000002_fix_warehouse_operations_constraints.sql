@@ -137,6 +137,7 @@ BEGIN
         warehouse_id,
         product_id,
         quantity,
+        quantity_change,
         quantity_before,
         quantity_after,
         type,
@@ -149,6 +150,7 @@ BEGIN
         p_warehouse_id,
         p_product_id,
         ABS(p_quantity_change), -- Always positive
+        p_quantity_change, -- The actual change (can be negative)
         current_quantity,
         new_quantity,
         transaction_type,
