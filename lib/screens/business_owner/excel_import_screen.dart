@@ -1754,7 +1754,7 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
   }
 
   /// Find quantity column by analyzing content for numeric patterns
-  int _findQuantityColumnByContent(Worksheet sheet, int headerRowIndex) {
+  int _findQuantityColumnByContent(excel.Sheet sheet, int headerRowIndex) {
     try {
       final maxColumnsToCheck = [sheet.maxColumns, MAX_COLUMNS_TO_SCAN].reduce((a, b) => a < b ? a : b);
       final maxRowsToCheck = [sheet.maxRows, headerRowIndex + 20].reduce((a, b) => a < b ? a : b);
