@@ -1195,7 +1195,8 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         // Complete phrases
         'quantity', 'total quantity', 'item quantity', 'order quantity',
         'purchase quantity', 'number of items', 'number of pieces',
-        'pieces count', 'units count', 'items count',
+        'pieces count', 'units count', 'items count', 'ordered quantity',
+        'required quantity', 'requested quantity', 'shipped quantity',
 
         // Single words
         'qty', 'pcs', 'pieces', 'units', 'count', 'amount', 'number', 'num',
@@ -1203,21 +1204,39 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         'gross', 'each', 'nos', 'numbers', 'items', 'stock', 'inventory',
 
         // Abbreviated and symbol forms
-        'ea', 'pc', 'unit', 'ct', 'cnt', '#', 'no', 'qnty', 'qtty',
+        'ea', 'pc', 'unit', 'ct', 'cnt', '#', 'no', 'qnty', 'qtty', 'q',
+
+        // Common Excel column headers
+        'column1', 'column2', 'column3', 'column4', 'column5', 'column6',
+        'col1', 'col2', 'col3', 'col4', 'col5', 'col6',
+        'field1', 'field2', 'field3', 'field4', 'field5', 'field6',
 
         // Packaging terms
         'package', 'packages', 'bag', 'bags', 'bottle', 'bottles', 'can', 'cans',
         'roll', 'rolls', 'sheet', 'sheets', 'set', 'sets', 'pair', 'pairs',
+        'case', 'cases', 'lot', 'lots', 'batch', 'batches',
 
-        // Variations with underscores
+        // Variations with underscores and dashes
         'quantity_ordered', 'qty_ordered', 'order_qty', 'purchase_qty',
         'item_count', 'piece_count', 'unit_count', 'total_count',
+        'quantity-ordered', 'qty-ordered', 'order-qty', 'purchase-qty',
+        'item-count', 'piece-count', 'unit-count', 'total-count',
+
+        // Common misspellings and variations
+        'quantiy', 'quanity', 'quantitiy', 'qantity', 'quntity',
+        'qtyy', 'qtty', 'qnty', 'qntyy',
 
         // Arabic variations - comprehensive
         'الكمية', 'عدد', 'كمية', 'المقدار', 'العدد', 'الرقم', 'القطع', 'الوحدات',
         'المجموع', 'الإجمالي', 'الحجم', 'الصناديق', 'الكراتين', 'العبوات',
         'الأكياس', 'الزجاجات', 'العلب', 'اللفات', 'الأوراق', 'المجموعات',
-        'الأزواج', 'كمية الطلب', 'عدد القطع', 'عدد الوحدات', 'إجمالي الكمية'
+        'الأزواج', 'كمية الطلب', 'عدد القطع', 'عدد الوحدات', 'إجمالي الكمية',
+
+        // Chinese variations for international files
+        '数量', '总数量', '总量', '件数', '个数', '数目',
+
+        // Other language variations
+        'cantidad', 'quantité', 'quantità', 'quantidade', 'menge', 'aantal'
       ],
 
       'yuan_price': [
@@ -1305,6 +1324,12 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         final row = _getSafeRow(sheet, rowIndex);
         if (row.isEmpty) continue;
 
+        // Debug: Log the row content for first few rows
+        if (rowIndex < 5) {
+          final rowContent = row.take(10).map((cell) => cell?.value?.toString() ?? '').toList();
+          AppLogger.info('الصف ${rowIndex + 1}: ${rowContent.join(' | ')}');
+        }
+
         final potentialMapping = <String, int>{};
         int matchScore = 0;
 
@@ -1336,19 +1361,28 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         }
 
         // Update best match if this row has better score
+        // FIXED: Now requires quantity column to be detected as well
         if (matchScore > bestMatchScore &&
             potentialMapping.containsKey('product_name') &&
-            potentialMapping.containsKey('yuan_price')) {
+            potentialMapping.containsKey('yuan_price') &&
+            potentialMapping.containsKey('quantity')) {
           bestMatchScore = matchScore;
           bestMapping = Map.from(potentialMapping);
           headerRowIndex = rowIndex;
           AppLogger.info('أفضل تطابق حتى الآن في الصف ${rowIndex + 1} بنقاط: $matchScore');
+          AppLogger.info('الأعمدة المكتشفة: ${potentialMapping.keys.join(', ')}');
         }
 
         // Early exit if we found a perfect match
-        if (potentialMapping.length >= 3 && matchScore >= 300) {
+        // FIXED: Ensure all required columns are detected
+        if (potentialMapping.containsKey('product_name') &&
+            potentialMapping.containsKey('yuan_price') &&
+            potentialMapping.containsKey('quantity') &&
+            matchScore >= 300) {
           headerRowIndex = rowIndex;
           columnMapping = potentialMapping;
+          AppLogger.info('تم العثور على تطابق مثالي في الصف ${rowIndex + 1}');
+          AppLogger.info('الأعمدة المكتشفة: ${potentialMapping.keys.join(', ')}');
           break;
         }
 
@@ -1365,8 +1399,52 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     }
 
     if (headerRowIndex == -1) {
-      throw Exception('لم يتم العثور على أعمدة البيانات المطلوبة (اسم المنتج والسعر)');
+      throw Exception('لم يتم العثور على أعمدة البيانات المطلوبة (اسم المنتج، السعر، والكمية)');
     }
+
+    // FIXED: Validate that all required columns are detected
+    if (!columnMapping.containsKey('product_name') ||
+        !columnMapping.containsKey('yuan_price') ||
+        !columnMapping.containsKey('quantity')) {
+      final missingColumns = <String>[];
+      if (!columnMapping.containsKey('product_name')) missingColumns.add('اسم المنتج');
+      if (!columnMapping.containsKey('yuan_price')) missingColumns.add('السعر');
+      if (!columnMapping.containsKey('quantity')) missingColumns.add('الكمية');
+
+      AppLogger.error('أعمدة مفقودة: ${missingColumns.join(', ')}');
+      AppLogger.error('الأعمدة المكتشفة: ${columnMapping.keys.join(', ')}');
+
+      // Try to find quantity column by looking for numeric columns
+      if (!columnMapping.containsKey('quantity') && headerRowIndex != -1) {
+        AppLogger.info('محاولة العثور على عمود الكمية من خلال البحث عن الأعمدة الرقمية...');
+        final quantityColumnIndex = _findQuantityColumnByContent(sheet, headerRowIndex);
+        if (quantityColumnIndex != -1) {
+          columnMapping['quantity'] = quantityColumnIndex;
+          AppLogger.info('تم العثور على عمود الكمية في الموضع: $quantityColumnIndex');
+          missingColumns.remove('الكمية');
+        }
+      }
+
+      if (missingColumns.isNotEmpty) {
+        final foundColumns = columnMapping.keys.map((key) {
+          switch (key) {
+            case 'product_name': return 'اسم المنتج';
+            case 'yuan_price': return 'السعر';
+            case 'quantity': return 'الكمية';
+            case 'product_image': return 'صورة المنتج';
+            default: return key;
+          }
+        }).join(', ');
+
+        final errorMessage = 'لم يتم العثور على الأعمدة المطلوبة: ${missingColumns.join(', ')}\n'
+                           'الأعمدة المكتشفة: ${foundColumns.isNotEmpty ? foundColumns : 'لا يوجد'}\n'
+                           'تأكد من أن ملف الإكسل يحتوي على أعمدة للمنتج والسعر والكمية';
+        throw Exception(errorMessage);
+      }
+    }
+
+    AppLogger.info('تم اكتشاف جميع الأعمدة المطلوبة بنجاح');
+    AppLogger.info('خريطة الأعمدة: $columnMapping');
 
     AppLogger.info('تم العثور على رأس الجدول في الصف ${headerRowIndex + 1}');
     AppLogger.info('تم تحديد الأعمدة: $columnMapping');
@@ -1418,9 +1496,11 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
             continue;
           }
 
-          // Enhanced quantity parsing
+          // Enhanced quantity parsing with debugging
           final quantityStr = _getCellValue(row, columnMapping['quantity']);
+          AppLogger.info('الصف ${rowIndex + 1}: قراءة الكمية من العمود ${columnMapping['quantity']}: "$quantityStr"');
           final quantity = _parseQuantity(quantityStr);
+          AppLogger.info('الصف ${rowIndex + 1}: الكمية المحللة: $quantity');
           if (quantity <= 0 || quantity > 9999) {
             skippedRows++;
             processingErrors.add('الصف ${rowIndex + 1}: كمية غير صحيحة ($quantityStr)');
@@ -1671,6 +1751,47 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     // Parse as double first, then convert to int
     final parsed = double.tryParse(cleaned) ?? 1.0;
     return parsed.round().clamp(1, 9999);
+  }
+
+  /// Find quantity column by analyzing content for numeric patterns
+  int _findQuantityColumnByContent(Worksheet sheet, int headerRowIndex) {
+    try {
+      final maxColumnsToCheck = [sheet.maxColumns, MAX_COLUMNS_TO_SCAN].reduce((a, b) => a < b ? a : b);
+      final maxRowsToCheck = [sheet.maxRows, headerRowIndex + 20].reduce((a, b) => a < b ? a : b);
+
+      for (int colIndex = 0; colIndex < maxColumnsToCheck; colIndex++) {
+        int numericCount = 0;
+        int totalCount = 0;
+
+        // Check several rows after header to see if this column contains mostly numbers
+        for (int rowIndex = headerRowIndex + 1; rowIndex < maxRowsToCheck && totalCount < 10; rowIndex++) {
+          final row = _getSafeRow(sheet, rowIndex);
+          if (colIndex < row.length) {
+            final cellValue = _getCellValue(row, colIndex);
+            if (cellValue.isNotEmpty) {
+              totalCount++;
+              // Check if this looks like a quantity (small positive integer)
+              final cleaned = cellValue.replaceAll(RegExp(r'[^\d.]'), '');
+              final parsed = double.tryParse(cleaned);
+              if (parsed != null && parsed > 0 && parsed <= 9999 && parsed == parsed.round()) {
+                numericCount++;
+              }
+            }
+          }
+        }
+
+        // If more than 70% of values in this column are valid quantities, consider it a quantity column
+        if (totalCount >= 3 && numericCount / totalCount >= 0.7) {
+          AppLogger.info('عمود محتمل للكمية في الموضع $colIndex: $numericCount/$totalCount قيم رقمية صحيحة');
+          return colIndex;
+        }
+      }
+
+      return -1;
+    } catch (e) {
+      AppLogger.error('خطأ في البحث عن عمود الكمية: $e');
+      return -1;
+    }
   }
 
   /// Fuzzy string matching for column detection (legacy method)
@@ -1964,16 +2085,34 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
       'quantity': [
         // Complete phrases and single words
         'quantity', 'total quantity', 'item quantity', 'order quantity',
+        'purchase quantity', 'number of items', 'number of pieces',
+        'pieces count', 'units count', 'items count', 'ordered quantity',
+        'required quantity', 'requested quantity', 'shipped quantity',
         'qty', 'pcs', 'pieces', 'units', 'count', 'amount', 'number', 'num',
         'total', 'sum', 'volume', 'size', 'pack', 'box', 'carton', 'dozen',
         'gross', 'each', 'nos', 'numbers', 'items', 'stock', 'inventory',
 
         // Abbreviated forms
-        'ea', 'pc', 'unit', 'ct', 'cnt', '#', 'no', 'qnty', 'qtty',
+        'ea', 'pc', 'unit', 'ct', 'cnt', '#', 'no', 'qnty', 'qtty', 'q',
+
+        // Common Excel column headers
+        'column1', 'column2', 'column3', 'column4', 'column5', 'column6',
+        'col1', 'col2', 'col3', 'col4', 'col5', 'col6',
+        'field1', 'field2', 'field3', 'field4', 'field5', 'field6',
+
+        // Common misspellings and variations
+        'quantiy', 'quanity', 'quantitiy', 'qantity', 'quntity',
+        'qtyy', 'qtty', 'qnty', 'qntyy',
 
         // Arabic variations
         'الكمية', 'عدد', 'كمية', 'المقدار', 'العدد', 'الرقم', 'القطع', 'الوحدات',
-        'المجموع', 'الإجمالي', 'الحجم', 'الصناديق', 'الكراتين', 'العبوات'
+        'المجموع', 'الإجمالي', 'الحجم', 'الصناديق', 'الكراتين', 'العبوات',
+
+        // Chinese variations for international files
+        '数量', '总数量', '总量', '件数', '个数', '数目',
+
+        // Other language variations
+        'cantidad', 'quantité', 'quantità', 'quantidade', 'menge', 'aantal'
       ],
 
       'yuan_price': [
@@ -2051,7 +2190,10 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
         }
       }
 
-        if (potentialMapping.containsKey('product_name') && potentialMapping.containsKey('yuan_price')) {
+        // FIXED: Now requires quantity column to be detected as well
+        if (potentialMapping.containsKey('product_name') &&
+            potentialMapping.containsKey('yuan_price') &&
+            potentialMapping.containsKey('quantity')) {
           headerRowIndex = rowIndex;
           columnMapping = potentialMapping;
           break;
@@ -2063,7 +2205,14 @@ class _ExcelImportScreenState extends State<ExcelImportScreen> {
     }
 
     if (headerRowIndex == -1) {
-      throw Exception('لم يتم العثور على أعمدة البيانات المطلوبة');
+      throw Exception('لم يتم العثور على أعمدة البيانات المطلوبة (اسم المنتج، السعر، والكمية)');
+    }
+
+    // FIXED: Validate that all required columns are detected
+    if (!columnMapping.containsKey('product_name') ||
+        !columnMapping.containsKey('yuan_price') ||
+        !columnMapping.containsKey('quantity')) {
+      throw Exception('لم يتم العثور على جميع الأعمدة المطلوبة');
     }
 
     // Extract data from rows after header with safe bounds
